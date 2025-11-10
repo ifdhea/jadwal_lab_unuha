@@ -23,20 +23,37 @@ import {
     AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 
+// Definisikan tipe data yang diterima dari controller
+interface ProgramStudi {
+    id: number;
+    nama: string;
+}
 interface Kampus {
     id: number;
-    kode: string;
     nama: string;
-    alamat: string | null;
+}
+interface TahunAjaran {
+    id: number;
+    nama: string;
+}
+interface Kelas {
+    id: number;
+    nama: string;
+    kode: string;
+    tingkat_semester: number;
+    kapasitas: number;
     is_aktif: boolean;
+    program_studi: ProgramStudi;
+    kampus: Kampus;
+    tahun_ajaran: TahunAjaran;
 }
 
 interface Props {
-    kampus: Kampus[];
+    kelas: Kelas[];
     breadcrumbs: Array<{ title: string; href: string }>;
 }
 
-export default function Index({ kampus, breadcrumbs }: Props) {
+export default function Index({ kelas, breadcrumbs }: Props) {
     const [deleteId, setDeleteId] = useState<number | null>(null);
     const { flash } = usePage<{ flash: { success?: string; error?: string } }>().props;
     const [showToast, setShowToast] = useState(false);
@@ -50,7 +67,7 @@ export default function Index({ kampus, breadcrumbs }: Props) {
 
     const handleDelete = () => {
         if (deleteId) {
-            router.delete(`/kampus/${deleteId}`, {
+            router.delete(`/kelas/${deleteId}`, {
                 onSuccess: () => setDeleteId(null),
             });
         }
@@ -58,9 +75,8 @@ export default function Index({ kampus, breadcrumbs }: Props) {
 
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
-            <Head title="Kampus" />
+            <Head title="Kelas" />
 
-            {/* Toast Notification */}
             {showToast && flash.success && (
                 <div className="fixed top-4 right-4 z-50 animate-in slide-in-from-top">
                     <div className="flex items-center gap-3 rounded-lg bg-green-500 px-6 py-3 text-white shadow-lg">
@@ -82,15 +98,13 @@ export default function Index({ kampus, breadcrumbs }: Props) {
                 <div className="space-y-6">
                     <div className="flex items-center justify-between">
                         <div>
-                            <h1 className="text-3xl font-bold">Kampus</h1>
-                            <p className="text-muted-foreground">
-                                Kelola data kampus UNUHA
-                            </p>
+                            <h1 className="text-3xl font-bold">Kelas</h1>
+                            <p className="text-muted-foreground">Kelola data kelas UNUHA</p>
                         </div>
-                        <Link href="/kampus/create">
+                        <Link href="/kelas/create">
                             <Button>
                                 <Plus className="mr-2 h-4 w-4" />
-                                Tambah Kampus
+                                Tambah Kelas
                             </Button>
                         </Link>
                     </div>
@@ -99,31 +113,31 @@ export default function Index({ kampus, breadcrumbs }: Props) {
                         <Table>
                             <TableHeader>
                                 <TableRow>
-                                    <TableHead>Kode</TableHead>
-                                    <TableHead>Nama</TableHead>
-                                    <TableHead>Alamat</TableHead>
+                                    <TableHead>Nama Kelas</TableHead>
+                                    <TableHead>Prodi</TableHead>
+                                    <TableHead>Kampus</TableHead>
+                                    <TableHead>Tahun Angkatan</TableHead>
                                     <TableHead>Status</TableHead>
                                     <TableHead className="text-right">Aksi</TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
-                                {kampus.length === 0 ? (
+                                {kelas.length === 0 ? (
                                     <TableRow>
                                         <TableCell
-                                            colSpan={5}
+                                            colSpan={6}
                                             className="text-center text-muted-foreground"
                                         >
-                                            Belum ada data kampus
+                                            Belum ada data kelas
                                         </TableCell>
                                     </TableRow>
                                 ) : (
-                                    kampus.map((item) => (
+                                    kelas.map((item) => (
                                         <TableRow key={item.id}>
-                                            <TableCell className="font-medium">
-                                                {item.kode}
-                                            </TableCell>
-                                            <TableCell>{item.nama}</TableCell>
-                                            <TableCell>{item.alamat || '-'}</TableCell>
+                                            <TableCell className="font-medium">{item.nama}</TableCell>
+                                            <TableCell>{item.program_studi.nama}</TableCell>
+                                            <TableCell>{item.kampus.nama}</TableCell>
+                                            <TableCell>{item.tahun_ajaran.nama}</TableCell>
                                             <TableCell>
                                                 {item.is_aktif ? (
                                                     <Badge variant="default">Aktif</Badge>
@@ -133,7 +147,7 @@ export default function Index({ kampus, breadcrumbs }: Props) {
                                             </TableCell>
                                             <TableCell className="text-right">
                                                 <div className="flex justify-end gap-2">
-                                                    <Link href={`/kampus/${item.id}/edit`}>
+                                                    <Link href={`/kelas/${item.id}/edit`}>
                                                         <Button variant="outline" size="sm">
                                                             <Pencil className="h-4 w-4" />
                                                         </Button>
@@ -159,8 +173,8 @@ export default function Index({ kampus, breadcrumbs }: Props) {
                             <AlertDialogHeader>
                                 <AlertDialogTitle>Konfirmasi Hapus</AlertDialogTitle>
                                 <AlertDialogDescription>
-                                    Apakah Anda yakin ingin menghapus kampus ini? Tindakan ini tidak dapat
-                                    dibatalkan.
+                                    Apakah Anda yakin ingin menghapus kelas ini? Tindakan ini tidak
+                                    dapat dibatalkan.
                                 </AlertDialogDescription>
                             </AlertDialogHeader>
                             <AlertDialogFooter>

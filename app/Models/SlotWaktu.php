@@ -2,13 +2,15 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class SlotWaktu extends Model
 {
+    use HasFactory;
+
     protected $table = 'slot_waktu';
-    
+
     protected $fillable = [
         'waktu_mulai',
         'waktu_selesai',
@@ -16,25 +18,20 @@ class SlotWaktu extends Model
         'urutan',
         'is_aktif',
     ];
-    
+
     protected $casts = [
-        'waktu_mulai' => 'datetime:H:i',
-        'waktu_selesai' => 'datetime:H:i',
         'is_aktif' => 'boolean',
     ];
-    
-    public function jadwalMasterMulai(): HasMany
+
+    protected $appends = ['waktu_mulai_formatted', 'waktu_selesai_formatted'];
+
+    public function getWaktuMulaiFormattedAttribute()
     {
-        return $this->hasMany(JadwalMaster::class, 'slot_waktu_mulai_id');
+        return substr($this->waktu_mulai, 0, 5);
     }
-    
-    public function jadwalMasterSelesai(): HasMany
+
+    public function getWaktuSelesaiFormattedAttribute()
     {
-        return $this->hasMany(JadwalMaster::class, 'slot_waktu_selesai_id');
-    }
-    
-    public function scopeAktif($query)
-    {
-        return $query->where('is_aktif', true);
+        return substr($this->waktu_selesai, 0, 5);
     }
 }

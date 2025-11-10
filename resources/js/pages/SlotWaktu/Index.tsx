@@ -23,20 +23,23 @@ import {
     AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 
-interface Kampus {
+interface SlotWaktu {
     id: number;
-    kode: string;
-    nama: string;
-    alamat: string | null;
+    label: string;
+    waktu_mulai: string;
+    waktu_selesai: string;
+    waktu_mulai_formatted: string;
+    waktu_selesai_formatted: string;
+    urutan: number;
     is_aktif: boolean;
 }
 
 interface Props {
-    kampus: Kampus[];
+    slotWaktu: SlotWaktu[];
     breadcrumbs: Array<{ title: string; href: string }>;
 }
 
-export default function Index({ kampus, breadcrumbs }: Props) {
+export default function Index({ slotWaktu, breadcrumbs }: Props) {
     const [deleteId, setDeleteId] = useState<number | null>(null);
     const { flash } = usePage<{ flash: { success?: string; error?: string } }>().props;
     const [showToast, setShowToast] = useState(false);
@@ -50,7 +53,7 @@ export default function Index({ kampus, breadcrumbs }: Props) {
 
     const handleDelete = () => {
         if (deleteId) {
-            router.delete(`/kampus/${deleteId}`, {
+            router.delete(`/slot-waktu/${deleteId}`, {
                 onSuccess: () => setDeleteId(null),
             });
         }
@@ -58,9 +61,8 @@ export default function Index({ kampus, breadcrumbs }: Props) {
 
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
-            <Head title="Kampus" />
+            <Head title="Slot Waktu" />
 
-            {/* Toast Notification */}
             {showToast && flash.success && (
                 <div className="fixed top-4 right-4 z-50 animate-in slide-in-from-top">
                     <div className="flex items-center gap-3 rounded-lg bg-green-500 px-6 py-3 text-white shadow-lg">
@@ -82,15 +84,13 @@ export default function Index({ kampus, breadcrumbs }: Props) {
                 <div className="space-y-6">
                     <div className="flex items-center justify-between">
                         <div>
-                            <h1 className="text-3xl font-bold">Kampus</h1>
-                            <p className="text-muted-foreground">
-                                Kelola data kampus UNUHA
-                            </p>
+                            <h1 className="text-3xl font-bold">Slot Waktu</h1>
+                            <p className="text-muted-foreground">Kelola slot waktu untuk jadwal.</p>
                         </div>
-                        <Link href="/kampus/create">
+                        <Link href="/slot-waktu/create">
                             <Button>
                                 <Plus className="mr-2 h-4 w-4" />
-                                Tambah Kampus
+                                Tambah Slot Waktu
                             </Button>
                         </Link>
                     </div>
@@ -99,41 +99,43 @@ export default function Index({ kampus, breadcrumbs }: Props) {
                         <Table>
                             <TableHeader>
                                 <TableRow>
-                                    <TableHead>Kode</TableHead>
-                                    <TableHead>Nama</TableHead>
-                                    <TableHead>Alamat</TableHead>
+                                    <TableHead>Urutan</TableHead>
+                                    <TableHead>Label</TableHead>
+                                    <TableHead>Waktu Mulai</TableHead>
+                                    <TableHead>Waktu Selesai</TableHead>
                                     <TableHead>Status</TableHead>
                                     <TableHead className="text-right">Aksi</TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
-                                {kampus.length === 0 ? (
+                                {slotWaktu.length === 0 ? (
                                     <TableRow>
                                         <TableCell
-                                            colSpan={5}
+                                            colSpan={6}
                                             className="text-center text-muted-foreground"
                                         >
-                                            Belum ada data kampus
+                                            Belum ada data slot waktu
                                         </TableCell>
                                     </TableRow>
                                 ) : (
-                                    kampus.map((item) => (
+                                    slotWaktu.map((item) => (
                                         <TableRow key={item.id}>
+                                            <TableCell>{item.urutan}</TableCell>
                                             <TableCell className="font-medium">
-                                                {item.kode}
+                                                {item.label}
                                             </TableCell>
-                                            <TableCell>{item.nama}</TableCell>
-                                            <TableCell>{item.alamat || '-'}</TableCell>
+                                            <TableCell>{item.waktu_mulai_formatted}</TableCell>
+                                            <TableCell>{item.waktu_selesai_formatted}</TableCell>
                                             <TableCell>
                                                 {item.is_aktif ? (
                                                     <Badge variant="default">Aktif</Badge>
                                                 ) : (
-                                                    <Badge variant="secondary">Tidak Aktif</Badge>
+                                                    <Badge variant="destructive">Tidak Aktif</Badge>
                                                 )}
                                             </TableCell>
                                             <TableCell className="text-right">
                                                 <div className="flex justify-end gap-2">
-                                                    <Link href={`/kampus/${item.id}/edit`}>
+                                                    <Link href={`/slot-waktu/${item.id}/edit`}>
                                                         <Button variant="outline" size="sm">
                                                             <Pencil className="h-4 w-4" />
                                                         </Button>
@@ -159,8 +161,8 @@ export default function Index({ kampus, breadcrumbs }: Props) {
                             <AlertDialogHeader>
                                 <AlertDialogTitle>Konfirmasi Hapus</AlertDialogTitle>
                                 <AlertDialogDescription>
-                                    Apakah Anda yakin ingin menghapus kampus ini? Tindakan ini tidak dapat
-                                    dibatalkan.
+                                    Apakah Anda yakin ingin menghapus slot waktu ini? Tindakan ini
+                                    tidak dapat dibatalkan.
                                 </AlertDialogDescription>
                             </AlertDialogHeader>
                             <AlertDialogFooter>

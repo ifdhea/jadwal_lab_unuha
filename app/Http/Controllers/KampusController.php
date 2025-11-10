@@ -76,9 +76,22 @@ class KampusController extends Controller
 
     public function destroy(Kampus $kampus)
     {
-        $kampus->delete();
+        try {
+            if ($kampus->delete()) {
+                return redirect('/kampus')->with('success', 'Kampus berhasil dihapus.');
+            }
 
-        return redirect('/kampus')
-            ->with('success', 'Kampus berhasil dihapus.');
+            return redirect('/kampus')->with('error', 'Gagal menghapus kampus karena alasan yang tidak diketahui.');
+        } catch (\Illuminate\Database\QueryException $e) {
+            // Menangkap error spesifik jika ada relasi yang menghalangi
+            if ($e->getCode() === '23000') {
+                return redirect('/kampus')->with(
+                    'error',
+                    'Kampus tidak dapat dihapus karena masih memiliki data terkait (misal: laboratorium atau kelas).'
+                );
+            }
+
+            return redirect('/kampus')->with('error', 'Terjadi kesalahan pada database saat menghapus kampus.');
+        }
     }
 }

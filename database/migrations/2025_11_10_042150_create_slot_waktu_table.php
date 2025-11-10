@@ -19,7 +19,7 @@ return new class extends Migration
             $table->unsignedTinyInteger('urutan');
             $table->boolean('is_aktif')->default(true);
             $table->timestamps();
-            
+
             $table->unique(['waktu_mulai', 'waktu_selesai']);
             $table->index('urutan');
         });

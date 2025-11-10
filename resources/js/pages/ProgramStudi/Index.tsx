@@ -23,20 +23,20 @@ import {
     AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 
-interface Kampus {
+interface ProgramStudi {
     id: number;
     kode: string;
     nama: string;
-    alamat: string | null;
+    deskripsi: string | null;
     is_aktif: boolean;
 }
 
 interface Props {
-    kampus: Kampus[];
+    programStudi: ProgramStudi[];
     breadcrumbs: Array<{ title: string; href: string }>;
 }
 
-export default function Index({ kampus, breadcrumbs }: Props) {
+export default function Index({ programStudi, breadcrumbs }: Props) {
     const [deleteId, setDeleteId] = useState<number | null>(null);
     const { flash } = usePage<{ flash: { success?: string; error?: string } }>().props;
     const [showToast, setShowToast] = useState(false);
@@ -50,7 +50,7 @@ export default function Index({ kampus, breadcrumbs }: Props) {
 
     const handleDelete = () => {
         if (deleteId) {
-            router.delete(`/kampus/${deleteId}`, {
+            router.delete(`/program-studi/${deleteId}`, {
                 onSuccess: () => setDeleteId(null),
             });
         }
@@ -58,9 +58,8 @@ export default function Index({ kampus, breadcrumbs }: Props) {
 
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
-            <Head title="Kampus" />
+            <Head title="Program Studi" />
 
-            {/* Toast Notification */}
             {showToast && flash.success && (
                 <div className="fixed top-4 right-4 z-50 animate-in slide-in-from-top">
                     <div className="flex items-center gap-3 rounded-lg bg-green-500 px-6 py-3 text-white shadow-lg">
@@ -82,15 +81,15 @@ export default function Index({ kampus, breadcrumbs }: Props) {
                 <div className="space-y-6">
                     <div className="flex items-center justify-between">
                         <div>
-                            <h1 className="text-3xl font-bold">Kampus</h1>
+                            <h1 className="text-3xl font-bold">Program Studi</h1>
                             <p className="text-muted-foreground">
-                                Kelola data kampus UNUHA
+                                Kelola data program studi UNUHA
                             </p>
                         </div>
-                        <Link href="/kampus/create">
+                        <Link href="/program-studi/create">
                             <Button>
                                 <Plus className="mr-2 h-4 w-4" />
-                                Tambah Kampus
+                                Tambah Program Studi
                             </Button>
                         </Link>
                     </div>
@@ -101,29 +100,27 @@ export default function Index({ kampus, breadcrumbs }: Props) {
                                 <TableRow>
                                     <TableHead>Kode</TableHead>
                                     <TableHead>Nama</TableHead>
-                                    <TableHead>Alamat</TableHead>
                                     <TableHead>Status</TableHead>
                                     <TableHead className="text-right">Aksi</TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
-                                {kampus.length === 0 ? (
+                                {programStudi.length === 0 ? (
                                     <TableRow>
                                         <TableCell
-                                            colSpan={5}
+                                            colSpan={4}
                                             className="text-center text-muted-foreground"
                                         >
-                                            Belum ada data kampus
+                                            Belum ada data program studi
                                         </TableCell>
                                     </TableRow>
                                 ) : (
-                                    kampus.map((item) => (
+                                    programStudi.map((item) => (
                                         <TableRow key={item.id}>
                                             <TableCell className="font-medium">
                                                 {item.kode}
                                             </TableCell>
                                             <TableCell>{item.nama}</TableCell>
-                                            <TableCell>{item.alamat || '-'}</TableCell>
                                             <TableCell>
                                                 {item.is_aktif ? (
                                                     <Badge variant="default">Aktif</Badge>
@@ -133,7 +130,7 @@ export default function Index({ kampus, breadcrumbs }: Props) {
                                             </TableCell>
                                             <TableCell className="text-right">
                                                 <div className="flex justify-end gap-2">
-                                                    <Link href={`/kampus/${item.id}/edit`}>
+                                                    <Link href={`/program-studi/${item.id}/edit`}>
                                                         <Button variant="outline" size="sm">
                                                             <Pencil className="h-4 w-4" />
                                                         </Button>
@@ -159,7 +156,7 @@ export default function Index({ kampus, breadcrumbs }: Props) {
                             <AlertDialogHeader>
                                 <AlertDialogTitle>Konfirmasi Hapus</AlertDialogTitle>
                                 <AlertDialogDescription>
-                                    Apakah Anda yakin ingin menghapus kampus ini? Tindakan ini tidak dapat
+                                    Apakah Anda yakin ingin menghapus program studi ini? Tindakan ini tidak dapat
                                     dibatalkan.
                                 </AlertDialogDescription>
                             </AlertDialogHeader>

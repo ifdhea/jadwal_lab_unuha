@@ -15,6 +15,7 @@ class Dosen extends Model
         'nidn',
         'nip',
         'program_studi_id',
+        'kampus_utama_id',
         'gelar_depan',
         'gelar_belakang',
         'no_telp',
@@ -34,6 +35,11 @@ class Dosen extends Model
     public function programStudi(): BelongsTo
     {
         return $this->belongsTo(ProgramStudi::class);
+    }
+    
+    public function kampusUtama(): BelongsTo
+    {
+        return $this->belongsTo(Kampus::class, 'kampus_utama_id');
     }
     
     public function jadwalMaster(): HasMany

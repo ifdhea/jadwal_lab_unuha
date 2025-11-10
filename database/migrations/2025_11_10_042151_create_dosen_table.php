@@ -17,6 +17,7 @@ return new class extends Migration
             $table->string('nidn', 20)->unique();
             $table->string('nip', 30)->nullable()->unique();
             $table->foreignId('program_studi_id')->nullable()->constrained('program_studi')->onDelete('set null');
+            $table->foreignId('kampus_utama_id')->nullable()->constrained('kampus')->onDelete('set null');
             $table->string('gelar_depan', 20)->nullable();
             $table->string('gelar_belakang', 50)->nullable();
             $table->string('no_telp', 20)->nullable();
