@@ -18,15 +18,15 @@ interface DashboardProps {
 }
 
 export default function Dashboard(props: DashboardProps) {
-    const { userRole } = props;
+    const { userRole, ...dashboardProps } = props;
 
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Dashboard" />
             {userRole === 'super_admin' || userRole === 'admin' ? (
-                <SuperAdminDashboard {...props} />
+                <SuperAdminDashboard {...(dashboardProps as any)} />
             ) : userRole === 'dosen' ? (
-                <DosenDashboard {...props} />
+                <DosenDashboard {...(dashboardProps as any)} />
             ) : (
                 <div className="p-6">
                     <p>Dashboard tidak tersedia untuk role Anda.</p>
