@@ -14,11 +14,13 @@ import { dashboard } from '@/routes';
 import { type NavItem } from '@/types';
 import { Link, usePage } from '@inertiajs/react';
 import {
+    ArrowLeftRight,
     Book,
     BookCheck,
     BookOpen,
     BookUser,
     Building,
+    Building2,
     Calendar,
     CalendarCheck,
     CalendarCog,
@@ -35,7 +37,11 @@ import {
 import AppLogo from './app-logo';
 
 export function AppSidebar() {
-    const mainNavItems: NavItem[] = [
+    const { auth } = usePage<{ auth: { user: { peran: string } } }>().props;
+    const userRole = auth.user.peran;
+
+    // Menu untuk Super Admin & Admin
+    const adminNavItems: NavItem[] = [
         {
             title: 'Dashboard',
             href: dashboard(),
@@ -56,6 +62,11 @@ export function AppSidebar() {
                     icon: CalendarCheck,
                 },
             ],
+        },
+        {
+            title: 'Booking Lab',
+            href: '/booking-lab',
+            icon: Building2,
         },
         {
             title: 'Master Data',
@@ -114,6 +125,33 @@ export function AppSidebar() {
             ],
         },
     ];
+
+    // Menu untuk Dosen
+    const dosenNavItems: NavItem[] = [
+        {
+            title: 'Dashboard',
+            href: dashboard(),
+            icon: LayoutGrid,
+        },
+        {
+            title: 'Jadwal',
+            href: '/jadwal',
+            icon: CalendarCheck,
+        },
+        {
+            title: 'Tukar Jadwal',
+            href: '/tukar-jadwal',
+            icon: ArrowLeftRight,
+        },
+        {
+            title: 'Booking Lab',
+            href: '/booking-lab',
+            icon: Building2,
+        },
+    ];
+
+    // Pilih menu berdasarkan role
+    const mainNavItems = userRole === 'dosen' ? dosenNavItems : adminNavItems;
 
     const footerNavItems: NavItem[] = [
         {
