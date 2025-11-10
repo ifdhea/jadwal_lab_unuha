@@ -1,5 +1,7 @@
 <?php
 
+use App\Http\Controllers\BookingLaboratoriumController;
+use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DosenController;
 use App\Http\Controllers\JadwalController;
 use App\Http\Controllers\JadwalGeneratorController;
@@ -13,6 +15,7 @@ use App\Http\Controllers\ProgramStudiController;
 use App\Http\Controllers\SemesterController;
 use App\Http\Controllers\SlotWaktuController;
 use App\Http\Controllers\TahunAjaranController;
+use App\Http\Controllers\TukarJadwalController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 use Laravel\Fortify\Features;
@@ -24,11 +27,35 @@ Route::get('/', function () {
 })->name('home');
 
 Route::middleware(['auth', 'verified'])->group(function () {
-    Route::get('dashboard', function () {
-        return Inertia::render('dashboard');
-    })->name('dashboard');
+    Route::get('dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
     Route::get('/jadwal', [JadwalController::class, 'index'])->name('jadwal.index');
+    
+    // Tukar Jadwal - Dosen only
+    Route::middleware(['peran:dosen'])->group(function () {
+        Route::get('/tukar-jadwal', [TukarJadwalController::class, 'index'])->name('tukar-jadwal.index');
+        Route::get('/tukar-jadwal/create', [TukarJadwalController::class, 'create'])->name('tukar-jadwal.create');
+        Route::post('/tukar-jadwal', [TukarJadwalController::class, 'store'])->name('tukar-jadwal.store');
+        Route::get('/tukar-jadwal/jadwal-mitra', [TukarJadwalController::class, 'getJadwalMitra'])->name('tukar-jadwal.jadwal-mitra');
+        Route::post('/tukar-jadwal/{tukarJadwal}/approve', [TukarJadwalController::class, 'approve'])->name('tukar-jadwal.approve');
+        Route::post('/tukar-jadwal/{tukarJadwal}/reject', [TukarJadwalController::class, 'reject'])->name('tukar-jadwal.reject');
+        Route::post('/tukar-jadwal/{tukarJadwal}/cancel', [TukarJadwalController::class, 'cancel'])->name('tukar-jadwal.cancel');
+    });
+
+    // Booking Laboratorium
+    Route::middleware(['peran:dosen,super_admin,admin'])->group(function () {
+        Route::get('/booking-lab', [BookingLaboratoriumController::class, 'index'])->name('booking-lab.index');
+        Route::get('/booking-lab/create', [BookingLaboratoriumController::class, 'create'])->name('booking-lab.create');
+        Route::post('/booking-lab', [BookingLaboratoriumController::class, 'store'])->name('booking-lab.store');
+        Route::post('/booking-lab/check-availability', [BookingLaboratoriumController::class, 'checkAvailability'])->name('booking-lab.check-availability');
+        Route::post('/booking-lab/{bookingLab}/cancel', [BookingLaboratoriumController::class, 'cancel'])->name('booking-lab.cancel');
+    });
+
+    // Approve/Reject Booking - Admin only
+    Route::middleware(['peran:super_admin,admin'])->group(function () {
+        Route::post('/booking-lab/{bookingLab}/approve', [BookingLaboratoriumController::class, 'approve'])->name('booking-lab.approve');
+        Route::post('/booking-lab/{bookingLab}/reject', [BookingLaboratoriumController::class, 'reject'])->name('booking-lab.reject');
+    });
     
     // Master Data - Super Admin & Admin only
     Route::middleware(['peran:super_admin,admin'])->group(function () {
