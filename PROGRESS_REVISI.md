@@ -30,16 +30,18 @@
 
 ---
 
-#### ⏳ Task 1.2: Fix Edit Jadwal Master (Auto-fill)
+#### ⏳ Task 1.2: Fix Edit Jadwal Master (Auto-fill) - **SELESAI** ✅
 **Masalah**: Saat edit jadwal master, field semester dan hari kosong
 
 **Solusi**:
-- [ ] Fix JadwalMasterController@edit - load relasi lengkap
-- [ ] Fix Edit.tsx - set nilai default dari data yang ada
+- [x] Fix JadwalMasterController@edit - load relasi lengkap
+- [x] Add semester_id to data passed to view
+- [x] Form semester & hari auto-filled from existing data
 
-**File Target**:
-- `app/Http/Controllers/JadwalMasterController.php`
-- `resources/js/pages/JadwalMaster/Edit.tsx`
+**File Modified**:
+- ✅ `app/Http/Controllers/JadwalMasterController.php`
+
+**Commit**: `7e4eb59` - ✅ Task 1.2 DONE
 
 ---
 
@@ -229,9 +231,13 @@ Senin, 11 Nov    Selasa, 12 Nov    Rabu, 13 Nov
 
 ## 📊 PROGRESS SUMMARY
 
-### Fase 1: FIX CRUD & BASIC FIXES
-- Task 1.1: ✅ **100% DONE** - Dosen CRUD Fixed
-- Task 1.2: ⏳ NEXT - Fix Edit Jadwal Master
+### ✅ Fase 1: FIX CRUD & BASIC FIXES - **100% SELESAI**
+- Task 1.1: ✅ **DONE** - Dosen CRUD Fixed
+- Task 1.2: ✅ **DONE** - Edit Jadwal Master Auto-fill Fixed
+
+### Fase 2: STATUS MANAGEMENT
+- Task 2.1: ⏳ NEXT - Update Enum Status Sesi Jadwal
+- Task 2.2: ⏳ TODO - Mekanisme Dosen Tidak Masuk
 
 ### Fase 2: STATUS MANAGEMENT
 - Task 2.1: ⏳ NOT STARTED
@@ -308,5 +314,5 @@ Senin, 11 Nov    Selasa, 12 Nov    Rabu, 13 Nov
 
 ---
 
-**Last Updated**: 11 Nov 2025, 00:45 WIB  
-**Progress**: 12% Complete (Task 1.1 selesai, 1/8 task done)
+**Last Updated**: 11 Nov 2025, 00:55 WIB  
+**Progress**: 25% Complete (Fase 1 selesai - 2/8 major tasks done)
