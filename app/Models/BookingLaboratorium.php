@@ -11,6 +11,7 @@ class BookingLaboratorium extends Model
 
     protected $fillable = [
         'dosen_id',
+        'kelas_mata_kuliah_id',
         'laboratorium_id',
         'tanggal',
         'slot_waktu_mulai_id',
@@ -54,6 +55,11 @@ class BookingLaboratorium extends Model
     public function diprosesOleh(): BelongsTo
     {
         return $this->belongsTo(User::class, 'diproses_oleh');
+    }
+
+    public function kelasMatKul(): BelongsTo
+    {
+        return $this->belongsTo(KelasMatKul::class, 'kelas_mata_kuliah_id');
     }
 
     public function scopeMenunggu($query)

@@ -200,7 +200,64 @@ class TukarJadwalController extends Controller
             'mitra_id' => 'nullable|exists:dosen,id',
             'sesi_jadwal_mitra_id' => 'nullable|exists:sesi_jadwal,id',
             'alasan_pemohon' => 'required|string|max:1000',
+            'jenis' => 'required|in:tukar,pindah',
         ]);
+
+        $sesiPemohon = SesiJadwal::with('jadwalMaster')->find($validated['sesi_jadwal_pemohon_id']);
+        
+        if ($validated['jenis'] === 'pindah' && !$validated['mitra_id'] && !$validated['sesi_jadwal_mitra_id']) {
+            $tanggalPemohon = $sesiPemohon->tanggal;
+            $jadwalPemohon = $sesiPemohon->jadwalMaster;
+            
+            $bentrok = SesiJadwal::whereDate('tanggal', $tanggalPemohon)
+                ->where('id', '!=', $sesiPemohon->id)
+                ->whereHas('jadwalMaster', function ($q) use ($jadwalPemohon) {
+                    $q->where('laboratorium_id', $jadwalPemohon->laboratorium_id)
+                        ->where('hari', $jadwalPemohon->hari)
+                        ->where(function ($sq) use ($jadwalPemohon) {
+                            $sq->where(function ($s) use ($jadwalPemohon) {
+                                $s->whereRaw('slot_waktu_mulai_id BETWEEN ? AND ?', [$jadwalPemohon->slot_waktu_mulai_id, $jadwalPemohon->slot_waktu_selesai_id])
+                                  ->orWhereRaw('slot_waktu_selesai_id BETWEEN ? AND ?', [$jadwalPemohon->slot_waktu_mulai_id, $jadwalPemohon->slot_waktu_selesai_id]);
+                            })->orWhere(function ($s) use ($jadwalPemohon) {
+                                $s->where('slot_waktu_mulai_id', '<=', $jadwalPemohon->slot_waktu_mulai_id)
+                                  ->where('slot_waktu_selesai_id', '>=', $jadwalPemohon->slot_waktu_selesai_id);
+                            });
+                        });
+                })
+                ->where('status', 'terjadwal')
+                ->exists();
+
+            if ($bentrok) {
+                return redirect()->back()->with('error', 'Tidak dapat pindah: slot waktu yang dipilih bentrok dengan jadwal lain');
+            }
+
+            DB::beginTransaction();
+            try {
+                $sesiPemohon->update([
+                    'tanggal' => $request->tanggal_tujuan,
+                    'pertemuan_ke' => $request->minggu_tujuan,
+                ]);
+
+                TukarJadwal::create([
+                    'pemohon_id' => $dosen->id,
+                    'sesi_jadwal_pemohon_id' => $validated['sesi_jadwal_pemohon_id'],
+                    'mitra_id' => null,
+                    'sesi_jadwal_mitra_id' => null,
+                    'alasan_pemohon' => $validated['alasan_pemohon'],
+                    'status' => 'disetujui',
+                    'jenis' => 'pindah',
+                    'tanggal_diproses' => now(),
+                ]);
+
+                DB::commit();
+                return redirect()->route('tukar-jadwal.index')->with('success', 'Jadwal berhasil dipindahkan (langsung disetujui karena slot kosong)');
+            } catch (\Exception $e) {
+                DB::rollBack();
+                return redirect()->back()->with('error', 'Gagal memproses pindah jadwal: ' . $e->getMessage());
+            }
+        }
+
+        $status = ($validated['jenis'] === 'pindah') ? 'disetujui' : 'menunggu';
 
         $tukarJadwal = TukarJadwal::create([
             'pemohon_id' => $dosen->id,
@@ -208,10 +265,16 @@ class TukarJadwalController extends Controller
             'mitra_id' => $validated['mitra_id'] ?? null,
             'sesi_jadwal_mitra_id' => $validated['sesi_jadwal_mitra_id'] ?? null,
             'alasan_pemohon' => $validated['alasan_pemohon'],
-            'status' => 'menunggu',
+            'jenis' => $validated['jenis'],
+            'status' => $status,
+            'tanggal_diproses' => $status === 'disetujui' ? now() : null,
         ]);
 
-        return redirect()->route('tukar-jadwal.index')->with('success', 'Permintaan tukar jadwal berhasil diajukan');
+        $message = $status === 'disetujui' 
+            ? 'Jadwal berhasil dipindahkan' 
+            : 'Permintaan tukar jadwal berhasil diajukan';
+
+        return redirect()->route('tukar-jadwal.index')->with('success', $message);
     }
 
     public function approve(TukarJadwal $tukarJadwal)

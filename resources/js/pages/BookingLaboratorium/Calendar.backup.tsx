@@ -2,16 +2,6 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
-    Dialog,
-    DialogContent,
-    DialogDescription,
-    DialogFooter,
-    DialogHeader,
-    DialogTitle,
-} from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import {
     Select,
     SelectContent,
     SelectItem,
@@ -19,7 +9,6 @@ import {
     SelectValue,
 } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Textarea } from '@/components/ui/textarea';
 import AppLayout from '@/layouts/app-layout';
 import { Head, router } from '@inertiajs/react';
 import {
@@ -29,7 +18,6 @@ import {
     Clock,
     MapPin,
     User,
-    Plus,
 } from 'lucide-react';
 import { useState } from 'react';
 
@@ -60,8 +48,7 @@ interface Slot {
     is_break?: boolean;
 }
 interface JadwalCell {
-    sesi_jadwal_id?: number;
-    booking_id?: number;
+    sesi_jadwal_id: number;
     matkul: string;
     kelas: string;
     dosen: string;
@@ -71,35 +58,14 @@ interface JadwalCell {
     waktu_mulai: string;
     waktu_selesai: string;
     status: string;
-    is_my_schedule?: boolean;
+    is_my_schedule: boolean;
     tanggal: string;
-    is_past?: boolean;
+    is_past: boolean;
 }
 type JadwalData = Record<
     number,
     Record<number, Record<number, Record<number, JadwalCell[]>>>
 >;
-
-interface MatKul {
-    id: number;
-    nama: string;
-    kelas: string;
-    sks: number;
-}
-
-interface Booking {
-    id: number;
-    mata_kuliah?: { nama: string; sks: number } | null;
-    kelas?: string | null;
-    laboratorium: { id: number; nama: string; kampus: string };
-    tanggal: string;
-    waktu_mulai: string;
-    waktu_selesai: string;
-    durasi_slot: number;
-    keperluan: string;
-    keterangan: string | null;
-    status: string;
-}
 
 interface Props {
     semesters: Semester[];
@@ -110,12 +76,10 @@ interface Props {
     hari: Hari[];
     slots: Slot[];
     jadwalData: JadwalData;
-    myBookings: Booking[];
-    myMatKuls: MatKul[];
     breadcrumbs: Array<{ title: string; href: string }>;
 }
 
-export default function Calendar({
+export default function Index({
     semesters,
     selectedSemesterId,
     kampusList,
@@ -124,39 +88,22 @@ export default function Calendar({
     hari,
     slots,
     jadwalData,
-    myBookings,
-    myMatKuls,
     breadcrumbs,
 }: Props) {
     const [activeKampus, setActiveKampus] = useState(
         kampusList[0]?.kode || 'B',
     );
-    const [showBookingDialog, setShowBookingDialog] = useState(false);
-    const [selectedSlot, setSelectedSlot] = useState<{
-        kampus_id: number;
-        tanggal: string;
-        slot_mulai_id: number;
-        waktu_mulai: string;
-    } | null>(null);
-    const [bookingForm, setBookingForm] = useState({
-        kelas_mata_kuliah_id: '',
-        keperluan: '',
-        keterangan: '',
-    });
 
-    // Cek apakah hari adalah hari ini (GMT+7 Jakarta)
+    // Cek apakah hari adalah hari ini
     const isToday = (tanggal?: string) => {
         if (!tanggal) return false;
-        // Gunakan waktu server Indonesia (WIB)
-        const now = new Date();
-        const wibTime = new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Jakarta' }));
-        const todayString = wibTime.toISOString().split('T')[0];
-        return tanggal === todayString;
+        const today = new Date().toISOString().split('T')[0];
+        return tanggal === today;
     };
 
     const handleSemesterChange = (semesterId: string) => {
         router.get(
-            '/booking-lab/calendar',
+            '/jadwal',
             { semester_id: semesterId, minggu: 1 },
             { preserveState: true },
         );
@@ -164,7 +111,7 @@ export default function Calendar({
 
     const handleMingguChange = (minggu: number) => {
         router.get(
-            '/booking-lab/calendar',
+            '/jadwal',
             {
                 semester_id: selectedSemesterId,
                 minggu,
@@ -173,101 +120,18 @@ export default function Calendar({
         );
     };
 
-    const handleCellClick = (
-        kampusId: number,
-        tanggal: string,
-        slotId: number,
-        waktuMulai: string,
-    ) => {
-        const now = new Date();
-        const wibTime = new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Jakarta' }));
-        wibTime.setHours(0, 0, 0, 0);
-        
-        const selectedDate = new Date(tanggal + 'T00:00:00');
-        selectedDate.setHours(0, 0, 0, 0);
-
-        if (selectedDate < wibTime) {
-            alert('Tidak dapat booking untuk tanggal yang sudah lewat');
-            return;
-        }
-
-        setSelectedSlot({
-            kampus_id: kampusId,
-            tanggal,
-            slot_mulai_id: slotId,
-            waktu_mulai: waktuMulai,
-        });
-        setBookingForm({ kelas_mata_kuliah_id: '', keperluan: '', keterangan: '' });
-        setShowBookingDialog(true);
-    };
-
-    const handleSubmitBooking = () => {
-        if (!selectedSlot || !bookingForm.kelas_mata_kuliah_id || !bookingForm.keperluan.trim()) return;
-
-        router.post('/booking-lab', {
-            kelas_mata_kuliah_id: bookingForm.kelas_mata_kuliah_id,
-            laboratorium_id: 1,
-            tanggal: selectedSlot.tanggal,
-            slot_waktu_mulai_id: selectedSlot.slot_mulai_id,
-            keperluan: bookingForm.keperluan,
-            keterangan: bookingForm.keterangan,
-        }, {
-            onSuccess: () => {
-                setShowBookingDialog(false);
-                setSelectedSlot(null);
-                setBookingForm({ kelas_mata_kuliah_id: '', keperluan: '', keterangan: '' });
-                
-                // Scroll ke list booking
-                setTimeout(() => {
-                    const bookingList = document.getElementById('booking-list');
-                    if (bookingList) {
-                        bookingList.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                    }
-                }, 500);
-            }
-        });
-    };
-
-    const getStatusBadge = (status: string) => {
-        const variants: Record<string, { variant: any; label: string }> = {
-            menunggu: { variant: 'default', label: 'Menunggu' },
-            disetujui: { variant: 'outline', label: 'Disetujui' },
-            ditolak: { variant: 'destructive', label: 'Ditolak' },
-        };
-        const config = variants[status] || variants.menunggu;
-        return <Badge variant={config.variant}>{config.label}</Badge>;
-    };
-
     const currentMinggu = mingguList.find((m) => m.nomor === selectedMinggu);
-    const pendingBookingsCount = myBookings.filter(b => b.status === 'menunggu').length;
 
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
-            <Head title="Booking Lab - Kalender" />
+            <Head title="Jadwal Final" />
 
             <div className="space-y-4 p-4">
                 <div className="flex items-center justify-between">
                     <div>
-                        <h1 className="text-3xl font-bold">Booking Laboratorium</h1>
+                        <h1 className="text-3xl font-bold">Jadwal Final</h1>
                         <p className="text-muted-foreground">
-                            Klik slot kosong untuk booking laboratorium
-                            {pendingBookingsCount > 0 && (
-                                <Button
-                                    variant="link"
-                                    size="sm"
-                                    className="ml-2 p-0 h-auto"
-                                    onClick={() => {
-                                        const bookingList = document.getElementById('booking-list');
-                                        if (bookingList) {
-                                            bookingList.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                                        }
-                                    }}
-                                >
-                                    <Badge variant="default">
-                                        ({pendingBookingsCount}) Request Pending
-                                    </Badge>
-                                </Button>
-                            )}
+                            Tampilan jadwal mingguan per kampus
                         </p>
                     </div>
                     <div className="w-72">
@@ -846,56 +710,7 @@ export default function Calendar({
                                                                                             )}
                                                                                         </div>
                                                                                     ) : (
-                                                                                        (() => {
-                                                                                            const today = new Date();
-                                                                                            const jakartaOffset = 7 * 60;
-                                                                                            const localOffset = today.getTimezoneOffset();
-                                                                                            const jakartaTime = new Date(today.getTime() + (jakartaOffset + localOffset) * 60 * 1000);
-                                                                                            jakartaTime.setHours(0, 0, 0, 0);
-                                                                                            
-                                                                                            const cellDate = h.tanggal ? new Date(h.tanggal + 'T00:00:00') : null;
-                                                                                            if (cellDate) cellDate.setHours(0, 0, 0, 0);
-                                                                                            
-                                                                                            const isPast = cellDate && cellDate < jakartaTime;
-                                                                                            const isCurrentDay = cellDate && cellDate.getTime() === jakartaTime.getTime();
-
-                                                                                            return (
-                                                                                                <div 
-                                                                                                    className={`h-24 flex items-center justify-center transition-colors ${
-                                                                                                        isPast 
-                                                                                                            ? 'bg-muted/30 cursor-not-allowed' 
-                                                                                                            : 'cursor-pointer hover:bg-green-50/50 hover:border-green-400 border-2 border-dashed border-transparent group'
-                                                                                                    }`}
-                                                                                                    onClick={() => {
-                                                                                                        if (!isPast && h.tanggal) {
-                                                                                                            handleCellClick(
-                                                                                                                kampus.id,
-                                                                                                                h.tanggal,
-                                                                                                                slot.id,
-                                                                                                                slot.waktu_mulai,
-                                                                                                            );
-                                                                                                        }
-                                                                                                    }}
-                                                                                                >
-                                                                                                    {isPast ? (
-                                                                                                        <div className="text-center text-muted-foreground">
-                                                                                                            <Clock className="h-5 w-5 mx-auto mb-1 opacity-50" />
-                                                                                                            <div className="text-xs font-medium">Sudah Lewat</div>
-                                                                                                        </div>
-                                                                                                    ) : (
-                                                                                                        <div className="text-center">
-                                                                                                            <Plus className={`h-6 w-6 mx-auto mb-1 ${isCurrentDay ? 'text-primary' : 'text-green-600 group-hover:text-green-700'}`} />
-                                                                                                            <div className={`text-sm font-medium ${isCurrentDay ? 'text-primary' : 'text-green-700 group-hover:text-green-800'}`}>
-                                                                                                                {isCurrentDay ? 'Booking Hari Ini' : 'Booking'}
-                                                                                                            </div>
-                                                                                                            <div className="text-xs text-muted-foreground mt-0.5 group-hover:text-green-600">
-                                                                                                                Klik untuk ajukan
-                                                                                                            </div>
-                                                                                                        </div>
-                                                                                                    )}
-                                                                                                </div>
-                                                                                            );
-                                                                                        })()
+                                                                                        <div className="h-24"></div>
                                                                                     )}
                                                                                 </td>
                                                                             );
@@ -912,72 +727,6 @@ export default function Calendar({
                                         </div>
                                     </CardContent>
                                 </Card>
-
-                                {/* Request Booking List */}
-                                {myBookings.length > 0 && (
-                                    <Card id="booking-list">
-                                        <CardHeader>
-                                            <CardTitle>Request Booking Saya</CardTitle>
-                                        </CardHeader>
-                                        <CardContent>
-                                            <div className="space-y-3">
-                                                {myBookings.map((booking) => (
-                                                    <div key={booking.id} className="rounded-lg border p-4">
-                                                        <div className="flex items-start justify-between">
-                                                            <div className="space-y-2 flex-1">
-                                                                <div className="flex items-center gap-2">
-                                                                    {getStatusBadge(booking.status)}
-                                                                    <span className="text-sm text-muted-foreground">
-                                                                        {new Date(booking.tanggal).toLocaleDateString('id-ID')}
-                                                                    </span>
-                                                                </div>
-                                                                <div className="grid gap-2 md:grid-cols-2">
-                                                                    {booking.mata_kuliah && (
-                                                                        <div className="text-sm">
-                                                                            <span className="font-medium">Mata Kuliah: </span>
-                                                                            {booking.mata_kuliah.nama} ({booking.mata_kuliah.sks} SKS)
-                                                                        </div>
-                                                                    )}
-                                                                    {booking.kelas && (
-                                                                        <div className="text-sm">
-                                                                            <span className="font-medium">Kelas: </span>
-                                                                            {booking.kelas}
-                                                                        </div>
-                                                                    )}
-                                                                    <div className="text-sm">
-                                                                        <span className="font-medium">Lab: </span>
-                                                                        {booking.laboratorium.nama}
-                                                                    </div>
-                                                                    <div className="text-sm">
-                                                                        <span className="font-medium">Waktu: </span>
-                                                                        {booking.waktu_mulai} - {booking.waktu_selesai}
-                                                                    </div>
-                                                                    <div className="text-sm">
-                                                                        <span className="font-medium">Keperluan: </span>
-                                                                        {booking.keperluan}
-                                                                    </div>
-                                                                </div>
-                                                            </div>
-                                                            {booking.status === 'menunggu' && (
-                                                                <Button
-                                                                    size="sm"
-                                                                    variant="outline"
-                                                                    onClick={() => {
-                                                                        if (confirm('Batalkan booking ini?')) {
-                                                                            router.post(`/booking-lab/${booking.id}/cancel`);
-                                                                        }
-                                                                    }}
-                                                                >
-                                                                    Batalkan
-                                                                </Button>
-                                                            )}
-                                                        </div>
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        </CardContent>
-                                    </Card>
-                                )}
                             </TabsContent>
                         );
                     })}
@@ -986,113 +735,12 @@ export default function Calendar({
                 {mingguList.length === 0 && (
                     <div className="flex h-64 items-center justify-center rounded-md border">
                         <p className="text-muted-foreground">
-                            Belum ada jadwal. Silakan pilih semester.
+                            Belum ada jadwal. Silakan generate jadwal di menu
+                            Jadwal Master.
                         </p>
                     </div>
                 )}
             </div>
-
-            {/* Dialog Booking */}
-            <Dialog open={showBookingDialog} onOpenChange={setShowBookingDialog}>
-                <DialogContent>
-                    <DialogHeader>
-                        <DialogTitle>Booking Laboratorium</DialogTitle>
-                        <DialogDescription>
-                            Isi form berikut untuk mengajukan booking laboratorium
-                        </DialogDescription>
-                    </DialogHeader>
-                    {selectedSlot && (
-                        <div className="space-y-4 py-4">
-                            <div className="rounded-lg border bg-muted/50 p-3 space-y-2">
-                                <div className="text-sm">
-                                    <span className="font-medium">Tanggal: </span>
-                                    {new Date(selectedSlot.tanggal).toLocaleDateString('id-ID')}
-                                </div>
-                                <div className="text-sm">
-                                    <span className="font-medium">Waktu Mulai: </span>
-                                    {selectedSlot.waktu_mulai.slice(0, 5)}
-                                </div>
-                            </div>
-
-                            <div className="space-y-2">
-                                <Label htmlFor="mata_kuliah">
-                                    Mata Kuliah <span className="text-destructive">*</span>
-                                </Label>
-                                <Select
-                                    value={bookingForm.kelas_mata_kuliah_id}
-                                    onValueChange={(value) =>
-                                        setBookingForm({
-                                            ...bookingForm,
-                                            kelas_mata_kuliah_id: value,
-                                        })
-                                    }
-                                >
-                                    <SelectTrigger>
-                                        <SelectValue placeholder="Pilih Mata Kuliah" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        {myMatKuls.map((mk) => (
-                                            <SelectItem key={mk.id} value={String(mk.id)}>
-                                                {mk.nama} - {mk.kelas} ({mk.sks} SKS)
-                                            </SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
-                                <p className="text-xs text-muted-foreground">
-                                    Durasi booking akan disesuaikan dengan SKS mata kuliah
-                                </p>
-                            </div>
-
-                            <div className="space-y-2">
-                                <Label htmlFor="keperluan">
-                                    Keperluan <span className="text-destructive">*</span>
-                                </Label>
-                                <Input
-                                    id="keperluan"
-                                    placeholder="Misal: Praktikum, Remedial, dll"
-                                    value={bookingForm.keperluan}
-                                    onChange={(e) =>
-                                        setBookingForm({
-                                            ...bookingForm,
-                                            keperluan: e.target.value,
-                                        })
-                                    }
-                                />
-                            </div>
-
-                            <div className="space-y-2">
-                                <Label htmlFor="keterangan">Keterangan (Opsional)</Label>
-                                <Textarea
-                                    id="keterangan"
-                                    placeholder="Tambahkan keterangan jika diperlukan..."
-                                    rows={3}
-                                    value={bookingForm.keterangan}
-                                    onChange={(e) =>
-                                        setBookingForm({
-                                            ...bookingForm,
-                                            keterangan: e.target.value,
-                                        })
-                                    }
-                                />
-                            </div>
-                        </div>
-                    )}
-                    <DialogFooter>
-                        <Button
-                            variant="outline"
-                            onClick={() => setShowBookingDialog(false)}
-                        >
-                            Batal
-                        </Button>
-                        <Button
-                            onClick={handleSubmitBooking}
-                            disabled={!bookingForm.kelas_mata_kuliah_id || !bookingForm.keperluan.trim()}
-                        >
-                            Ajukan Booking
-                        </Button>
-                    </DialogFooter>
-                </DialogContent>
-            </Dialog>
         </AppLayout>
     );
 }

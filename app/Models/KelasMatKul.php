@@ -33,6 +33,6 @@ class KelasMatKul extends Model
     
     public function jadwalMaster(): HasMany
     {
-        return $this->hasMany(JadwalMaster::class);
+        return $this->hasMany(JadwalMaster::class, 'kelas_mata_kuliah_id');
     }
 }

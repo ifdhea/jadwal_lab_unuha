@@ -24,9 +24,10 @@ class BookingLaboratoriumController extends Controller
             'slotWaktuMulai',
             'slotWaktuSelesai',
             'diprosesOleh',
+            'kelasMatKul.mataKuliah',
+            'kelasMatKul.kelas',
         ]);
 
-        // Filter berdasarkan role
         if ($user->peran === 'dosen') {
             $dosen = Dosen::where('user_id', $user->id)->first();
             if ($dosen) {
@@ -34,12 +35,10 @@ class BookingLaboratoriumController extends Controller
             }
         }
 
-        // Filter status
         if ($request->filled('status') && $request->status !== 'all') {
             $query->where('status', $request->status);
         }
 
-        // Filter tanggal
         if ($request->filled('tanggal')) {
             $query->whereDate('tanggal', $request->tanggal);
         }
@@ -59,6 +58,11 @@ class BookingLaboratoriumController extends Controller
                             'nama' => $item->dosen->user ? $item->dosen->user->name : '-',
                             'nidn' => $item->dosen->nidn ?? '-',
                         ] : null,
+                        'mata_kuliah' => $item->kelasMatKul && $item->kelasMatKul->mataKuliah ? [
+                            'nama' => $item->kelasMatKul->mataKuliah->nama,
+                            'sks' => $item->kelasMatKul->mataKuliah->sks,
+                        ] : null,
+                        'kelas' => $item->kelasMatKul && $item->kelasMatKul->kelas ? $item->kelasMatKul->kelas->nama : null,
                         'laboratorium' => $item->laboratorium ? [
                             'id' => $item->laboratorium->id,
                             'nama' => $item->laboratorium->nama ?? '-',
@@ -84,7 +88,75 @@ class BookingLaboratoriumController extends Controller
                 'total' => $bookings->total(),
             ],
             'filters' => $request->only(['status', 'tanggal']),
-            'canApprove' => $user->peran === 'super_admin',
+            'canApprove' => $user->peran === 'super_admin' || $user->peran === 'admin',
+        ]);
+    }
+
+    public function adminIndex(Request $request)
+    {
+        $query = BookingLaboratorium::with([
+            'dosen.user',
+            'laboratorium.kampus',
+            'slotWaktuMulai',
+            'slotWaktuSelesai',
+            'diprosesOleh',
+            'kelasMatKul.mataKuliah',
+            'kelasMatKul.kelas',
+        ]);
+
+        if ($request->filled('status') && $request->status !== 'all') {
+            $query->where('status', $request->status);
+        }
+
+        if ($request->filled('tanggal')) {
+            $query->whereDate('tanggal', $request->tanggal);
+        }
+
+        $bookings = $query->orderBy('tanggal', 'desc')
+            ->orderBy('slot_waktu_mulai_id')
+            ->paginate(10)
+            ->withQueryString();
+
+        return Inertia::render('Admin/BookingLab/Index', [
+            'bookings' => [
+                'data' => $bookings->map(function ($item) {
+                    return [
+                        'id' => $item->id,
+                        'dosen' => $item->dosen ? [
+                            'id' => $item->dosen->id,
+                            'nama' => $item->dosen->user ? $item->dosen->user->name : '-',
+                            'nidn' => $item->dosen->nidn ?? '-',
+                        ] : null,
+                        'mata_kuliah' => $item->kelasMatKul && $item->kelasMatKul->mataKuliah ? [
+                            'nama' => $item->kelasMatKul->mataKuliah->nama,
+                            'sks' => $item->kelasMatKul->mataKuliah->sks,
+                        ] : null,
+                        'kelas' => $item->kelasMatKul && $item->kelasMatKul->kelas ? $item->kelasMatKul->kelas->nama : null,
+                        'laboratorium' => $item->laboratorium ? [
+                            'id' => $item->laboratorium->id,
+                            'nama' => $item->laboratorium->nama ?? '-',
+                            'kampus' => $item->laboratorium->kampus ? $item->laboratorium->kampus->nama : '-',
+                        ] : null,
+                        'tanggal' => $item->tanggal ?? '-',
+                        'waktu_mulai' => $item->slotWaktuMulai ? $item->slotWaktuMulai->waktu_mulai : '-',
+                        'waktu_selesai' => $item->slotWaktuSelesai ? $item->slotWaktuSelesai->waktu_selesai : '-',
+                        'durasi_slot' => $item->durasi_slot ?? 1,
+                        'keperluan' => $item->keperluan ?? '-',
+                        'keterangan' => $item->keterangan,
+                        'status' => $item->status ?? 'menunggu',
+                        'catatan_admin' => $item->catatan_admin,
+                        'diproses_oleh' => $item->diprosesOleh ? $item->diprosesOleh->name : null,
+                        'tanggal_diajukan' => $item->tanggal_diajukan ?? $item->created_at,
+                        'tanggal_diproses' => $item->tanggal_diproses,
+                    ];
+                })->values()->all(),
+                'links' => $bookings->linkCollection()->toArray(),
+                'current_page' => $bookings->currentPage(),
+                'last_page' => $bookings->lastPage(),
+                'per_page' => $bookings->perPage(),
+                'total' => $bookings->total(),
+            ],
+            'filters' => $request->only(['status', 'tanggal']),
         ]);
     }
 
@@ -205,33 +277,85 @@ class BookingLaboratoriumController extends Controller
         }
 
         $validated = $request->validate([
+            'kelas_mata_kuliah_id' => 'required|exists:kelas_mata_kuliah,id',
             'laboratorium_id' => 'required|exists:laboratorium,id',
             'tanggal' => 'required|date|after_or_equal:today',
             'slot_waktu_mulai_id' => 'required|exists:slot_waktu,id',
-            'slot_waktu_selesai_id' => 'required|exists:slot_waktu,id',
-            'durasi_slot' => 'required|integer|min:1|max:10',
             'keperluan' => 'required|string|max:200',
             'keterangan' => 'nullable|string|max:1000',
         ]);
 
-        // Validasi ketersediaan ulang
-        $availability = $this->checkAvailability($request);
-        $availabilityData = json_decode($availability->getContent(), true);
+        $kelasMatKul = \App\Models\KelasMatKul::with('mataKuliah')->find($validated['kelas_mata_kuliah_id']);
+        if (!$kelasMatKul) {
+            return redirect()->back()->withInput()->with('error', 'Kelas mata kuliah tidak ditemukan');
+        }
 
-        if (!$availabilityData['available']) {
-            return redirect()->back()->withInput()->with('error', $availabilityData['message']);
+        $sks = $kelasMatKul->mataKuliah->sks;
+        $durasiSlot = $sks;
+
+        $slotMulai = SlotWaktu::find($validated['slot_waktu_mulai_id']);
+        $slotSelesai = SlotWaktu::where('urutan', $slotMulai->urutan + $durasiSlot - 1)
+            ->where('is_aktif', true)
+            ->first();
+
+        if (!$slotSelesai) {
+            return redirect()->back()->withInput()->with('error', 'Durasi slot mata kuliah melebihi jadwal yang tersedia');
+        }
+
+        $tanggal = Carbon::parse($validated['tanggal']);
+        $hari = $this->getHariIndonesia($tanggal->dayOfWeek);
+
+        $jadwalBentrok = SesiJadwal::whereDate('tanggal', $tanggal)
+            ->whereHas('jadwalMaster', function ($query) use ($validated, $slotMulai, $slotSelesai, $hari) {
+                $query->where('laboratorium_id', $validated['laboratorium_id'])
+                    ->where('hari', $hari)
+                    ->where(function ($q) use ($slotMulai, $slotSelesai) {
+                        $q->where(function ($sq) use ($slotMulai, $slotSelesai) {
+                            $sq->whereRaw('slot_waktu_mulai_id BETWEEN ? AND ?', [$slotMulai->id, $slotSelesai->id])
+                               ->orWhereRaw('slot_waktu_selesai_id BETWEEN ? AND ?', [$slotMulai->id, $slotSelesai->id]);
+                        })->orWhere(function ($sq) use ($slotMulai, $slotSelesai) {
+                            $sq->where('slot_waktu_mulai_id', '<=', $slotMulai->id)
+                               ->where('slot_waktu_selesai_id', '>=', $slotSelesai->id);
+                        });
+                    });
+            })
+            ->where('status', 'terjadwal')
+            ->exists();
+
+        if ($jadwalBentrok) {
+            return redirect()->back()->withInput()->with('error', 'Lab sudah terpakai pada waktu tersebut (jadwal perkuliahan bentrok)');
+        }
+
+        $bookingBentrok = BookingLaboratorium::where('laboratorium_id', $validated['laboratorium_id'])
+            ->whereDate('tanggal', $tanggal)
+            ->whereIn('status', ['menunggu', 'disetujui'])
+            ->where(function ($q) use ($slotMulai, $slotSelesai) {
+                $q->where(function ($sq) use ($slotMulai, $slotSelesai) {
+                    $sq->whereRaw('slot_waktu_mulai_id BETWEEN ? AND ?', [$slotMulai->id, $slotSelesai->id])
+                       ->orWhereRaw('slot_waktu_selesai_id BETWEEN ? AND ?', [$slotMulai->id, $slotSelesai->id]);
+                })->orWhere(function ($sq) use ($slotMulai, $slotSelesai) {
+                    $sq->where('slot_waktu_mulai_id', '<=', $slotMulai->id)
+                       ->where('slot_waktu_selesai_id', '>=', $slotSelesai->id);
+                });
+            })
+            ->exists();
+
+        if ($bookingBentrok) {
+            return redirect()->back()->withInput()->with('error', 'Lab sudah dibooking pada waktu tersebut');
         }
 
         BookingLaboratorium::create([
             'dosen_id' => $dosen->id,
+            'kelas_mata_kuliah_id' => $validated['kelas_mata_kuliah_id'],
             'laboratorium_id' => $validated['laboratorium_id'],
             'tanggal' => $validated['tanggal'],
             'slot_waktu_mulai_id' => $validated['slot_waktu_mulai_id'],
-            'slot_waktu_selesai_id' => $validated['slot_waktu_selesai_id'],
-            'durasi_slot' => $validated['durasi_slot'],
+            'slot_waktu_selesai_id' => $slotSelesai->id,
+            'durasi_slot' => $durasiSlot,
             'keperluan' => $validated['keperluan'],
             'keterangan' => $validated['keterangan'],
             'status' => 'menunggu',
+            'tanggal_diajukan' => now(),
         ]);
 
         return redirect()->route('booking-lab.index')->with('success', 'Booking laboratorium berhasil diajukan');
@@ -260,7 +384,7 @@ class BookingLaboratoriumController extends Controller
             'tanggal_diproses' => now(),
         ]);
 
-        return redirect()->route('booking-lab.index')->with('success', 'Booking laboratorium disetujui');
+        return redirect()->route('admin.booking-lab.index')->with('success', 'Booking laboratorium disetujui');
     }
 
     public function reject(Request $request, BookingLaboratorium $bookingLab)
@@ -286,7 +410,7 @@ class BookingLaboratoriumController extends Controller
             'tanggal_diproses' => now(),
         ]);
 
-        return redirect()->route('booking-lab.index')->with('success', 'Booking laboratorium ditolak');
+        return redirect()->route('admin.booking-lab.index')->with('success', 'Booking laboratorium ditolak');
     }
 
     public function cancel(BookingLaboratorium $bookingLab)
@@ -330,7 +454,29 @@ class BookingLaboratoriumController extends Controller
      */
     public function calendar(Request $request)
     {
-        // Reuse logic dari JadwalController untuk consistency
+        $user = Auth::user();
+        $dosen = null;
+        $myMatKuls = [];
+
+        if ($user->peran === 'dosen') {
+            $dosen = Dosen::where('user_id', $user->id)->first();
+            if ($dosen) {
+                $myMatKuls = \App\Models\KelasMatKul::whereHas('jadwalMaster', function ($q) use ($dosen) {
+                    $q->where('dosen_id', $dosen->id);
+                })
+                ->with(['mataKuliah', 'kelas'])
+                ->get()
+                ->map(function ($km) {
+                    return [
+                        'id' => $km->id,
+                        'nama' => $km->mataKuliah->nama,
+                        'kelas' => $km->kelas->nama,
+                        'sks' => $km->mataKuliah->sks,
+                    ];
+                });
+            }
+        }
+
         $semesters = \App\Models\Semester::where('is_aktif', true)->get();
         $selectedSemesterId = $request->get('semester_id', $semesters->first()?->id);
         $selectedSemester = \App\Models\Semester::find($selectedSemesterId);
@@ -339,15 +485,11 @@ class BookingLaboratoriumController extends Controller
             return redirect()->route('dashboard')->with('error', 'Semester tidak ditemukan');
         }
 
-        // Get minggu list
         $totalMinggu = $selectedSemester->total_minggu ?? 20;
-        $mingguList = range(1, $totalMinggu);
         $selectedMinggu = $request->get('minggu', 1);
 
-        // Get kampus list
         $kampusList = \App\Models\Kampus::where('is_aktif', true)->get();
         
-        // Get hari dengan tanggal
         $tanggalMulai = Carbon::parse($selectedSemester->tanggal_mulai);
         $mingguStart = $tanggalMulai->copy()->addWeeks($selectedMinggu - 1)->startOfWeek();
         
@@ -361,10 +503,8 @@ class BookingLaboratoriumController extends Controller
             ];
         }
 
-        // Get slots
         $slots = SlotWaktu::where('is_aktif', true)->orderBy('urutan')->get();
 
-        // Get jadwal data (sama seperti JadwalController)
         $sesiJadwals = SesiJadwal::whereHas('jadwalMaster.kelasMatKul', function ($query) use ($selectedSemesterId) {
                 $query->where('semester_id', $selectedSemesterId);
             })
@@ -380,7 +520,6 @@ class BookingLaboratoriumController extends Controller
             ->get();
 
         $jadwalData = [];
-        $availableSlots = [];
         $hariMap = [
             'Senin' => 1,
             'Selasa' => 2,
@@ -394,90 +533,104 @@ class BookingLaboratoriumController extends Controller
             $master = $sesi->jadwalMaster;
             $kampusId = $master->laboratorium->kampus_id;
             $hariId = $hariMap[$master->hari] ?? null;
-            $slotId = $master->slot_waktu_mulai_id;
+            $slotMulaiId = $master->slot_waktu_mulai_id;
             $minggu = $sesi->pertemuan_ke;
 
             if ($hariId) {
-                if (!isset($jadwalData[$kampusId][$minggu][$hariId][$slotId])) {
-                    $jadwalData[$kampusId][$minggu][$hariId][$slotId] = [];
-                }
-                
-                // Cek apakah slot ini available untuk booking (status = tidak_masuk)
-                $isAvailable = ($sesi->status === 'tidak_masuk');
-                
-                $jadwalData[$kampusId][$minggu][$hariId][$slotId][] = [
-                    'sesi_jadwal_id' => $sesi->id,
-                    'matkul' => $master->kelasMatKul->mataKuliah->nama,
-                    'kelas' => $master->kelasMatKul->kelas->nama,
-                    'dosen' => $master->dosen->user->name,
-                    'lab' => $master->laboratorium->nama,
-                    'laboratorium_id' => $master->laboratorium_id,
-                    'sks' => $master->kelasMatKul->mataKuliah->sks,
-                    'durasi_slot' => $master->durasi_slot,
-                    'waktu_mulai' => $master->slotWaktuMulai->waktu_mulai,
-                    'waktu_selesai' => $master->slotWaktuSelesai->waktu_selesai,
-                    'status' => $sesi->status,
-                    'tanggal' => $sesi->tanggal->format('Y-m-d'),
-                    'is_available' => $isAvailable,
-                ];
+                for ($i = 0; $i < $master->durasi_slot; $i++) {
+                    $currentSlot = SlotWaktu::where('urutan', $master->slotWaktuMulai->urutan + $i)->first();
+                    if (!$currentSlot) continue;
 
-                // Track available slots
-                if ($isAvailable) {
-                    $availableSlots[] = [
-                        'kampus_id' => $kampusId,
-                        'hari_id' => $hariId,
-                        'slot_id' => $slotId,
-                        'lab_id' => $master->laboratorium_id,
+                    $slotId = $currentSlot->id;
+                    
+                    if (!isset($jadwalData[$kampusId][$minggu][$hariId][$slotId])) {
+                        $jadwalData[$kampusId][$minggu][$hariId][$slotId] = [];
+                    }
+
+                    $jadwalData[$kampusId][$minggu][$hariId][$slotId][] = [
+                        'sesi_jadwal_id' => $sesi->id,
+                        'matkul' => $master->kelasMatKul->mataKuliah->nama,
+                        'kelas' => $master->kelasMatKul->kelas->nama,
+                        'dosen' => $master->dosen->user->name,
+                        'lab' => $master->laboratorium->nama,
+                        'laboratorium_id' => $master->laboratorium_id,
+                        'sks' => $master->kelasMatKul->mataKuliah->sks,
+                        'durasi_slot' => $master->durasi_slot,
+                        'waktu_mulai' => $master->slotWaktuMulai->waktu_mulai,
+                        'waktu_selesai' => $master->slotWaktuSelesai->waktu_selesai,
+                        'status' => $sesi->status,
                         'tanggal' => $sesi->tanggal->format('Y-m-d'),
-                        'reason' => 'dosen_tidak_masuk',
+                        'slot_position' => $i,
+                        'is_first_slot' => $i === 0,
+                        'is_last_slot' => $i === ($master->durasi_slot - 1),
                     ];
                 }
             }
         }
 
-        // Get approved bookings untuk minggu ini
-        $bookings = BookingLaboratorium::where('status', 'disetujui')
+        $bookings = BookingLaboratorium::whereIn('status', ['disetujui', 'menunggu'])
             ->whereHas('laboratorium.kampus')
-            ->with(['dosen.user', 'laboratorium.kampus', 'slotWaktuMulai', 'slotWaktuSelesai'])
+            ->with(['dosen.user', 'laboratorium.kampus', 'slotWaktuMulai', 'slotWaktuSelesai', 'kelasMatKul.mataKuliah', 'kelasMatKul.kelas'])
             ->get();
 
-        $bookingData = [];
         foreach ($bookings as $booking) {
             $tanggal = Carbon::parse($booking->tanggal);
             $hariId = $hariMap[$this->getHariIndonesia($tanggal->dayOfWeek)] ?? null;
             
-            if ($hariId) {
-                $bookingData[] = [
-                    'id' => $booking->id,
-                    'kampus_id' => $booking->laboratorium->kampus_id,
-                    'hari_id' => $hariId,
-                    'slot_mulai_id' => $booking->slot_waktu_mulai_id,
-                    'slot_selesai_id' => $booking->slot_waktu_selesai_id,
-                    'lab_id' => $booking->laboratorium_id,
-                    'lab_nama' => $booking->laboratorium->nama,
-                    'dosen_nama' => $booking->dosen->user->name,
-                    'keperluan' => $booking->keperluan,
-                    'tanggal' => $booking->tanggal,
+            if (!$hariId) continue;
+
+            $kampusId = $booking->laboratorium->kampus_id;
+            $weekNumber = $tanggal->diffInWeeks($tanggalMulai) + 1;
+
+            if ($weekNumber != $selectedMinggu) continue;
+
+            for ($i = 0; $i < $booking->durasi_slot; $i++) {
+                $currentSlot = SlotWaktu::where('urutan', $booking->slotWaktuMulai->urutan + $i)->first();
+                if (!$currentSlot) continue;
+
+                $slotId = $currentSlot->id;
+
+                if (!isset($jadwalData[$kampusId][$selectedMinggu][$hariId][$slotId])) {
+                    $jadwalData[$kampusId][$selectedMinggu][$hariId][$slotId] = [];
+                }
+
+                $jadwalData[$kampusId][$selectedMinggu][$hariId][$slotId][] = [
+                    'booking_id' => $booking->id,
+                    'matkul' => $booking->kelasMatKul ? $booking->kelasMatKul->mataKuliah->nama : '-',
+                    'kelas' => $booking->kelasMatKul ? $booking->kelasMatKul->kelas->nama : '-',
+                    'dosen' => $booking->dosen->user->name,
+                    'lab' => $booking->laboratorium->nama,
+                    'laboratorium_id' => $booking->laboratorium_id,
+                    'sks' => $booking->kelasMatKul ? $booking->kelasMatKul->mataKuliah->sks : $booking->durasi_slot,
+                    'durasi_slot' => $booking->durasi_slot,
                     'waktu_mulai' => $booking->slotWaktuMulai->waktu_mulai,
                     'waktu_selesai' => $booking->slotWaktuSelesai->waktu_selesai,
+                    'status' => 'booking_' . $booking->status,
+                    'keperluan' => $booking->keperluan,
+                    'tanggal' => $booking->tanggal,
+                    'slot_position' => $i,
+                    'is_first_slot' => $i === 0,
+                    'is_last_slot' => $i === ($booking->durasi_slot - 1),
                 ];
             }
         }
 
-        // Get my bookings untuk tab request
-        $user = Auth::user();
-        $dosen = Dosen::where('user_id', $user->id)->first();
         $myBookings = [];
         
         if ($dosen) {
             $myBookings = BookingLaboratorium::where('dosen_id', $dosen->id)
-                ->with(['laboratorium.kampus', 'slotWaktuMulai', 'slotWaktuSelesai'])
+                ->with(['laboratorium.kampus', 'slotWaktuMulai', 'slotWaktuSelesai', 'kelasMatKul.mataKuliah', 'kelasMatKul.kelas'])
                 ->whereIn('status', ['menunggu', 'disetujui', 'ditolak'])
                 ->orderBy('tanggal', 'desc')
                 ->get()
                 ->map(function ($booking) {
                     return [
                         'id' => $booking->id,
+                        'mata_kuliah' => $booking->kelasMatKul ? [
+                            'nama' => $booking->kelasMatKul->mataKuliah->nama,
+                            'sks' => $booking->kelasMatKul->mataKuliah->sks,
+                        ] : null,
+                        'kelas' => $booking->kelasMatKul ? $booking->kelasMatKul->kelas->nama : null,
                         'laboratorium' => [
                             'id' => $booking->laboratorium->id,
                             'nama' => $booking->laboratorium->nama,
@@ -497,7 +650,7 @@ class BookingLaboratoriumController extends Controller
         $mingguData = [];
         foreach (range(1, $totalMinggu) as $m) {
             $start = $tanggalMulai->copy()->addWeeks($m - 1)->startOfWeek();
-            $end = $start->copy()->endOfWeek()->subDay(); // Sampai sabtu
+            $end = $start->copy()->endOfWeek()->subDay();
             $mingguData[] = [
                 'nomor' => $m,
                 'tanggal_mulai' => $start->format('Y-m-d'),
@@ -515,10 +668,10 @@ class BookingLaboratoriumController extends Controller
             'slots' => $slots,
             'jadwalData' => $jadwalData,
             'myBookings' => $myBookings,
+            'myMatKuls' => $myMatKuls,
             'breadcrumbs' => [
                 ['title' => 'Dashboard', 'href' => '/dashboard'],
                 ['title' => 'Booking Lab', 'href' => '/booking-lab'],
-                ['title' => 'Kalender', 'href' => '/booking-lab/calendar'],
             ],
         ]);
     }

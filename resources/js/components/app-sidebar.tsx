@@ -65,7 +65,7 @@ export function AppSidebar() {
         },
         {
             title: 'Booking Lab',
-            href: '/booking-lab',
+            href: '/admin/booking-lab',
             icon: Building2,
         },
         {

@@ -52,6 +52,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     // Booking Laboratorium
     Route::middleware(['peran:dosen,super_admin,admin'])->group(function () {
         Route::get('/booking-lab', [BookingLaboratoriumController::class, 'calendar'])->name('booking-lab.index');
+        Route::get('/booking-lab/calendar', [BookingLaboratoriumController::class, 'calendar'])->name('booking-lab.calendar');
         Route::get('/booking-lab/requests', [BookingLaboratoriumController::class, 'index'])->name('booking-lab.requests');
         Route::get('/booking-lab/create', [BookingLaboratoriumController::class, 'create'])->name('booking-lab.create');
         Route::post('/booking-lab', [BookingLaboratoriumController::class, 'store'])->name('booking-lab.store');
@@ -61,6 +62,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     // Approve/Reject Booking - Admin only
     Route::middleware(['peran:super_admin,admin'])->group(function () {
+        Route::get('/admin/booking-lab', [BookingLaboratoriumController::class, 'adminIndex'])->name('admin.booking-lab.index');
         Route::post('/booking-lab/{bookingLab}/approve', [BookingLaboratoriumController::class, 'approve'])->name('booking-lab.approve');
         Route::post('/booking-lab/{bookingLab}/reject', [BookingLaboratoriumController::class, 'reject'])->name('booking-lab.reject');
         

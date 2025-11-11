@@ -15,6 +15,7 @@ class TukarJadwal extends Model
         'mitra_id',
         'sesi_jadwal_mitra_id',
         'status',
+        'jenis',
         'alasan_pemohon',
         'alasan_penolakan',
         'tanggal_diajukan',
