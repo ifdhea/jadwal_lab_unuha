@@ -97,8 +97,11 @@ export default function Index({
     // Cek apakah hari adalah hari ini
     const isToday = (tanggal?: string) => {
         if (!tanggal) return false;
-        const today = new Date().toISOString().split('T')[0];
-        return tanggal === today;
+        const now = new Date();
+        const offset = 7 * 60;
+        const wibTime = new Date(now.getTime() + offset * 60 * 1000);
+        const todayString = wibTime.toISOString().split('T')[0];
+        return tanggal === todayString;
     };
 
     const handleSemesterChange = (semesterId: string) => {

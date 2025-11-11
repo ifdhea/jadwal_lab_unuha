@@ -147,9 +147,9 @@ export default function Calendar({
     // Cek apakah hari adalah hari ini (GMT+7 Jakarta)
     const isToday = (tanggal?: string) => {
         if (!tanggal) return false;
-        // Gunakan waktu server Indonesia (WIB)
         const now = new Date();
-        const wibTime = new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Jakarta' }));
+        const offset = 7 * 60;
+        const wibTime = new Date(now.getTime() + offset * 60 * 1000);
         const todayString = wibTime.toISOString().split('T')[0];
         return tanggal === todayString;
     };
@@ -180,7 +180,8 @@ export default function Calendar({
         waktuMulai: string,
     ) => {
         const now = new Date();
-        const wibTime = new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Jakarta' }));
+        const offset = 7 * 60;
+        const wibTime = new Date(now.getTime() + offset * 60 * 1000);
         wibTime.setHours(0, 0, 0, 0);
         
         const selectedDate = new Date(tanggal + 'T00:00:00');

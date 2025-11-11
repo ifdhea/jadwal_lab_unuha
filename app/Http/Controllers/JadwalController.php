@@ -51,10 +51,12 @@ class JadwalController extends Controller
             $tanggalMulai = Carbon::parse($semester->tanggal_mulai);
             
             for ($i = 1; $i <= $totalMinggu; $i++) {
+                $start = $tanggalMulai->copy()->addWeeks($i - 1)->startOfWeek(Carbon::MONDAY);
+                $end = $start->copy()->addDays(5); // Senin + 5 hari = Sabtu
                 $mingguList[] = [
                     'nomor' => $i,
-                    'tanggal_mulai' => $tanggalMulai->copy()->addWeeks($i - 1)->format('Y-m-d'),
-                    'tanggal_selesai' => $tanggalMulai->copy()->addWeeks($i - 1)->addDays(6)->format('Y-m-d'),
+                    'tanggal_mulai' => $start->format('Y-m-d'),
+                    'tanggal_selesai' => $end->format('Y-m-d'),
                 ];
             }
         }
@@ -62,7 +64,7 @@ class JadwalController extends Controller
         // Generate hari dengan tanggal untuk minggu yang dipilih
         $hari = [];
         if ($tanggalMulai) {
-            $mingguStart = $tanggalMulai->copy()->addWeeks($selectedMinggu - 1)->startOfWeek();
+            $mingguStart = $tanggalMulai->copy()->addWeeks($selectedMinggu - 1)->startOfWeek(Carbon::MONDAY);
             foreach ([1 => 'Senin', 2 => 'Selasa', 3 => 'Rabu', 4 => 'Kamis', 5 => 'Jumat', 6 => 'Sabtu'] as $id => $nama) {
                 $tanggalHari = $mingguStart->copy()->addDays($id - 1);
                 $hari[] = [

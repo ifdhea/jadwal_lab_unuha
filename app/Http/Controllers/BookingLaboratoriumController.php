@@ -491,7 +491,7 @@ class BookingLaboratoriumController extends Controller
         $kampusList = \App\Models\Kampus::where('is_aktif', true)->get();
         
         $tanggalMulai = Carbon::parse($selectedSemester->tanggal_mulai);
-        $mingguStart = $tanggalMulai->copy()->addWeeks($selectedMinggu - 1)->startOfWeek();
+        $mingguStart = $tanggalMulai->copy()->addWeeks($selectedMinggu - 1)->startOfWeek(Carbon::MONDAY);
         
         $hari = [];
         foreach ([1 => 'Senin', 2 => 'Selasa', 3 => 'Rabu', 4 => 'Kamis', 5 => 'Jumat', 6 => 'Sabtu'] as $id => $nama) {
@@ -580,9 +580,12 @@ class BookingLaboratoriumController extends Controller
             if (!$hariId) continue;
 
             $kampusId = $booking->laboratorium->kampus_id;
-            $weekNumber = $tanggal->diffInWeeks($tanggalMulai) + 1;
-
-            if ($weekNumber != $selectedMinggu) continue;
+            
+            // Cek apakah tanggal booking ada di minggu yang dipilih
+            $weekStart = $mingguStart->copy();
+            $weekEnd = $mingguStart->copy()->addDays(5); // Senin - Sabtu
+            
+            if ($tanggal->lt($weekStart) || $tanggal->gt($weekEnd)) continue;
 
             for ($i = 0; $i < $booking->durasi_slot; $i++) {
                 $currentSlot = SlotWaktu::where('urutan', $booking->slotWaktuMulai->urutan + $i)->first();
@@ -649,8 +652,8 @@ class BookingLaboratoriumController extends Controller
 
         $mingguData = [];
         foreach (range(1, $totalMinggu) as $m) {
-            $start = $tanggalMulai->copy()->addWeeks($m - 1)->startOfWeek();
-            $end = $start->copy()->endOfWeek()->subDay();
+            $start = $tanggalMulai->copy()->addWeeks($m - 1)->startOfWeek(Carbon::MONDAY);
+            $end = $start->copy()->addDays(5); // Senin + 5 hari = Sabtu
             $mingguData[] = [
                 'nomor' => $m,
                 'tanggal_mulai' => $start->format('Y-m-d'),
