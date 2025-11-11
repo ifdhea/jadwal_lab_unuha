@@ -49,7 +49,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     // Booking Laboratorium
     Route::middleware(['peran:dosen,super_admin,admin'])->group(function () {
-        Route::get('/booking-lab', [BookingLaboratoriumController::class, 'index'])->name('booking-lab.index');
+        Route::get('/booking-lab', [BookingLaboratoriumController::class, 'calendar'])->name('booking-lab.index');
+        Route::get('/booking-lab/requests', [BookingLaboratoriumController::class, 'index'])->name('booking-lab.requests');
         Route::get('/booking-lab/create', [BookingLaboratoriumController::class, 'create'])->name('booking-lab.create');
         Route::post('/booking-lab', [BookingLaboratoriumController::class, 'store'])->name('booking-lab.store');
         Route::post('/booking-lab/check-availability', [BookingLaboratoriumController::class, 'checkAvailability'])->name('booking-lab.check-availability');

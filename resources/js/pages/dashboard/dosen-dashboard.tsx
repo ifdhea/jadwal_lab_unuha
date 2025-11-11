@@ -47,6 +47,7 @@ interface SemesterAktif {
 interface DosenDashboardProps {
     dosen: Dosen;
     stats: Stats;
+    jadwalHariIni: JadwalItem[];
     jadwalMingguIni: JadwalItem[];
     jadwalBulanIni: JadwalItem[];
     semesterAktif: SemesterAktif | null;
@@ -56,6 +57,7 @@ interface DosenDashboardProps {
 export default function DosenDashboard({
     dosen,
     stats,
+    jadwalHariIni,
     jadwalMingguIni,
     jadwalBulanIni,
     semesterAktif,
@@ -179,6 +181,65 @@ export default function DosenDashboard({
                     </CardContent>
                 </Card>
             </div>
+
+            {/* Jadwal Hari Ini - PRIORITAS */}
+            <Card className="border-primary/50 bg-primary/5">
+                <CardHeader>
+                    <CardTitle className="flex items-center gap-2 text-primary">
+                        <Calendar className="h-5 w-5" />
+                        Jadwal Hari Ini
+                    </CardTitle>
+                    <CardDescription>
+                        {jadwalHariIni.length > 0
+                            ? `${jadwalHariIni.length} pertemuan hari ini`
+                            : 'Tidak ada jadwal hari ini'}
+                    </CardDescription>
+                </CardHeader>
+                <CardContent>
+                    {jadwalHariIni.length > 0 ? (
+                        <div className="space-y-3">
+                            {jadwalHariIni.map((jadwal) => (
+                                <div
+                                    key={jadwal.id}
+                                    className="flex items-start justify-between rounded-lg border-2 border-primary/20 bg-background p-4 hover:border-primary/40 hover:bg-accent/50"
+                                >
+                                    <div className="flex flex-col gap-2">
+                                        <div className="text-lg font-semibold text-primary">
+                                            {jadwal.mata_kuliah}
+                                        </div>
+                                        <div className="text-sm font-medium text-foreground">
+                                            {jadwal.kelas}
+                                        </div>
+                                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                                            <Building2 className="h-4 w-4" />
+                                            {jadwal.laboratorium} ({jadwal.kampus})
+                                        </div>
+                                    </div>
+                                    <div className="flex flex-col items-end gap-2">
+                                        <span className="text-lg font-bold text-primary">
+                                            {jadwal.waktu_mulai} - {jadwal.waktu_selesai}
+                                        </span>
+                                        {getStatusBadge(jadwal.status)}
+                                        <span className="text-sm font-medium text-muted-foreground">
+                                            Pertemuan ke-{jadwal.pertemuan_ke}
+                                        </span>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    ) : (
+                        <div className="py-8 text-center">
+                            <Calendar className="mx-auto h-12 w-12 text-muted-foreground/50" />
+                            <p className="mt-2 text-sm font-medium text-muted-foreground">
+                                Tidak ada jadwal untuk hari ini.
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                                Nikmati waktu luang Anda!
+                            </p>
+                        </div>
+                    )}
+                </CardContent>
+            </Card>
 
             {/* Jadwal Minggu Ini */}
             <Card>

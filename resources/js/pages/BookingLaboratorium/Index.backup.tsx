@@ -55,40 +55,25 @@ interface Booking {
 }
 
 interface PageProps {
-    bookings?: {
+    bookings: {
         data: Booking[];
         links: any[];
         current_page: number;
         last_page: number;
-    } | any[];
-    filters?: {
+    };
+    filters: {
         status?: string;
         tanggal?: string;
     };
-    canApprove?: boolean;
-    semesters?: any[];
-    selectedSemesterId?: number;
-    kampusList?: any[];
-    mingguList?: number[];
-    selectedMinggu?: number;
-    hari?: Record<number, string>;
-    slots?: any[];
-    jadwalData?: any;
-    availableSlots?: any[];
-    breadcrumbs?: BreadcrumbItem[];
+    canApprove: boolean;
 }
 
-const defaultBreadcrumbs: BreadcrumbItem[] = [
+const breadcrumbs: BreadcrumbItem[] = [
     { title: 'Dashboard', href: '/dashboard' },
     { title: 'Booking Lab', href: '/booking-lab' },
 ];
 
-export default function Index({ 
-    bookings, 
-    filters = {}, 
-    canApprove = false,
-    breadcrumbs = defaultBreadcrumbs
-}: PageProps) {
+export default function Index({ bookings, filters, canApprove }: PageProps) {
     const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
     const [showApproveDialog, setShowApproveDialog] = useState(false);
     const [showRejectDialog, setShowRejectDialog] = useState(false);
@@ -252,13 +237,13 @@ export default function Index({
                     <CardHeader>
                         <CardTitle>Daftar Booking</CardTitle>
                         <CardDescription>
-                            {(Array.isArray(bookings) ? bookings : bookings?.data || []).length} booking ditemukan
+                            {bookings.data.length} booking ditemukan
                         </CardDescription>
                     </CardHeader>
                     <CardContent>
-                        {(Array.isArray(bookings) ? bookings : bookings?.data || []).length > 0 ? (
+                        {bookings.data.length > 0 ? (
                             <div className="space-y-4">
-                                {(Array.isArray(bookings) ? bookings : bookings?.data || []).map((booking: any) => (
+                                {bookings.data.map((booking) => (
                                     <div
                                         key={booking.id}
                                         className="rounded-lg border p-4 hover:bg-accent/50"

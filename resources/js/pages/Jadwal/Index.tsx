@@ -46,6 +46,7 @@ interface Slot {
     waktu_selesai: string;
 }
 interface JadwalCell {
+    sesi_jadwal_id: number;
     matkul: string;
     kelas: string;
     dosen: string;
@@ -55,6 +56,9 @@ interface JadwalCell {
     waktu_mulai: string;
     waktu_selesai: string;
     status: string;
+    is_my_schedule: boolean;
+    tanggal: string;
+    is_past: boolean;
 }
 type JadwalData = Record<
     number,
@@ -402,6 +406,8 @@ export default function Index({
                                                                                                                     return 'default';
                                                                                                                 case 'selesai':
                                                                                                                     return 'secondary';
+                                                                                                                case 'tidak_masuk':
+                                                                                                                    return 'outline';
                                                                                                                 case 'dibatalkan':
                                                                                                                     return 'destructive';
                                                                                                                 default:
@@ -605,11 +611,51 @@ export default function Index({
                                                                                                                     )}
                                                                                                                     className="px-1.5 py-0.5 text-xs font-medium"
                                                                                                                 >
-                                                                                                                    {
-                                                                                                                        cell.status
-                                                                                                                    }
+                                                                                                                    {cell.status === 'terjadwal' ? 'Terjadwal' : 
+                                                                                                                     cell.status === 'selesai' ? 'Selesai' :
+                                                                                                                     cell.status === 'tidak_masuk' ? 'Tidak Masuk' :
+                                                                                                                     cell.status === 'dibatalkan' ? 'Dibatalkan' : cell.status}
                                                                                                                 </Badge>
                                                                                                             </div>
+
+                                                                                                            {/* Button Tidak Masuk (hanya untuk dosen pemilik jadwal) */}
+                                                                                                            {cell.is_my_schedule && !cell.is_past && cell.status === 'terjadwal' && (
+                                                                                                                <div className="mt-2">
+                                                                                                                    <Button
+                                                                                                                        variant="outline"
+                                                                                                                        size="sm"
+                                                                                                                        className="w-full text-xs h-7"
+                                                                                                                        onClick={() => {
+                                                                                                                            if (confirm('Tandai jadwal ini sebagai "Tidak Masuk"?')) {
+                                                                                                                                router.post(`/sesi-jadwal/${cell.sesi_jadwal_id}/update-status`, {
+                                                                                                                                    status: 'tidak_masuk',
+                                                                                                                                    catatan: null,
+                                                                                                                                });
+                                                                                                                            }
+                                                                                                                        }}
+                                                                                                                    >
+                                                                                                                        Tidak Masuk
+                                                                                                                    </Button>
+                                                                                                                </div>
+                                                                                                            )}
+
+                                                                                                            {/* Button Reset Status */}
+                                                                                                            {cell.is_my_schedule && !cell.is_past && cell.status === 'tidak_masuk' && (
+                                                                                                                <div className="mt-2">
+                                                                                                                    <Button
+                                                                                                                        variant="default"
+                                                                                                                        size="sm"
+                                                                                                                        className="w-full text-xs h-7"
+                                                                                                                        onClick={() => {
+                                                                                                                            if (confirm('Kembalikan status ke "Terjadwal"?')) {
+                                                                                                                                router.post(`/sesi-jadwal/${cell.sesi_jadwal_id}/reset-status`);
+                                                                                                                            }
+                                                                                                                        }}
+                                                                                                                    >
+                                                                                                                        Reset Status
+                                                                                                                    </Button>
+                                                                                                                </div>
+                                                                                                            )}
                                                                                                         </div>
                                                                                                     );
                                                                                                 },

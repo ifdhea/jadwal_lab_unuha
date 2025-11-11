@@ -109,7 +109,15 @@ class JadwalController extends Controller
                     $jadwalData[$kampusId][$minggu][$hariId][$slotId] = [];
                 }
                 
+                // Cek apakah user adalah dosen pemilik jadwal ini
+                $user = $request->user();
+                $isMySchedule = false;
+                if ($user && $user->peran === 'dosen' && $user->dosen) {
+                    $isMySchedule = ($master->dosen_id === $user->dosen->id);
+                }
+                
                 $jadwalData[$kampusId][$minggu][$hariId][$slotId][] = [
+                    'sesi_jadwal_id' => $sesi->id,
                     'matkul' => $master->kelasMatKul->mataKuliah->nama,
                     'kelas' => $master->kelasMatKul->kelas->nama,
                     'dosen' => $master->dosen->user->name,
@@ -118,7 +126,10 @@ class JadwalController extends Controller
                     'durasi_slot' => $master->durasi_slot,
                     'waktu_mulai' => $master->slotWaktuMulai->waktu_mulai,
                     'waktu_selesai' => $master->slotWaktuSelesai->waktu_selesai,
-                    'status' => $sesi->status, // Tambahkan status dari sesi_jadwal
+                    'status' => $sesi->status,
+                    'is_my_schedule' => $isMySchedule,
+                    'tanggal' => $sesi->tanggal->format('Y-m-d'),
+                    'is_past' => $sesi->tanggal->isPast() && !$sesi->tanggal->isToday(),
                 ];
             }
         }

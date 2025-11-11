@@ -193,6 +193,36 @@ class DashboardController extends Controller
                 ->where('status', 'selesai')
                 ->count();
 
+            // Jadwal Hari Ini
+            $jadwalHariIni = SesiJadwal::whereIn('jadwal_master_id', $jadwalMasterIds)
+                ->whereDate('tanggal', Carbon::today())
+                ->with([
+                    'jadwalMaster.laboratorium.kampus',
+                    'jadwalMaster.kelasMatKul.kelas',
+                    'jadwalMaster.kelasMatKul.mataKuliah',
+                    'jadwalMaster.slotWaktuMulai',
+                    'jadwalMaster.slotWaktuSelesai'
+                ])
+                ->get()
+                ->map(function ($sesi) {
+                    $master = $sesi->jadwalMaster;
+                    return [
+                        'id' => $sesi->id,
+                        'tanggal' => $sesi->tanggal,
+                        'hari' => $master->hari,
+                        'mata_kuliah' => $master->kelasMatKul->mataKuliah->nama,
+                        'kelas' => $master->kelasMatKul->kelas->nama,
+                        'laboratorium' => $master->laboratorium->nama,
+                        'kampus' => $master->laboratorium->kampus->nama,
+                        'waktu_mulai' => $master->slotWaktuMulai->waktu_mulai,
+                        'waktu_selesai' => $master->slotWaktuSelesai->waktu_selesai,
+                        'status' => $sesi->status,
+                        'pertemuan_ke' => $sesi->pertemuan_ke,
+                    ];
+                })
+                ->sortBy('waktu_mulai')
+                ->values();
+
             // Jadwal Minggu Ini
             $startOfWeek = Carbon::now()->startOfWeek();
             $endOfWeek = Carbon::now()->endOfWeek();
@@ -258,6 +288,8 @@ class DashboardController extends Controller
                 })
                 ->sortBy('tanggal')
                 ->values();
+        } else {
+            $jadwalHariIni = [];
         }
 
         return Inertia::render('dashboard', [
@@ -274,6 +306,7 @@ class DashboardController extends Controller
                 'nama' => $semesterAktif->nama,
             ] : null,
             'stats' => $stats,
+            'jadwalHariIni' => $jadwalHariIni,
             'jadwalMingguIni' => $jadwalMingguIni,
             'jadwalBulanIni' => $jadwalBulanIni,
         ]);
