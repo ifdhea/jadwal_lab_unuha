@@ -300,4 +300,238 @@ class TukarJadwalController extends Controller
 
         return redirect()->route('tukar-jadwal.index')->with('success', 'Permintaan tukar jadwal dibatalkan');
     }
+
+    public function calendar(Request $request)
+    {
+        $user = Auth::user();
+        $dosen = Dosen::where('user_id', $user->id)->first();
+
+        if (!$dosen) {
+            return redirect()->route('dashboard')->with('error', 'Data dosen tidak ditemukan');
+        }
+
+        // Reuse logic dari JadwalController
+        $semesters = \App\Models\Semester::where('is_aktif', true)->get();
+        $selectedSemesterId = $request->get('semester_id', $semesters->first()?->id);
+        $selectedSemester = \App\Models\Semester::find($selectedSemesterId);
+        
+        if (!$selectedSemester) {
+            return redirect()->route('dashboard')->with('error', 'Semester tidak ditemukan');
+        }
+
+        $totalMinggu = $selectedSemester->total_minggu ?? 20;
+        $selectedMinggu = $request->get('minggu', 1);
+
+        $kampusList = \App\Models\Kampus::where('is_aktif', true)->get();
+        
+        // Generate hari dengan tanggal
+        $tanggalMulai = Carbon::parse($selectedSemester->tanggal_mulai);
+        $mingguStart = $tanggalMulai->copy()->addWeeks($selectedMinggu - 1)->startOfWeek();
+        
+        $hari = [];
+        foreach ([1 => 'Senin', 2 => 'Selasa', 3 => 'Rabu', 4 => 'Kamis', 5 => 'Jumat', 6 => 'Sabtu'] as $id => $nama) {
+            $tanggalHari = $mingguStart->copy()->addDays($id - 1);
+            $hari[] = [
+                'id' => $id,
+                'nama' => $nama,
+                'tanggal' => $tanggalHari->format('Y-m-d'),
+            ];
+        }
+
+        $slots = \App\Models\SlotWaktu::where('is_aktif', true)->orderBy('urutan')->get();
+
+        // Get jadwal data
+        $sesiJadwals = SesiJadwal::whereHas('jadwalMaster.kelasMatKul', function ($query) use ($selectedSemesterId) {
+                $query->where('semester_id', $selectedSemesterId);
+            })
+            ->where('pertemuan_ke', $selectedMinggu)
+            ->with([
+                'jadwalMaster.laboratorium.kampus',
+                'jadwalMaster.dosen.user',
+                'jadwalMaster.kelasMatKul.kelas',
+                'jadwalMaster.kelasMatKul.mataKuliah',
+                'jadwalMaster.slotWaktuMulai',
+                'jadwalMaster.slotWaktuSelesai'
+            ])
+            ->get();
+
+        $jadwalData = [];
+        $hariMap = [
+            'Senin' => 1,
+            'Selasa' => 2,
+            'Rabu' => 3,
+            'Kamis' => 4,
+            'Jumat' => 5,
+            'Sabtu' => 6,
+        ];
+
+        foreach ($sesiJadwals as $sesi) {
+            $master = $sesi->jadwalMaster;
+            $kampusId = $master->laboratorium->kampus_id;
+            $hariId = $hariMap[$master->hari] ?? null;
+            $slotId = $master->slot_waktu_mulai_id;
+            $minggu = $sesi->pertemuan_ke;
+
+            if ($hariId) {
+                if (!isset($jadwalData[$kampusId][$minggu][$hariId][$slotId])) {
+                    $jadwalData[$kampusId][$minggu][$hariId][$slotId] = [];
+                }
+                
+                $isMySchedule = $master->dosen_id === $dosen->id;
+                $isPast = $sesi->tanggal->isPast();
+                
+                $jadwalData[$kampusId][$minggu][$hariId][$slotId][] = [
+                    'sesi_jadwal_id' => $sesi->id,
+                    'matkul' => $master->kelasMatKul->mataKuliah->nama,
+                    'kelas' => $master->kelasMatKul->kelas->nama,
+                    'dosen' => $master->dosen->user->name,
+                    'dosen_id' => $master->dosen->id,
+                    'lab' => $master->laboratorium->nama,
+                    'laboratorium_id' => $master->laboratorium_id,
+                    'sks' => $master->kelasMatKul->mataKuliah->sks,
+                    'durasi_slot' => $master->durasi_slot,
+                    'waktu_mulai' => $master->slotWaktuMulai->waktu_mulai,
+                    'waktu_selesai' => $master->slotWaktuSelesai->waktu_selesai,
+                    'status' => $sesi->status,
+                    'tanggal' => $sesi->tanggal->format('Y-m-d'),
+                    'is_my_schedule' => $isMySchedule,
+                    'is_past' => $isPast,
+                ];
+            }
+        }
+
+        // Get my requests (request keluar)
+        $myRequests = TukarJadwal::where('pemohon_id', $dosen->id)
+            ->with([
+                'pemohon.user',
+                'mitra.user',
+                'sesiJadwalPemohon.jadwalMaster.kelasMatKul.mataKuliah',
+                'sesiJadwalPemohon.jadwalMaster.laboratorium',
+                'sesiJadwalMitra.jadwalMaster.kelasMatKul.mataKuliah',
+                'sesiJadwalMitra.jadwalMaster.laboratorium',
+            ])
+            ->whereIn('status', ['menunggu', 'disetujui', 'ditolak'])
+            ->orderBy('created_at', 'desc')
+            ->get()
+            ->map(function ($item) use ($dosen) {
+                return [
+                    'id' => $item->id,
+                    'pemohon' => [
+                        'id' => $item->pemohon->id,
+                        'nama' => $item->pemohon->user->name,
+                    ],
+                    'sesi_pemohon' => [
+                        'id' => $item->sesiJadwalPemohon->id,
+                        'mata_kuliah' => $item->sesiJadwalPemohon->jadwalMaster->kelasMatKul->mataKuliah->nama,
+                        'tanggal' => $item->sesiJadwalPemohon->tanggal,
+                        'hari' => $item->sesiJadwalPemohon->jadwalMaster->hari,
+                        'laboratorium' => $item->sesiJadwalPemohon->jadwalMaster->laboratorium->nama,
+                        'waktu_mulai' => $item->sesiJadwalPemohon->jadwalMaster->slotWaktuMulai->waktu_mulai,
+                        'waktu_selesai' => $item->sesiJadwalPemohon->jadwalMaster->slotWaktuSelesai->waktu_selesai,
+                    ],
+                    'mitra' => $item->mitra ? [
+                        'id' => $item->mitra->id,
+                        'nama' => $item->mitra->user->name,
+                    ] : null,
+                    'sesi_mitra' => $item->sesiJadwalMitra ? [
+                        'id' => $item->sesiJadwalMitra->id,
+                        'mata_kuliah' => $item->sesiJadwalMitra->jadwalMaster->kelasMatKul->mataKuliah->nama,
+                        'tanggal' => $item->sesiJadwalMitra->tanggal,
+                        'hari' => $item->sesiJadwalMitra->jadwalMaster->hari,
+                        'laboratorium' => $item->sesiJadwalMitra->jadwalMaster->laboratorium->nama,
+                        'waktu_mulai' => $item->sesiJadwalMitra->jadwalMaster->slotWaktuMulai->waktu_mulai,
+                        'waktu_selesai' => $item->sesiJadwalMitra->jadwalMaster->slotWaktuSelesai->waktu_selesai,
+                    ] : null,
+                    'status' => $item->status,
+                    'alasan_pemohon' => $item->alasan_pemohon,
+                    'alasan_penolakan' => $item->alasan_penolakan,
+                    'tanggal_diajukan' => $item->tanggal_diajukan,
+                    'tanggal_diproses' => $item->tanggal_diproses,
+                    'is_pemohon' => true,
+                    'is_mitra' => false,
+                ];
+            });
+
+        // Get incoming requests (request masuk)
+        $incomingRequests = TukarJadwal::where('mitra_id', $dosen->id)
+            ->with([
+                'pemohon.user',
+                'mitra.user',
+                'sesiJadwalPemohon.jadwalMaster.kelasMatKul.mataKuliah',
+                'sesiJadwalPemohon.jadwalMaster.laboratorium',
+                'sesiJadwalMitra.jadwalMaster.kelasMatKul.mataKuliah',
+                'sesiJadwalMitra.jadwalMaster.laboratorium',
+            ])
+            ->whereIn('status', ['menunggu', 'disetujui', 'ditolak'])
+            ->orderBy('created_at', 'desc')
+            ->get()
+            ->map(function ($item) use ($dosen) {
+                return [
+                    'id' => $item->id,
+                    'pemohon' => [
+                        'id' => $item->pemohon->id,
+                        'nama' => $item->pemohon->user->name,
+                    ],
+                    'sesi_pemohon' => [
+                        'id' => $item->sesiJadwalPemohon->id,
+                        'mata_kuliah' => $item->sesiJadwalPemohon->jadwalMaster->kelasMatKul->mataKuliah->nama,
+                        'tanggal' => $item->sesiJadwalPemohon->tanggal,
+                        'hari' => $item->sesiJadwalPemohon->jadwalMaster->hari,
+                        'laboratorium' => $item->sesiJadwalPemohon->jadwalMaster->laboratorium->nama,
+                        'waktu_mulai' => $item->sesiJadwalPemohon->jadwalMaster->slotWaktuMulai->waktu_mulai,
+                        'waktu_selesai' => $item->sesiJadwalPemohon->jadwalMaster->slotWaktuSelesai->waktu_selesai,
+                    ],
+                    'mitra' => $item->mitra ? [
+                        'id' => $item->mitra->id,
+                        'nama' => $item->mitra->user->name,
+                    ] : null,
+                    'sesi_mitra' => $item->sesiJadwalMitra ? [
+                        'id' => $item->sesiJadwalMitra->id,
+                        'mata_kuliah' => $item->sesiJadwalMitra->jadwalMaster->kelasMatKul->mataKuliah->nama,
+                        'tanggal' => $item->sesiJadwalMitra->tanggal,
+                        'hari' => $item->sesiJadwalMitra->jadwalMaster->hari,
+                        'laboratorium' => $item->sesiJadwalMitra->jadwalMaster->laboratorium->nama,
+                        'waktu_mulai' => $item->sesiJadwalMitra->jadwalMaster->slotWaktuMulai->waktu_mulai,
+                        'waktu_selesai' => $item->sesiJadwalMitra->jadwalMaster->slotWaktuSelesai->waktu_selesai,
+                    ] : null,
+                    'status' => $item->status,
+                    'alasan_pemohon' => $item->alasan_pemohon,
+                    'alasan_penolakan' => $item->alasan_penolakan,
+                    'tanggal_diajukan' => $item->tanggal_diajukan,
+                    'tanggal_diproses' => $item->tanggal_diproses,
+                    'is_pemohon' => false,
+                    'is_mitra' => true,
+                ];
+            });
+
+        $mingguData = [];
+        foreach (range(1, $totalMinggu) as $m) {
+            $start = $tanggalMulai->copy()->addWeeks($m - 1)->startOfWeek();
+            $end = $start->copy()->endOfWeek()->subDay();
+            $mingguData[] = [
+                'nomor' => $m,
+                'tanggal_mulai' => $start->format('Y-m-d'),
+                'tanggal_selesai' => $end->format('Y-m-d'),
+            ];
+        }
+
+        return Inertia::render('TukarJadwal/Calendar', [
+            'semesters' => $semesters,
+            'selectedSemesterId' => $selectedSemesterId,
+            'kampusList' => $kampusList,
+            'mingguList' => $mingguData,
+            'selectedMinggu' => $selectedMinggu,
+            'hari' => $hari,
+            'slots' => $slots,
+            'jadwalData' => $jadwalData,
+            'myRequests' => $myRequests,
+            'incomingRequests' => $incomingRequests,
+            'dosenId' => $dosen->id,
+            'breadcrumbs' => [
+                ['title' => 'Dashboard', 'href' => '/dashboard'],
+                ['title' => 'Tukar Jadwal', 'href' => '/tukar-jadwal'],
+                ['title' => 'Kalender', 'href' => '/tukar-jadwal/calendar'],
+            ],
+        ]);
+    }
 }

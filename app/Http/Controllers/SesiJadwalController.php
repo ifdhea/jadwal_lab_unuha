@@ -3,11 +3,18 @@
 namespace App\Http\Controllers;
 
 use App\Models\SesiJadwal;
+use App\Services\JadwalStatusService;
 use Illuminate\Http\Request;
 use Carbon\Carbon;
 
 class SesiJadwalController extends Controller
 {
+    protected $statusService;
+
+    public function __construct(JadwalStatusService $statusService)
+    {
+        $this->statusService = $statusService;
+    }
     /**
      * Update status sesi jadwal (untuk dosen set tidak masuk)
      */
@@ -78,5 +85,46 @@ class SesiJadwalController extends Controller
         ]);
 
         return back()->with('success', 'Status jadwal dikembalikan ke Terjadwal.');
+    }
+
+    /**
+     * Admin tandai dosen tidak hadir
+     */
+    public function tandaiTidakHadir(Request $request, SesiJadwal $sesiJadwal)
+    {
+        $request->validate([
+            'catatan' => 'nullable|string|max:500',
+        ]);
+
+        try {
+            $this->statusService->tandaiDosenTidakHadir(
+                $sesiJadwal->id,
+                $request->catatan
+            );
+
+            return back()->with('success', 'Jadwal berhasil ditandai: Dosen tidak hadir');
+
+        } catch (\Exception $e) {
+            return back()->with('error', $e->getMessage());
+        }
+    }
+
+    /**
+     * Admin batalkan jadwal
+     */
+    public function batalkan(Request $request, SesiJadwal $sesiJadwal)
+    {
+        $request->validate([
+            'alasan' => 'required|string|max:500',
+        ]);
+
+        try {
+            $this->statusService->batalkanJadwal($sesiJadwal->id, $request->alasan);
+
+            return back()->with('success', 'Jadwal berhasil dibatalkan');
+
+        } catch (\Exception $e) {
+            return back()->with('error', $e->getMessage());
+        }
     }
 }

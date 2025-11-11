@@ -34,7 +34,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
     
     // Tukar Jadwal - Dosen only
     Route::middleware(['peran:dosen'])->group(function () {
-        Route::get('/tukar-jadwal', [TukarJadwalController::class, 'index'])->name('tukar-jadwal.index');
+        Route::get('/tukar-jadwal', [TukarJadwalController::class, 'calendar'])->name('tukar-jadwal.index');
+        Route::get('/tukar-jadwal/calendar', [TukarJadwalController::class, 'calendar'])->name('tukar-jadwal.calendar');
+        Route::get('/tukar-jadwal/requests', [TukarJadwalController::class, 'index'])->name('tukar-jadwal.requests');
         Route::get('/tukar-jadwal/create', [TukarJadwalController::class, 'create'])->name('tukar-jadwal.create');
         Route::post('/tukar-jadwal', [TukarJadwalController::class, 'store'])->name('tukar-jadwal.store');
         Route::get('/tukar-jadwal/jadwal-mitra', [TukarJadwalController::class, 'getJadwalMitra'])->name('tukar-jadwal.jadwal-mitra');
@@ -61,6 +63,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::middleware(['peran:super_admin,admin'])->group(function () {
         Route::post('/booking-lab/{bookingLab}/approve', [BookingLaboratoriumController::class, 'approve'])->name('booking-lab.approve');
         Route::post('/booking-lab/{bookingLab}/reject', [BookingLaboratoriumController::class, 'reject'])->name('booking-lab.reject');
+        
+        // Admin: Tandai dosen tidak hadir & batalkan jadwal
+        Route::post('/sesi-jadwal/{sesiJadwal}/tandai-tidak-hadir', [SesiJadwalController::class, 'tandaiTidakHadir'])->name('sesi-jadwal.tandai-tidak-hadir');
+        Route::post('/sesi-jadwal/{sesiJadwal}/batalkan', [SesiJadwalController::class, 'batalkan'])->name('sesi-jadwal.batalkan');
     });
     
     // Master Data - Super Admin & Admin only

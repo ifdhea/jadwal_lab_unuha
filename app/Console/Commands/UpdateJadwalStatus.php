@@ -3,8 +3,7 @@
 namespace App\Console\Commands;
 
 use Illuminate\Console\Command;
-use App\Models\SesiJadwal;
-use Carbon\Carbon;
+use App\Services\JadwalStatusService;
 
 class UpdateJadwalStatus extends Command
 {
@@ -20,7 +19,15 @@ class UpdateJadwalStatus extends Command
      *
      * @var string
      */
-    protected $description = 'Update status jadwal otomatis berdasarkan tanggal (jadwal lewat -> selesai)';
+    protected $description = 'Update status jadwal otomatis (terjadwal -> berlangsung -> selesai)';
+
+    protected $statusService;
+
+    public function __construct(JadwalStatusService $statusService)
+    {
+        parent::__construct();
+        $this->statusService = $statusService;
+    }
 
     /**
      * Execute the console command.
@@ -29,14 +36,18 @@ class UpdateJadwalStatus extends Command
     {
         $this->info('Memulai update status jadwal...');
 
-        // Update jadwal yang sudah lewat menjadi 'selesai'
-        // Hanya untuk yang masih status 'terjadwal'
-        $updated = SesiJadwal::where('status', 'terjadwal')
-            ->where('tanggal', '<', Carbon::today())
-            ->update(['status' => 'selesai']);
+        try {
+            $result = $this->statusService->updateStatusOtomatis();
 
-        $this->info("✅ {$updated} jadwal berhasil diupdate ke status 'selesai'");
+            $this->info("✅ Status berhasil diupdate:");
+            $this->line("   - Berlangsung: {$result['berlangsung']}");
+            $this->line("   - Selesai: {$result['selesai']}");
 
-        return Command::SUCCESS;
+            return Command::SUCCESS;
+
+        } catch (\Exception $e) {
+            $this->error("❌ Gagal update status: " . $e->getMessage());
+            return Command::FAILURE;
+        }
     }
 }

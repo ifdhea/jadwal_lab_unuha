@@ -8,5 +8,5 @@ Artisan::command('inspire', function () {
     $this->comment(Inspiring::quote());
 })->purpose('Display an inspiring quote');
 
-// Schedule auto-update status jadwal setiap hari jam 00:01
-Schedule::command('jadwal:update-status')->dailyAt('00:01');
+// Schedule auto-update status jadwal setiap 5 menit (untuk real-time update status)
+Schedule::command('jadwal:update-status')->everyFiveMinutes();

@@ -39,11 +39,13 @@ interface Minggu {
 interface Hari {
     id: number;
     nama: string;
+    tanggal?: string;
 }
 interface Slot {
     id: number;
     waktu_mulai: string;
     waktu_selesai: string;
+    is_break?: boolean;
 }
 interface JadwalCell {
     sesi_jadwal_id: number;
@@ -91,6 +93,13 @@ export default function Index({
     const [activeKampus, setActiveKampus] = useState(
         kampusList[0]?.kode || 'B',
     );
+
+    // Cek apakah hari adalah hari ini
+    const isToday = (tanggal?: string) => {
+        if (!tanggal) return false;
+        const today = new Date().toISOString().split('T')[0];
+        return tanggal === today;
+    };
 
     const handleSemesterChange = (semesterId: string) => {
         router.get(
@@ -223,14 +232,34 @@ export default function Index({
                                                         <th className="sticky left-0 z-10 w-32 border bg-muted/50 p-2 font-semibold">
                                                             Jam
                                                         </th>
-                                                        {hari.map((h) => (
-                                                            <th
-                                                                key={h.id}
-                                                                className="border p-2 font-semibold"
-                                                            >
-                                                                {h.nama}
-                                                            </th>
-                                                        ))}
+                                                        {hari.map((h) => {
+                                                            const isTodayCell = isToday(h.tanggal);
+                                                            return (
+                                                                <th
+                                                                    key={h.id}
+                                                                    className={`border p-2 font-semibold ${
+                                                                        isTodayCell 
+                                                                            ? 'bg-primary/10 ring-2 ring-primary ring-inset' 
+                                                                            : ''
+                                                                    }`}
+                                                                >
+                                                                    <div className="flex flex-col gap-1">
+                                                                        <span className={isTodayCell ? 'text-primary font-bold' : ''}>
+                                                                            {h.nama}
+                                                                        </span>
+                                                                        {h.tanggal && (
+                                                                            <span className={`text-xs ${isTodayCell ? 'text-primary font-semibold' : 'text-muted-foreground'}`}>
+                                                                                {new Date(h.tanggal).toLocaleDateString('id-ID', {
+                                                                                    day: '2-digit',
+                                                                                    month: 'short'
+                                                                                })}
+                                                                                {isTodayCell && ' (Hari Ini)'}
+                                                                            </span>
+                                                                        )}
+                                                                    </div>
+                                                                </th>
+                                                            );
+                                                        })}
                                                     </tr>
                                                 </thead>
                                                 <tbody>
@@ -248,25 +277,44 @@ export default function Index({
                                                         });
 
                                                         return slots.map(
-                                                            (slot, slotIdx) => (
-                                                                <tr
-                                                                    key={
-                                                                        slot.id
-                                                                    }
-                                                                    className="h-24"
-                                                                >
-                                                                    <td className="sticky left-0 h-24 border bg-background p-2 text-center font-mono text-xs font-semibold">
-                                                                        {slot.waktu_mulai.slice(
-                                                                            0,
-                                                                            5,
-                                                                        )}{' '}
-                                                                        -{' '}
-                                                                        {slot.waktu_selesai.slice(
-                                                                            0,
-                                                                            5,
-                                                                        )}
-                                                                    </td>
-                                                                    {hari.map(
+                                                            (slot, slotIdx) => {
+                                                                // Deteksi jam istirahat (11:45-13:15)
+                                                                const isBreakTime = slot.waktu_mulai === '11:45:00' && slot.waktu_selesai === '13:15:00';
+                                                                
+                                                                return (
+                                                                    <tr
+                                                                        key={
+                                                                            slot.id
+                                                                        }
+                                                                        className={isBreakTime ? 'h-16' : 'h-24'}
+                                                                    >
+                                                                        <td className={`sticky left-0 border p-2 text-center font-mono text-xs font-semibold ${
+                                                                            isBreakTime ? 'bg-muted/50 h-16' : 'bg-background h-24'
+                                                                        }`}>
+                                                                            {slot.waktu_mulai.slice(
+                                                                                0,
+                                                                                5,
+                                                                            )}{' '}
+                                                                            -{' '}
+                                                                            {slot.waktu_selesai.slice(
+                                                                                0,
+                                                                                5,
+                                                                            )}
+                                                                        </td>
+                                                                        {isBreakTime ? (
+                                                                            <td 
+                                                                                colSpan={hari.length} 
+                                                                                className="border bg-muted/50 p-4 text-center h-16"
+                                                                            >
+                                                                                <div className="flex items-center justify-center gap-2">
+                                                                                    <Clock className="h-4 w-4 text-muted-foreground" />
+                                                                                    <span className="font-semibold text-muted-foreground">
+                                                                                        ISTIRAHAT
+                                                                                    </span>
+                                                                                </div>
+                                                                            </td>
+                                                                        ) : (
+                                                                            hari.map(
                                                                         (h) => {
                                                                             // Skip jika cell ini sudah di-render sebagai bagian dari rowspan
                                                                             if (
@@ -667,9 +715,11 @@ export default function Index({
                                                                                 </td>
                                                                             );
                                                                         },
-                                                                    )}
+                                                                    )
+                                                                )}
                                                                 </tr>
-                                                            ),
+                                                            );
+                                                        }
                                                         );
                                                     })()}
                                                 </tbody>

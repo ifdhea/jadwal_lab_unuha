@@ -21,15 +21,24 @@
 - [ ] Halaman Jadwal (Dosen) - Tambahkan tanggal di atas hari
 
 ### Fase 3C: Mekanisme Status Jadwal
-- [ ] Implementasi status sesi_jadwal:
+- [x] Implementasi status sesi_jadwal:
   - `terjadwal` - Default jadwal
   - `berlangsung` - Sedang berjalan
   - `selesai` - Sudah selesai
-  - `dosen_tidak_hadir` - Dosen tidak masuk
+  - `tidak_masuk` - Dosen tidak hadir
   - `dibatalkan` - Dibatalkan
-- [ ] Auto update status based on time
-- [ ] Mekanisme lapor dosen tidak hadir
-- [ ] Lab kosong otomatis bisa dibooking
+- [x] Auto update status based on time
+- [x] Mekanisme lapor dosen tidak hadir (admin)
+- [x] Service JadwalStatusService dengan method:
+  - updateStatusOtomatis() - Update otomatis setiap 5 menit
+  - tandaiDosenTidakHadir() - Admin tandai dosen tidak hadir
+  - batalkanJadwal() - Admin batalkan jadwal
+  - getSlotTersediaBooking() - Cek slot kosong untuk booking
+  - getStatistikStatus() - Statistik status jadwal
+- [x] Console Command jadwal:update-status
+- [x] Scheduler: Run setiap 5 menit
+- [x] Controller methods untuk tandai tidak hadir & batalkan
+- [x] Routes untuk admin actions
 
 ### Fase 3D: Booking Laboratorium
 - [ ] Create Controller dengan fungsi:

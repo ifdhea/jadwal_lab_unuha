@@ -45,6 +45,7 @@ class JadwalController extends Controller
 
         // Generate daftar minggu
         $mingguList = [];
+        $tanggalMulai = null;
         if ($semester) {
             $totalMinggu = $semester->total_minggu ?? 16;
             $tanggalMulai = Carbon::parse($semester->tanggal_mulai);
@@ -58,14 +59,28 @@ class JadwalController extends Controller
             }
         }
 
-        $hari = [
-            ['id' => 1, 'nama' => 'Senin'],
-            ['id' => 2, 'nama' => 'Selasa'],
-            ['id' => 3, 'nama' => 'Rabu'],
-            ['id' => 4, 'nama' => 'Kamis'],
-            ['id' => 5, 'nama' => 'Jumat'],
-            ['id' => 6, 'nama' => 'Sabtu'],
-        ];
+        // Generate hari dengan tanggal untuk minggu yang dipilih
+        $hari = [];
+        if ($tanggalMulai) {
+            $mingguStart = $tanggalMulai->copy()->addWeeks($selectedMinggu - 1)->startOfWeek();
+            foreach ([1 => 'Senin', 2 => 'Selasa', 3 => 'Rabu', 4 => 'Kamis', 5 => 'Jumat', 6 => 'Sabtu'] as $id => $nama) {
+                $tanggalHari = $mingguStart->copy()->addDays($id - 1);
+                $hari[] = [
+                    'id' => $id,
+                    'nama' => $nama,
+                    'tanggal' => $tanggalHari->format('Y-m-d'),
+                ];
+            }
+        } else {
+            $hari = [
+                ['id' => 1, 'nama' => 'Senin'],
+                ['id' => 2, 'nama' => 'Selasa'],
+                ['id' => 3, 'nama' => 'Rabu'],
+                ['id' => 4, 'nama' => 'Kamis'],
+                ['id' => 5, 'nama' => 'Jumat'],
+                ['id' => 6, 'nama' => 'Sabtu'],
+            ];
+        }
 
         $slots = SlotWaktu::orderBy('waktu_mulai')
             ->get(['id', 'waktu_mulai', 'waktu_selesai']);

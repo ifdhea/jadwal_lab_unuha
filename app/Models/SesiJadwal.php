@@ -41,6 +41,11 @@ class SesiJadwal extends Model
         return $query->where('status', 'tidak_masuk');
     }
 
+    public function scopeDosenTidakHadir($query)
+    {
+        return $query->where('status', 'tidak_masuk');
+    }
+
     public function scopeBerlangsung($query)
     {
         return $query->where('status', 'berlangsung');

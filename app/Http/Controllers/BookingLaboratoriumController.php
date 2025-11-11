@@ -347,17 +347,21 @@ class BookingLaboratoriumController extends Controller
         // Get kampus list
         $kampusList = \App\Models\Kampus::where('is_aktif', true)->get();
         
-        // Get hari
-        $hari = [
-            1 => 'Senin',
-            2 => 'Selasa',
-            3 => 'Rabu',
-            4 => 'Kamis',
-            5 => 'Jumat',
-            6 => 'Sabtu',
-        ];
+        // Get hari dengan tanggal
+        $tanggalMulai = Carbon::parse($selectedSemester->tanggal_mulai);
+        $mingguStart = $tanggalMulai->copy()->addWeeks($selectedMinggu - 1)->startOfWeek();
+        
+        $hari = [];
+        foreach ([1 => 'Senin', 2 => 'Selasa', 3 => 'Rabu', 4 => 'Kamis', 5 => 'Jumat', 6 => 'Sabtu'] as $id => $nama) {
+            $tanggalHari = $mingguStart->copy()->addDays($id - 1);
+            $hari[] = [
+                'id' => $id,
+                'nama' => $nama,
+                'tanggal' => $tanggalHari->format('Y-m-d'),
+            ];
+        }
 
-        // Get slots (exclude istirahat)
+        // Get slots
         $slots = SlotWaktu::where('is_aktif', true)->orderBy('urutan')->get();
 
         // Get jadwal data (sama seperti JadwalController)
@@ -407,7 +411,7 @@ class BookingLaboratoriumController extends Controller
                     'kelas' => $master->kelasMatKul->kelas->nama,
                     'dosen' => $master->dosen->user->name,
                     'lab' => $master->laboratorium->nama,
-                    'lab_id' => $master->laboratorium_id,
+                    'laboratorium_id' => $master->laboratorium_id,
                     'sks' => $master->kelasMatKul->mataKuliah->sks,
                     'durasi_slot' => $master->durasi_slot,
                     'waktu_mulai' => $master->slotWaktuMulai->waktu_mulai,
@@ -460,20 +464,61 @@ class BookingLaboratoriumController extends Controller
             }
         }
 
-        return Inertia::render('BookingLaboratorium/Index', [
+        // Get my bookings untuk tab request
+        $user = Auth::user();
+        $dosen = Dosen::where('user_id', $user->id)->first();
+        $myBookings = [];
+        
+        if ($dosen) {
+            $myBookings = BookingLaboratorium::where('dosen_id', $dosen->id)
+                ->with(['laboratorium.kampus', 'slotWaktuMulai', 'slotWaktuSelesai'])
+                ->whereIn('status', ['menunggu', 'disetujui', 'ditolak'])
+                ->orderBy('tanggal', 'desc')
+                ->get()
+                ->map(function ($booking) {
+                    return [
+                        'id' => $booking->id,
+                        'laboratorium' => [
+                            'id' => $booking->laboratorium->id,
+                            'nama' => $booking->laboratorium->nama,
+                            'kampus' => $booking->laboratorium->kampus->nama,
+                        ],
+                        'tanggal' => $booking->tanggal,
+                        'waktu_mulai' => $booking->slotWaktuMulai->waktu_mulai,
+                        'waktu_selesai' => $booking->slotWaktuSelesai->waktu_selesai,
+                        'durasi_slot' => $booking->durasi_slot,
+                        'keperluan' => $booking->keperluan,
+                        'keterangan' => $booking->keterangan,
+                        'status' => $booking->status,
+                    ];
+                });
+        }
+
+        $mingguData = [];
+        foreach (range(1, $totalMinggu) as $m) {
+            $start = $tanggalMulai->copy()->addWeeks($m - 1)->startOfWeek();
+            $end = $start->copy()->endOfWeek()->subDay(); // Sampai sabtu
+            $mingguData[] = [
+                'nomor' => $m,
+                'tanggal_mulai' => $start->format('Y-m-d'),
+                'tanggal_selesai' => $end->format('Y-m-d'),
+            ];
+        }
+
+        return Inertia::render('BookingLaboratorium/Calendar', [
             'semesters' => $semesters,
             'selectedSemesterId' => $selectedSemesterId,
             'kampusList' => $kampusList,
-            'mingguList' => $mingguList,
+            'mingguList' => $mingguData,
             'selectedMinggu' => $selectedMinggu,
             'hari' => $hari,
             'slots' => $slots,
             'jadwalData' => $jadwalData,
-            'availableSlots' => $availableSlots,
-            'bookings' => $bookingData,
+            'myBookings' => $myBookings,
             'breadcrumbs' => [
                 ['title' => 'Dashboard', 'href' => '/dashboard'],
                 ['title' => 'Booking Lab', 'href' => '/booking-lab'],
+                ['title' => 'Kalender', 'href' => '/booking-lab/calendar'],
             ],
         ]);
     }
