@@ -13,6 +13,7 @@ use App\Http\Controllers\LaboratoriumController;
 use App\Http\Controllers\MataKuliahController;
 use App\Http\Controllers\ProgramStudiController;
 use App\Http\Controllers\SemesterController;
+use App\Http\Controllers\SesiJadwalController;
 use App\Http\Controllers\SlotWaktuController;
 use App\Http\Controllers\TahunAjaranController;
 use App\Http\Controllers\TukarJadwalController;
@@ -40,6 +41,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::post('/tukar-jadwal/{tukarJadwal}/approve', [TukarJadwalController::class, 'approve'])->name('tukar-jadwal.approve');
         Route::post('/tukar-jadwal/{tukarJadwal}/reject', [TukarJadwalController::class, 'reject'])->name('tukar-jadwal.reject');
         Route::post('/tukar-jadwal/{tukarJadwal}/cancel', [TukarJadwalController::class, 'cancel'])->name('tukar-jadwal.cancel');
+        
+        // Sesi Jadwal - Update Status (Tidak Masuk)
+        Route::post('/sesi-jadwal/{sesiJadwal}/update-status', [SesiJadwalController::class, 'updateStatus'])->name('sesi-jadwal.update-status');
+        Route::post('/sesi-jadwal/{sesiJadwal}/reset-status', [SesiJadwalController::class, 'resetStatus'])->name('sesi-jadwal.reset-status');
     });
 
     // Booking Laboratorium

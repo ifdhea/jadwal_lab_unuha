@@ -58,13 +58,13 @@ export default function Edit({ dosen, kampus, programStudi, breadcrumbs }: Props
         password: '',
         password_confirmation: '',
         nidn: dosen.nidn,
-        nip: dosen.nip || '',
-        program_studi_id: dosen.program_studi_id || ('' as string | number),
-        kampus_utama_id: dosen.kampus_utama_id || ('' as string | number),
-        gelar_depan: dosen.gelar_depan || '',
-        gelar_belakang: dosen.gelar_belakang || '',
-        no_telp: dosen.no_telp || '',
-        alamat: dosen.alamat || '',
+        nip: dosen.nip ?? '',
+        program_studi_id: dosen.program_studi_id ?? ('' as string | number),
+        kampus_utama_id: dosen.kampus_utama_id ?? ('' as string | number),
+        gelar_depan: dosen.gelar_depan ?? '',
+        gelar_belakang: dosen.gelar_belakang ?? '',
+        no_telp: dosen.no_telp ?? '',
+        alamat: dosen.alamat ?? '',
         is_aktif: dosen.is_aktif,
     });
 
@@ -100,6 +100,7 @@ export default function Edit({ dosen, kampus, programStudi, breadcrumbs }: Props
                                     />
                                     <InputError message={errors.name} />
                                 </div>
+
                                 <div>
                                     <Label htmlFor="email">Email</Label>
                                     <Input
@@ -111,6 +112,7 @@ export default function Edit({ dosen, kampus, programStudi, breadcrumbs }: Props
                                     />
                                     <InputError message={errors.email} />
                                 </div>
+
                                 <div>
                                     <Label htmlFor="password">
                                         Password Baru (kosongkan jika tidak diubah)
@@ -123,6 +125,7 @@ export default function Edit({ dosen, kampus, programStudi, breadcrumbs }: Props
                                     />
                                     <InputError message={errors.password} />
                                 </div>
+
                                 <div>
                                     <Label htmlFor="password_confirmation">
                                         Konfirmasi Password Baru
@@ -143,6 +146,7 @@ export default function Edit({ dosen, kampus, programStudi, breadcrumbs }: Props
                         {/* Profil Dosen */}
                         <div className="space-y-4 rounded-md border p-4">
                             <h3 className="font-semibold">Profil Dosen</h3>
+
                             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                                 <div>
                                     <Label htmlFor="nidn">NIDN</Label>
@@ -154,6 +158,7 @@ export default function Edit({ dosen, kampus, programStudi, breadcrumbs }: Props
                                     />
                                     <InputError message={errors.nidn} />
                                 </div>
+
                                 <div>
                                     <Label htmlFor="nip">NIP (Opsional)</Label>
                                     <Input
@@ -163,6 +168,7 @@ export default function Edit({ dosen, kampus, programStudi, breadcrumbs }: Props
                                     />
                                     <InputError message={errors.nip} />
                                 </div>
+
                                 <div>
                                     <Label htmlFor="gelar_depan">Gelar Depan (Opsional)</Label>
                                     <Input
@@ -173,6 +179,7 @@ export default function Edit({ dosen, kampus, programStudi, breadcrumbs }: Props
                                     />
                                     <InputError message={errors.gelar_depan} />
                                 </div>
+
                                 <div>
                                     <Label htmlFor="gelar_belakang">Gelar Belakang (Opsional)</Label>
                                     <Input
@@ -183,6 +190,7 @@ export default function Edit({ dosen, kampus, programStudi, breadcrumbs }: Props
                                     />
                                     <InputError message={errors.gelar_belakang} />
                                 </div>
+
                                 <div>
                                     <Label htmlFor="program_studi_id">Program Studi (Opsional)</Label>
                                     <Select
@@ -197,10 +205,7 @@ export default function Edit({ dosen, kampus, programStudi, breadcrumbs }: Props
                                         <SelectContent>
                                             <SelectItem value="">Semua Program Studi</SelectItem>
                                             {programStudi.map((item) => (
-                                                <SelectItem
-                                                    key={item.id}
-                                                    value={String(item.id)}
-                                                >
+                                                <SelectItem key={item.id} value={String(item.id)}>
                                                     {item.nama}
                                                 </SelectItem>
                                             ))}
@@ -208,6 +213,7 @@ export default function Edit({ dosen, kampus, programStudi, breadcrumbs }: Props
                                     </Select>
                                     <InputError message={errors.program_studi_id} />
                                 </div>
+
                                 <div>
                                     <Label htmlFor="kampus_utama_id">Kampus Utama (Opsional)</Label>
                                     <Select
@@ -222,10 +228,7 @@ export default function Edit({ dosen, kampus, programStudi, breadcrumbs }: Props
                                         <SelectContent>
                                             <SelectItem value="">Semua Kampus</SelectItem>
                                             {kampus.map((item) => (
-                                                <SelectItem
-                                                    key={item.id}
-                                                    value={String(item.id)}
-                                                >
+                                                <SelectItem key={item.id} value={String(item.id)}>
                                                     {item.nama}
                                                 </SelectItem>
                                             ))}
@@ -236,6 +239,7 @@ export default function Edit({ dosen, kampus, programStudi, breadcrumbs }: Props
                                         Kosongkan jika dosen bisa mengajar di semua kampus
                                     </p>
                                 </div>
+
                                 <div>
                                     <Label htmlFor="no_telp">No. Telepon (Opsional)</Label>
                                     <Input
@@ -245,6 +249,7 @@ export default function Edit({ dosen, kampus, programStudi, breadcrumbs }: Props
                                     />
                                     <InputError message={errors.no_telp} />
                                 </div>
+
                                 <div className="md:col-span-2">
                                     <Label htmlFor="alamat">Alamat (Opsional)</Label>
                                     <Input
@@ -255,6 +260,7 @@ export default function Edit({ dosen, kampus, programStudi, breadcrumbs }: Props
                                     <InputError message={errors.alamat} />
                                 </div>
                             </div>
+
                             <div className="flex items-center gap-2">
                                 <Checkbox
                                     id="is_aktif"

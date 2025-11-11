@@ -35,4 +35,37 @@ class SesiJadwal extends Model
     {
         return $query->where('status', 'selesai');
     }
+
+    public function scopeTidakMasuk($query)
+    {
+        return $query->where('status', 'tidak_masuk');
+    }
+
+    public function scopeBerlangsung($query)
+    {
+        return $query->where('status', 'berlangsung');
+    }
+
+    public function scopeDibatalkan($query)
+    {
+        return $query->where('status', 'dibatalkan');
+    }
+
+    // Helper untuk cek apakah jadwal bisa di-booking
+    public function isAvailableForBooking(): bool
+    {
+        return in_array($this->status, ['tidak_masuk']);
+    }
+
+    // Helper untuk cek apakah sudah lewat
+    public function isPast(): bool
+    {
+        return $this->tanggal->isPast();
+    }
+
+    // Helper untuk cek apakah hari ini atau akan datang
+    public function isTodayOrFuture(): bool
+    {
+        return $this->tanggal->isToday() || $this->tanggal->isFuture();
+    }
 }
