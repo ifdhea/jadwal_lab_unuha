@@ -24,9 +24,13 @@ interface Dosen {
     id: number;
     nidn: string;
     nip: string | null;
-    no_telp: string | null;
-    is_aktif: boolean;
+    program_studi_id: number | null;
     kampus_utama_id: number | null;
+    gelar_depan: string | null;
+    gelar_belakang: string | null;
+    no_telp: string | null;
+    alamat: string | null;
+    is_aktif: boolean;
     user: User;
 }
 
@@ -34,13 +38,20 @@ interface Kampus {
     id: number;
     nama: string;
 }
+
+interface ProgramStudi {
+    id: number;
+    nama: string;
+}
+
 interface Props {
     dosen: Dosen;
     kampus: Kampus[];
+    programStudi: ProgramStudi[];
     breadcrumbs: Array<{ title: string; href: string }>;
 }
 
-export default function Edit({ dosen, kampus, breadcrumbs }: Props) {
+export default function Edit({ dosen, kampus, programStudi, breadcrumbs }: Props) {
     const { data, setData, put, errors, processing } = useForm({
         name: dosen.user.name,
         email: dosen.user.email,
@@ -48,8 +59,12 @@ export default function Edit({ dosen, kampus, breadcrumbs }: Props) {
         password_confirmation: '',
         nidn: dosen.nidn,
         nip: dosen.nip || '',
+        program_studi_id: dosen.program_studi_id || ('' as string | number),
+        kampus_utama_id: dosen.kampus_utama_id || ('' as string | number),
+        gelar_depan: dosen.gelar_depan || '',
+        gelar_belakang: dosen.gelar_belakang || '',
         no_telp: dosen.no_telp || '',
-        kampus_utama_id: dosen.kampus_utama_id ? String(dosen.kampus_utama_id) : '',
+        alamat: dosen.alamat || '',
         is_aktif: dosen.is_aktif,
     });
 
@@ -149,24 +164,60 @@ export default function Edit({ dosen, kampus, breadcrumbs }: Props) {
                                     <InputError message={errors.nip} />
                                 </div>
                                 <div>
-                                    <Label htmlFor="no_telp">No. Telepon (Opsional)</Label>
+                                    <Label htmlFor="gelar_depan">Gelar Depan (Opsional)</Label>
                                     <Input
-                                        id="no_telp"
-                                        value={data.no_telp}
-                                        onChange={(e) => setData('no_telp', e.target.value)}
+                                        id="gelar_depan"
+                                        value={data.gelar_depan}
+                                        onChange={(e) => setData('gelar_depan', e.target.value)}
+                                        placeholder="Dr., Prof., dll"
                                     />
-                                    <InputError message={errors.no_telp} />
+                                    <InputError message={errors.gelar_depan} />
+                                </div>
+                                <div>
+                                    <Label htmlFor="gelar_belakang">Gelar Belakang (Opsional)</Label>
+                                    <Input
+                                        id="gelar_belakang"
+                                        value={data.gelar_belakang}
+                                        onChange={(e) => setData('gelar_belakang', e.target.value)}
+                                        placeholder="M.Kom, S.Pd, dll"
+                                    />
+                                    <InputError message={errors.gelar_belakang} />
+                                </div>
+                                <div>
+                                    <Label htmlFor="program_studi_id">Program Studi (Opsional)</Label>
+                                    <Select
+                                        value={data.program_studi_id ? String(data.program_studi_id) : ''}
+                                        onValueChange={(value) =>
+                                            setData('program_studi_id', value ? parseInt(value) : '')
+                                        }
+                                    >
+                                        <SelectTrigger id="program_studi_id">
+                                            <SelectValue placeholder="Pilih Program Studi" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="">Semua Program Studi</SelectItem>
+                                            {programStudi.map((item) => (
+                                                <SelectItem
+                                                    key={item.id}
+                                                    value={String(item.id)}
+                                                >
+                                                    {item.nama}
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                    <InputError message={errors.program_studi_id} />
                                 </div>
                                 <div>
                                     <Label htmlFor="kampus_utama_id">Kampus Utama (Opsional)</Label>
                                     <Select
-                                        value={data.kampus_utama_id}
+                                        value={data.kampus_utama_id ? String(data.kampus_utama_id) : ''}
                                         onValueChange={(value) =>
-                                            setData('kampus_utama_id', value)
+                                            setData('kampus_utama_id', value ? parseInt(value) : '')
                                         }
                                     >
                                         <SelectTrigger id="kampus_utama_id">
-                                            <SelectValue placeholder="Semua Kampus" />
+                                            <SelectValue placeholder="Pilih Kampus" />
                                         </SelectTrigger>
                                         <SelectContent>
                                             <SelectItem value="">Semua Kampus</SelectItem>
@@ -184,6 +235,24 @@ export default function Edit({ dosen, kampus, breadcrumbs }: Props) {
                                     <p className="text-xs text-muted-foreground mt-1">
                                         Kosongkan jika dosen bisa mengajar di semua kampus
                                     </p>
+                                </div>
+                                <div>
+                                    <Label htmlFor="no_telp">No. Telepon (Opsional)</Label>
+                                    <Input
+                                        id="no_telp"
+                                        value={data.no_telp}
+                                        onChange={(e) => setData('no_telp', e.target.value)}
+                                    />
+                                    <InputError message={errors.no_telp} />
+                                </div>
+                                <div className="md:col-span-2">
+                                    <Label htmlFor="alamat">Alamat (Opsional)</Label>
+                                    <Input
+                                        id="alamat"
+                                        value={data.alamat}
+                                        onChange={(e) => setData('alamat', e.target.value)}
+                                    />
+                                    <InputError message={errors.alamat} />
                                 </div>
                             </div>
                             <div className="flex items-center gap-2">

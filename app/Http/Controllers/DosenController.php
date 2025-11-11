@@ -28,6 +28,7 @@ class DosenController extends Controller
     {
         return Inertia::render('Dosen/Create', [
             'kampus' => Kampus::where('is_aktif', true)->orderBy('nama')->get(),
+            'programStudi' => \App\Models\ProgramStudi::where('is_aktif', true)->orderBy('nama')->get(),
             'breadcrumbs' => [
                 ['title' => 'Dashboard', 'href' => '/dashboard'],
                 ['title' => 'Dosen', 'href' => '/dosen'],
@@ -44,8 +45,12 @@ class DosenController extends Controller
             'password' => ['required', 'confirmed', Rules\Password::defaults()],
             'nidn' => 'required|string|max:20|unique:'.Dosen::class,
             'nip' => 'nullable|string|max:30',
-            'no_telp' => 'nullable|string|max:20',
+            'program_studi_id' => 'nullable|exists:program_studi,id',
             'kampus_utama_id' => 'nullable|exists:kampus,id',
+            'gelar_depan' => 'nullable|string|max:20',
+            'gelar_belakang' => 'nullable|string|max:50',
+            'no_telp' => 'nullable|string|max:20',
+            'alamat' => 'nullable|string',
             'is_aktif' => 'boolean',
         ]);
 
@@ -60,8 +65,12 @@ class DosenController extends Controller
             $user->dosen()->create([
                 'nidn' => $request->nidn,
                 'nip' => $request->nip,
-                'no_telp' => $request->no_telp,
+                'program_studi_id' => $request->program_studi_id ?? null,
                 'kampus_utama_id' => $request->kampus_utama_id ?? null,
+                'gelar_depan' => $request->gelar_depan,
+                'gelar_belakang' => $request->gelar_belakang,
+                'no_telp' => $request->no_telp,
+                'alamat' => $request->alamat,
                 'is_aktif' => $request->is_aktif ?? true,
             ]);
         });
@@ -75,6 +84,7 @@ class DosenController extends Controller
         return Inertia::render('Dosen/Edit', [
             'dosen' => $dosen,
             'kampus' => Kampus::where('is_aktif', true)->orderBy('nama')->get(),
+            'programStudi' => \App\Models\ProgramStudi::where('is_aktif', true)->orderBy('nama')->get(),
             'breadcrumbs' => [
                 ['title' => 'Dashboard', 'href' => '/dashboard'],
                 ['title' => 'Dosen', 'href' => '/dosen'],
@@ -93,8 +103,12 @@ class DosenController extends Controller
             'password' => ['nullable', 'confirmed', Rules\Password::defaults()],
             'nidn' => 'required|string|max:20|unique:'.Dosen::class.',nidn,'.$dosen->id,
             'nip' => 'nullable|string|max:30',
-            'no_telp' => 'nullable|string|max:20',
+            'program_studi_id' => 'nullable|exists:program_studi,id',
             'kampus_utama_id' => 'nullable|exists:kampus,id',
+            'gelar_depan' => 'nullable|string|max:20',
+            'gelar_belakang' => 'nullable|string|max:50',
+            'no_telp' => 'nullable|string|max:20',
+            'alamat' => 'nullable|string',
             'is_aktif' => 'boolean',
         ]);
 
@@ -111,8 +125,12 @@ class DosenController extends Controller
             $dosen->update([
                 'nidn' => $request->nidn,
                 'nip' => $request->nip,
-                'no_telp' => $request->no_telp,
+                'program_studi_id' => $request->program_studi_id ?? null,
                 'kampus_utama_id' => $request->kampus_utama_id ?? null,
+                'gelar_depan' => $request->gelar_depan,
+                'gelar_belakang' => $request->gelar_belakang,
+                'no_telp' => $request->no_telp,
+                'alamat' => $request->alamat,
                 'is_aktif' => $request->is_aktif ?? true,
             ]);
         });
