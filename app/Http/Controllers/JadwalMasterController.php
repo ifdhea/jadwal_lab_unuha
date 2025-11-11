@@ -103,8 +103,33 @@ class JadwalMasterController extends Controller
 
     public function edit(JadwalMaster $jadwalMaster)
     {
+        // Load relasi lengkap
+        $jadwalMaster->load([
+            'kelasMatKul.semester',
+            'kelasMatKul.kelas',
+            'kelasMatKul.mataKuliah',
+            'dosen.user',
+            'laboratorium',
+            'slotWaktuMulai',
+            'slotWaktuSelesai'
+        ]);
+
         return Inertia::render('JadwalMaster/Edit', array_merge($this->getFormData(), [
-            'jadwalMaster' => $jadwalMaster,
+            'jadwalMaster' => [
+                'id' => $jadwalMaster->id,
+                'kelas_mata_kuliah_id' => $jadwalMaster->kelas_mata_kuliah_id,
+                'dosen_id' => $jadwalMaster->dosen_id,
+                'laboratorium_id' => $jadwalMaster->laboratorium_id,
+                'hari' => $jadwalMaster->hari,
+                'slot_waktu_mulai_id' => $jadwalMaster->slot_waktu_mulai_id,
+                'slot_waktu_selesai_id' => $jadwalMaster->slot_waktu_selesai_id,
+                'pola_minggu' => $jadwalMaster->pola_minggu,
+                'semester_id' => $jadwalMaster->kelasMatKul->semester_id, // Add semester_id
+                'semester' => $jadwalMaster->kelasMatKul->semester,
+                'kelas_matkul' => $jadwalMaster->kelasMatKul,
+                'dosen' => $jadwalMaster->dosen,
+                'laboratorium' => $jadwalMaster->laboratorium,
+            ],
             'breadcrumbs' => [
                 ['title' => 'Dashboard', 'href' => '/dashboard'],
                 ['title' => 'Jadwal Master', 'href' => '/jadwal-master'],

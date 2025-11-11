@@ -10,7 +10,7 @@
 ### **FASE 1: FIX CRUD & BASIC FIXES** 
 **Target**: Fix bug dan perbaikan dasar
 
-#### ✅ Task 1.1: Fix CRUD Dosen - **SELESAI**
+#### ✅ Task 1.1: Fix CRUD Dosen - **SELESAI** ✅
 - [x] Tambah field `program_studi_id` di controller
 - [x] Tambah field `gelar_depan` & `gelar_belakang` di controller  
 - [x] Tambah field `alamat` di controller
@@ -19,12 +19,14 @@
 - [x] Pass `programStudi` ke view Create
 - [x] Pass `programStudi` ke view Edit
 - [x] Update form Create.tsx dengan field lengkap
-- [ ] Update form Edit.tsx dengan field lengkap (NEXT)
+- [x] Update form Edit.tsx dengan field lengkap ✅
 
 **File Modified**:
 - ✅ `app/Http/Controllers/DosenController.php`
 - ✅ `resources/js/pages/Dosen/Create.tsx`
-- ⏳ `resources/js/pages/Dosen/Edit.tsx` (belum)
+- ✅ `resources/js/pages/Dosen/Edit.tsx`
+
+**Commit**: `bff503f` - ✅ Task 1.1 DONE
 
 ---
 
@@ -228,8 +230,8 @@ Senin, 11 Nov    Selasa, 12 Nov    Rabu, 13 Nov
 ## 📊 PROGRESS SUMMARY
 
 ### Fase 1: FIX CRUD & BASIC FIXES
-- Task 1.1: ✅ 90% DONE (tinggal Edit.tsx)
-- Task 1.2: ⏳ NOT STARTED
+- Task 1.1: ✅ **100% DONE** - Dosen CRUD Fixed
+- Task 1.2: ⏳ NEXT - Fix Edit Jadwal Master
 
 ### Fase 2: STATUS MANAGEMENT
 - Task 2.1: ⏳ NOT STARTED
@@ -306,5 +308,5 @@ Senin, 11 Nov    Selasa, 12 Nov    Rabu, 13 Nov
 
 ---
 
-**Last Updated**: 11 Nov 2025, 00:30 WIB  
-**Progress**: 10% Complete (1/10 fase minor selesai)
+**Last Updated**: 11 Nov 2025, 00:45 WIB  
+**Progress**: 12% Complete (Task 1.1 selesai, 1/8 task done)
