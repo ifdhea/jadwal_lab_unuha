@@ -180,11 +180,11 @@ export default function Index({
                             <p className="text-xs text-muted-foreground">
                                 {new Date(
                                     currentMinggu.tanggal_mulai,
-                                ).toLocaleDateString('id-ID')}{' '}
+                                ).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}{' '}
                                 -{' '}
                                 {new Date(
                                     currentMinggu.tanggal_selesai,
-                                ).toLocaleDateString('id-ID')}
+                                ).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}
                             </p>
                         )}
                     </div>

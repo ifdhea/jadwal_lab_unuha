@@ -17,7 +17,6 @@ class JadwalController extends Controller
     {
         $semesters = Semester::where('is_aktif', true)->orderBy('tanggal_mulai', 'desc')->get();
         $selectedSemesterId = $request->input('semester_id', $semesters->first()->id ?? null);
-        $selectedMinggu = (int) $request->input('minggu', 1);
 
         if (!$selectedSemesterId) {
             return Inertia::render('Jadwal/Index', [
@@ -37,6 +36,25 @@ class JadwalController extends Controller
         }
 
         $semester = Semester::find($selectedSemesterId);
+
+        // Auto-navigate to current week if not specified
+        $selectedMinggu = (int) $request->input('minggu');
+        if ($semester && !$request->has('minggu')) {
+            $tanggalMulai = Carbon::parse($semester->tanggal_mulai);
+            $today = Carbon::now();
+            $totalMinggu = $semester->total_minggu ?? 16;
+
+            if ($today->lt($tanggalMulai)) {
+                $selectedMinggu = 1;
+            } else {
+                // Use diffInDays and floor division for accurate week calculation
+                $diffInDays = $tanggalMulai->startOfDay()->diffInDays($today->startOfDay());
+                $currentWeek = (int)floor($diffInDays / 7) + 1;
+                $selectedMinggu = max(1, min($currentWeek, $totalMinggu));
+            }
+        } elseif (!$selectedMinggu) {
+            $selectedMinggu = 1;
+        }
         
         // Data kampus
         $kampusList = Kampus::where('is_aktif', true)

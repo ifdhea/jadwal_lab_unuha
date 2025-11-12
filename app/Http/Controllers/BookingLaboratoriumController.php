@@ -672,7 +672,24 @@ class BookingLaboratoriumController extends Controller
         }
 
         $totalMinggu = $selectedSemester->total_minggu ?? 20;
-        $selectedMinggu = $request->get('minggu', 1);
+        
+        // Auto-navigate to current week if not specified
+        $selectedMinggu = (int) $request->input('minggu');
+        if (!$request->has('minggu')) {
+            $tanggalMulai = Carbon::parse($selectedSemester->tanggal_mulai);
+            $today = Carbon::now();
+
+            if ($today->lt($tanggalMulai)) {
+                $selectedMinggu = 1;
+            } else {
+                // Use diffInDays and floor division for accurate week calculation
+                $diffInDays = $tanggalMulai->startOfDay()->diffInDays($today->startOfDay());
+                $currentWeek = (int)floor($diffInDays / 7) + 1;
+                $selectedMinggu = max(1, min($currentWeek, $totalMinggu));
+            }
+        } elseif (!$selectedMinggu) {
+            $selectedMinggu = 1;
+        }
 
         $kampusList = \App\Models\Kampus::where('is_aktif', true)->get();
         

@@ -192,14 +192,17 @@ export default function Calendar({
         );
     };
 
-    const handleMingguChange = (minggu: number) => {
+    const handleMingguChange = (minggu: number | string) => {
+        const mingguNum = Number(minggu);
+        if (isNaN(mingguNum) || mingguNum < 1) return;
+
         router.get(
             '/booking-lab/calendar',
             {
                 semester_id: selectedSemesterId,
-                minggu,
+                minggu: mingguNum,
             },
-            { preserveState: true },
+            { preserveState: true, preserveScroll: true },
         );
     };
 
@@ -269,7 +272,7 @@ export default function Calendar({
         return <Badge variant={config.variant}>{config.label}</Badge>;
     };
 
-    const currentMinggu = mingguList.find((m) => m.nomor === selectedMinggu);
+    const currentMinggu = mingguList.find((m) => m.nomor === Number(selectedMinggu));
     const pendingBookingsCount = myBookings.filter(b => b.status === 'menunggu').length;
 
     return (
@@ -329,8 +332,8 @@ export default function Calendar({
                     <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => handleMingguChange(selectedMinggu - 1)}
-                        disabled={selectedMinggu <= 1}
+                        onClick={() => handleMingguChange(Number(selectedMinggu) - 1)}
+                        disabled={Number(selectedMinggu) <= 1}
                     >
                         <ChevronLeft className="h-4 w-4" />
                     </Button>
@@ -351,8 +354,8 @@ export default function Calendar({
                     <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => handleMingguChange(selectedMinggu + 1)}
-                        disabled={selectedMinggu >= mingguList.length}
+                        onClick={() => handleMingguChange(Number(selectedMinggu) + 1)}
+                        disabled={Number(selectedMinggu) >= mingguList.length}
                     >
                         <ChevronRight className="h-4 w-4" />
                     </Button>
