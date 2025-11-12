@@ -165,12 +165,12 @@ export default function Profile({
                                                 </div>
 
                                                 <div className="grid gap-2">
-                                                    <Label htmlFor="nip">NIP</Label>
+                                                    <Label htmlFor="nip">NIPY</Label>
                                                     <Input
                                                         id="nip"
                                                         name="nip"
                                                         defaultValue={dosenData.nip || ''}
-                                                        placeholder="NIP"
+                                                        placeholder="NIPY"
                                                     />
                                                     <InputError message={errors.nip} />
                                                 </div>
@@ -232,7 +232,7 @@ export default function Profile({
                                                 <div className="grid gap-2">
                                                     <Label>Kampus Utama</Label>
                                                     <Input
-                                                        value={dosenData.kampus_utama?.nama || '-'}
+                                                        value={dosenData.kampus_utama?.nama || 'Semua Kampus'}
                                                         disabled
                                                         className="bg-muted"
                                                     />

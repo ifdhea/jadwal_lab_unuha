@@ -101,7 +101,7 @@ export default function Create({ kampus, programStudi, breadcrumbs }: Props) {
                   <InputError message={errors.nidn} />
                 </div>
                 <div>
-                  <Label htmlFor="nip">NIP (Opsional)</Label>
+                  <Label htmlFor="nip">NIPY (Opsional)</Label>
                   <Input id="nip" value={data.nip} onChange={(e) => setData('nip', e.target.value)} />
                   <InputError message={errors.nip} />
                 </div>
@@ -119,16 +119,14 @@ export default function Create({ kampus, programStudi, breadcrumbs }: Props) {
                 <div>
                   <Label htmlFor="program_studi_id">Program Studi (Opsional)</Label>
                   <Select
-                    value={data.program_studi_id ? String(data.program_studi_id) : undefined}
-                    onValueChange={(value) => setData('program_studi_id', parseInt(value))}
+                    value={data.program_studi_id ? String(data.program_studi_id) : 'none'}
+                    onValueChange={(value) => setData('program_studi_id', value === 'none' ? '' : parseInt(value))}
                   >
                     <SelectTrigger id="program_studi_id">
                       <SelectValue placeholder="Pilih Program Studi" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="none" disabled>
-                        Pilih Program Studi
-                      </SelectItem>
+                      <SelectItem value="none">Semua Program Studi</SelectItem>
                       {programStudi.map((item) => (
                         <SelectItem key={item.id} value={String(item.id)}>
                           {item.nama}
@@ -142,16 +140,14 @@ export default function Create({ kampus, programStudi, breadcrumbs }: Props) {
                 <div>
                   <Label htmlFor="kampus_utama_id">Kampus Utama (Opsional)</Label>
                   <Select
-                    value={data.kampus_utama_id ? String(data.kampus_utama_id) : undefined}
-                    onValueChange={(value) => setData('kampus_utama_id', parseInt(value))}
+                    value={data.kampus_utama_id ? String(data.kampus_utama_id) : 'none'}
+                    onValueChange={(value) => setData('kampus_utama_id', value === 'none' ? '' : parseInt(value))}
                   >
                     <SelectTrigger id="kampus_utama_id">
                       <SelectValue placeholder="Pilih Kampus" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="none" disabled>
-                        Pilih Kampus
-                      </SelectItem>
+                      <SelectItem value="none">Semua Kampus</SelectItem>
                       {kampus.map((item) => (
                         <SelectItem key={item.id} value={String(item.id)}>
                           {item.nama}
