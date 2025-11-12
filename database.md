@@ -628,6 +628,7 @@ CREATE TABLE `users` (
   `id` bigint UNSIGNED NOT NULL,
   `name` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `email` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `foto_profil` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `peran` enum('super_admin','admin','dosen') CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'dosen',
   `email_verified_at` timestamp NULL DEFAULT NULL,
   `password` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -643,11 +644,11 @@ CREATE TABLE `users` (
 -- Dumping data for table `users`
 --
 
-INSERT INTO `users` (`id`, `name`, `email`, `peran`, `email_verified_at`, `password`, `two_factor_secret`, `two_factor_recovery_codes`, `two_factor_confirmed_at`, `remember_token`, `created_at`, `updated_at`) VALUES
-(1, 'Super Admin', 'admin@unuha.ac.id', 'super_admin', '2025-11-10 15:34:07', '$2y$12$tXcKpd.TdyDgrD.cnwGbTuzNouUFjl641gnDWB8NsFOb.pdexstHG', NULL, NULL, NULL, '7ouepacqb2jwnnOHGKAAQSjfkjkfzybADASfSAXZQnFt9LUWTK25kRYZ93CA', '2025-11-10 15:34:07', '2025-11-10 15:34:07'),
-(3, 'Dr. Ahmad Hidayat, M.Kom', 'ahmad.hidayat@unuha.ac.id', 'dosen', '2025-11-10 22:56:10', '$2y$12$sbes1mcdDyVuDqeKs8/TBu1gWTKl1b4LvF6PzUFadnpvPpLJcgzYu', NULL, NULL, NULL, NULL, '2025-11-10 22:56:10', '2025-11-10 22:56:10'),
-(4, 'Siti Fatimah, M.T', 'siti.fatimah@unuha.ac.id', 'dosen', '2025-11-10 22:56:10', '$2y$12$sbes1mcdDyVuDqeKs8/TBu1gWTKl1b4LvF6PzUFadnpvPpLJcgzYu', NULL, NULL, NULL, NULL, '2025-11-10 22:56:10', '2025-11-10 22:56:10'),
-(5, 'ggggggggg', 'admn@unuha.ac.id', 'dosen', NULL, '$2y$12$IGsV0x8YmFQaKgAs.v/J/uexlOH8kG/TnhHLRNKmk98MT4xuztGFC', NULL, NULL, NULL, NULL, '2025-11-10 17:56:04', '2025-11-10 17:56:04');
+INSERT INTO `users` (`id`, `name`, `email`, `foto_profil`, `peran`, `email_verified_at`, `password`, `two_factor_secret`, `two_factor_recovery_codes`, `two_factor_confirmed_at`, `remember_token`, `created_at`, `updated_at`) VALUES
+(1, 'Super Admin', 'admin@unuha.ac.id', NULL, 'super_admin', '2025-11-10 15:34:07', '$2y$12$tXcKpd.TdyDgrD.cnwGbTuzNouUFjl641gnDWB8NsFOb.pdexstHG', NULL, NULL, NULL, '7ouepacqb2jwnnOHGKAAQSjfkjkfzybADASfSAXZQnFt9LUWTK25kRYZ93CA', '2025-11-10 15:34:07', '2025-11-10 15:34:07'),
+(3, 'Dr. Ahmad Hidayat, M.Kom', 'ahmad.hidayat@unuha.ac.id', NULL, 'dosen', '2025-11-10 22:56:10', '$2y$12$sbes1mcdDyVuDqeKs8/TBu1gWTKl1b4LvF6PzUFadnpvPpLJcgzYu', NULL, NULL, NULL, NULL, '2025-11-10 22:56:10', '2025-11-10 22:56:10'),
+(4, 'Siti Fatimah, M.T', 'siti.fatimah@unuha.ac.id', NULL, 'dosen', '2025-11-10 22:56:10', '$2y$12$sbes1mcdDyVuDqeKs8/TBu1gWTKl1b4LvF6PzUFadnpvPpLJcgzYu', NULL, NULL, NULL, NULL, '2025-11-10 22:56:10', '2025-11-10 22:56:10'),
+(5, 'ggggggggg', 'admn@unuha.ac.id', NULL, 'dosen', NULL, '$2y$12$IGsV0x8YmFQaKgAs.v/J/uexlOH8kG/TnhHLRNKmk98MT4xuztGFC', NULL, NULL, NULL, NULL, '2025-11-10 17:56:04', '2025-11-10 17:56:04');
 
 --
 -- Indexes for dumped tables

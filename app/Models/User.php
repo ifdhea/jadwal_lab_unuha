@@ -23,6 +23,7 @@ class User extends Authenticatable
         'email',
         'password',
         'peran',
+        'foto_profil',
     ];
 
     /**
@@ -69,5 +70,13 @@ class User extends Authenticatable
     public function isDosen()
     {
         return $this->peran === 'dosen';
+    }
+    
+    public function getFotoProfilUrlAttribute()
+    {
+        if ($this->foto_profil) {
+            return asset('storage/' . $this->foto_profil);
+        }
+        return null;
     }
 }

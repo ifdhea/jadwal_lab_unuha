@@ -16,9 +16,8 @@ class ProfileUpdateRequest extends FormRequest
      */
     public function rules(): array
     {
-        return [
+        $rules = [
             'name' => ['required', 'string', 'max:255'],
-
             'email' => [
                 'required',
                 'string',
@@ -27,6 +26,21 @@ class ProfileUpdateRequest extends FormRequest
                 'max:255',
                 Rule::unique(User::class)->ignore($this->user()->id),
             ],
+            'foto_profil' => ['nullable', 'image', 'mimes:jpeg,png,jpg,gif', 'max:2048'],
         ];
+        
+        // Add dosen fields if user is dosen
+        if ($this->user()->isDosen()) {
+            $rules = array_merge($rules, [
+                'nidn' => ['nullable', 'string', 'max:20'],
+                'nip' => ['nullable', 'string', 'max:30'],
+                'gelar_depan' => ['nullable', 'string', 'max:20'],
+                'gelar_belakang' => ['nullable', 'string', 'max:50'],
+                'no_telp' => ['nullable', 'string', 'max:20'],
+                'alamat' => ['nullable', 'string'],
+            ]);
+        }
+        
+        return $rules;
     }
 }

@@ -18,9 +18,17 @@ class ProfileController extends Controller
      */
     public function edit(Request $request): Response
     {
+        $user = $request->user();
+        $dosenData = null;
+        
+        if ($user->isDosen() && $user->dosen) {
+            $dosenData = $user->dosen->load(['programStudi', 'kampusUtama']);
+        }
+        
         return Inertia::render('settings/profile', [
             'mustVerifyEmail' => $request->user() instanceof MustVerifyEmail,
             'status' => $request->session()->get('status'),
+            'dosenData' => $dosenData,
         ]);
     }
 
@@ -29,13 +37,36 @@ class ProfileController extends Controller
      */
     public function update(ProfileUpdateRequest $request): RedirectResponse
     {
-        $request->user()->fill($request->validated());
+        $user = $request->user();
+        $validated = $request->validated();
+        
+        // Handle foto profil upload
+        if ($request->hasFile('foto_profil')) {
+            // Delete old photo if exists
+            if ($user->foto_profil && \Storage::disk('public')->exists($user->foto_profil)) {
+                \Storage::disk('public')->delete($user->foto_profil);
+            }
+            
+            $path = $request->file('foto_profil')->store('foto_profil', 'public');
+            $validated['foto_profil'] = $path;
+        }
+        
+        $user->fill($validated);
 
-        if ($request->user()->isDirty('email')) {
-            $request->user()->email_verified_at = null;
+        if ($user->isDirty('email')) {
+            $user->email_verified_at = null;
         }
 
-        $request->user()->save();
+        $user->save();
+        
+        // Update dosen data if user is dosen
+        if ($user->isDosen() && $user->dosen) {
+            $dosenData = $request->only([
+                'nidn', 'nip', 'gelar_depan', 'gelar_belakang', 
+                'no_telp', 'alamat'
+            ]);
+            $user->dosen->update($dosenData);
+        }
 
         return to_route('profile.edit');
     }
