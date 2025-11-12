@@ -61,6 +61,8 @@ interface JadwalCell {
     is_my_schedule: boolean;
     tanggal: string;
     is_past: boolean;
+    slot_waktu_mulai_id?: number;
+    laboratorium_id?: number;
 }
 type JadwalData = Record<
     number,
@@ -304,20 +306,7 @@ export default function Index({
                                                                                 5,
                                                                             )}
                                                                         </td>
-                                                                        {isBreakTime ? (
-                                                                            <td 
-                                                                                colSpan={hari.length} 
-                                                                                className="border bg-muted/50 p-4 text-center h-16"
-                                                                            >
-                                                                                <div className="flex items-center justify-center gap-2">
-                                                                                    <Clock className="h-4 w-4 text-muted-foreground" />
-                                                                                    <span className="font-semibold text-muted-foreground">
-                                                                                        ISTIRAHAT
-                                                                                    </span>
-                                                                                </div>
-                                                                            </td>
-                                                                        ) : (
-                                                                            hari.map(
+                                                                        {hari.map(
                                                                         (h) => {
                                                                             // Skip jika cell ini sudah di-render sebagai bagian dari rowspan
                                                                             if (
@@ -429,7 +418,7 @@ export default function Index({
                                                                                     key={
                                                                                         h.id
                                                                                     }
-                                                                                    className="h-full border p-0 align-middle"
+                                                                                    className="h-full border p-0 align-middle relative"
                                                                                     rowSpan={
                                                                                         maxRowSpan
                                                                                     }
@@ -437,6 +426,17 @@ export default function Index({
                                                                                         height: `${maxRowSpan * 6}rem`,
                                                                                     }}
                                                                                 >
+                                                                                    {/* Overlay istirahat jika slot istirahat */}
+                                                                                    {isBreakTime && (
+                                                                                        <div className="absolute inset-0 z-10 bg-muted/90 flex items-center justify-center border-t-2 border-b-2 border-dashed border-muted-foreground/30 pointer-events-none">
+                                                                                            <div className="flex items-center gap-2 opacity-60">
+                                                                                                <Clock className="h-3 w-3 text-muted-foreground" />
+                                                                                                <span className="text-xs font-semibold text-muted-foreground">
+                                                                                                    ISTIRAHAT
+                                                                                                </span>
+                                                                                            </div>
+                                                                                        </div>
+                                                                                    )}
                                                                                     {cellsData.length >
                                                                                     0 ? (
                                                                                         <div className="flex h-full flex-col divide-y">
@@ -718,8 +718,7 @@ export default function Index({
                                                                                 </td>
                                                                             );
                                                                         },
-                                                                    )
-                                                                )}
+                                                                    )}
                                                                 </tr>
                                                             );
                                                         }

@@ -100,6 +100,7 @@ class JadwalController extends Controller
                 'jadwalMaster.slotWaktuMulai',
                 'jadwalMaster.slotWaktuSelesai'
             ])
+            ->whereNotIn('status', ['dibatalkan']) // Filter jadwal yang dibatalkan
             ->get();
 
         // Struktur data: jadwalData[kampus_id][minggu][hari_id][slot_id][] = { matkul, kelas, dosen, lab, sks, durasi_slot, waktu_mulai, waktu_selesai }
@@ -147,6 +148,8 @@ class JadwalController extends Controller
                     'is_my_schedule' => $isMySchedule,
                     'tanggal' => $sesi->tanggal->format('Y-m-d'),
                     'is_past' => $sesi->tanggal->isPast() && !$sesi->tanggal->isToday(),
+                    'slot_waktu_mulai_id' => $master->slot_waktu_mulai_id,
+                    'laboratorium_id' => $master->laboratorium_id,
                 ];
             }
         }

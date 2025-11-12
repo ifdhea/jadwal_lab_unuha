@@ -43,8 +43,8 @@ class BookingLaboratoriumController extends Controller
             $query->whereDate('tanggal', $request->tanggal);
         }
 
-        $bookings = $query->orderBy('tanggal', 'desc')
-            ->orderBy('slot_waktu_mulai_id')
+        $bookings = $query->orderBy('tanggal_diajukan', 'desc')
+            ->orderBy('created_at', 'desc')
             ->paginate(10)
             ->withQueryString();
 
@@ -225,7 +225,35 @@ class BookingLaboratoriumController extends Controller
         $hari = $this->getHariIndonesia($tanggal->dayOfWeek);
 
         // Cek jadwal master yang bentrok
+        // HANYA jadwal dengan status 'terjadwal' yang dianggap bentrok
+        
+        // Debug: Cek semua jadwal di tanggal tersebut
+        $allJadwalCheck = SesiJadwal::whereDate('tanggal', $tanggal)
+            ->whereHas('jadwalMaster', function ($query) use ($validated, $hari) {
+                $query->where('laboratorium_id', $validated['laboratorium_id'])
+                    ->where('hari', $hari);
+            })
+            ->with('jadwalMaster.slotWaktuMulai', 'jadwalMaster.slotWaktuSelesai')
+            ->get(['id', 'status', 'tanggal', 'jadwal_master_id']);
+        
+        \Log::info('checkAvailability - Semua jadwal:', [
+            'tanggal' => $tanggal->format('Y-m-d'),
+            'hari' => $hari,
+            'lab_id' => $validated['laboratorium_id'],
+            'slot_request' => [$slotMulai->id, $slotSelesaiId],
+            'jadwal_count' => $allJadwalCheck->count(),
+            'jadwal_detail' => $allJadwalCheck->map(function($j) {
+                return [
+                    'id' => $j->id,
+                    'status' => $j->status,
+                    'slot_mulai' => $j->jadwalMaster->slotWaktuMulai->urutan ?? null,
+                    'slot_selesai' => $j->jadwalMaster->slotWaktuSelesai->urutan ?? null,
+                ];
+            })->toArray()
+        ]);
+        
         $jadwalBentrok = SesiJadwal::whereDate('tanggal', $tanggal)
+            ->where('status', 'terjadwal') // Hanya cek yang terjadwal, tidak_masuk bisa di-override
             ->whereHas('jadwalMaster', function ($query) use ($validated, $slotMulai, $slotSelesaiId, $hari) {
                 $query->where('laboratorium_id', $validated['laboratorium_id'])
                     ->where('hari', $hari)
@@ -235,6 +263,10 @@ class BookingLaboratoriumController extends Controller
                     });
             })
             ->exists();
+        
+        \Log::info('checkAvailability - Hasil bentrok:', [
+            'jadwal_bentrok' => $jadwalBentrok
+        ]);
 
         if ($jadwalBentrok) {
             return response()->json([
@@ -326,40 +358,98 @@ class BookingLaboratoriumController extends Controller
         $hari = $this->getHariIndonesia($tanggal->dayOfWeek);
 
         // Cek jadwal master yang bentrok (overlap detection)
+        // HANYA jadwal dengan status 'terjadwal' yang dianggap bentrok
+        // Jadwal 'tidak_masuk' BISA di-override dengan booking baru
         $urutanMulai = $slotMulai->urutan;
         $urutanSelesai = $slotSelesai->urutan;
         
+        // Debug: Cek semua jadwal di tanggal tersebut
+        $allJadwal = SesiJadwal::whereDate('tanggal', $tanggal)
+            ->whereHas('jadwalMaster', function ($query) use ($validated, $hari) {
+                $query->where('laboratorium_id', $validated['laboratorium_id'])
+                    ->where('hari', $hari);
+            })
+            ->with('jadwalMaster.kelasMatKul.mataKuliah', 'jadwalMaster.slotWaktuMulai', 'jadwalMaster.slotWaktuSelesai')
+            ->get();
+        
+        \Log::info('Debug Booking - Semua jadwal di tanggal ini:', [
+            'tanggal' => $tanggal->format('Y-m-d'),
+            'hari' => $hari,
+            'lab_id' => $validated['laboratorium_id'],
+            'booking_slot' => ['mulai' => $urutanMulai, 'selesai' => $urutanSelesai],
+            'jadwal' => $allJadwal->map(function($j) {
+                return [
+                    'id' => $j->id,
+                    'matkul' => $j->jadwalMaster->kelasMatKul->mataKuliah->nama ?? 'Unknown',
+                    'status' => $j->status,
+                    'slot_mulai' => $j->jadwalMaster->slotWaktuMulai->urutan ?? null,
+                    'slot_selesai' => $j->jadwalMaster->slotWaktuSelesai->urutan ?? null,
+                    'jam' => ($j->jadwalMaster->slotWaktuMulai->waktu_mulai ?? '-') . ' - ' . ($j->jadwalMaster->slotWaktuSelesai->waktu_selesai ?? '-'),
+                ];
+            })->toArray(),
+        ]);
+        
         $jadwalBentrok = SesiJadwal::whereDate('tanggal', $tanggal)
+            ->where('status', 'terjadwal') // Filter status dulu sebelum cek overlap
             ->whereHas('jadwalMaster', function ($query) use ($validated, $urutanMulai, $urutanSelesai, $hari) {
                 $query->where('laboratorium_id', $validated['laboratorium_id'])
                     ->where('hari', $hari)
                     ->where(function ($q) use ($urutanMulai, $urutanSelesai) {
-                        $q->whereHas('slotWaktuMulai', function ($sq) use ($urutanMulai, $urutanSelesai) {
-                            // Jadwal mulai di antara slot booking (exclusive end)
-                            $sq->where('urutan', '>=', $urutanMulai)
-                               ->where('urutan', '<', $urutanSelesai);
+                        // Overlap terjadi jika:
+                        // 1. Jadwal mulai sebelum booking selesai DAN
+                        // 2. Jadwal selesai setelah booking mulai
+                        // Ini adalah standard interval overlap detection
+                        $q->whereHas('slotWaktuMulai', function ($sq) use ($urutanSelesai) {
+                            $sq->where('urutan', '<', $urutanSelesai);
                         })
-                        ->orWhereHas('slotWaktuSelesai', function ($sq) use ($urutanMulai, $urutanSelesai) {
-                            // Jadwal selesai di antara slot booking (exclusive start)
-                            $sq->where('urutan', '>', $urutanMulai)
-                               ->where('urutan', '<=', $urutanSelesai);
-                        })
-                        ->orWhere(function ($sq) use ($urutanMulai, $urutanSelesai) {
-                            // Jadwal meliputi seluruh slot booking
-                            $sq->whereHas('slotWaktuMulai', function ($s) use ($urutanMulai) {
-                                $s->where('urutan', '<=', $urutanMulai);
-                            })
-                            ->whereHas('slotWaktuSelesai', function ($s) use ($urutanSelesai) {
-                                $s->where('urutan', '>=', $urutanSelesai);
-                            });
+                        ->whereHas('slotWaktuSelesai', function ($sq) use ($urutanMulai) {
+                            $sq->where('urutan', '>', $urutanMulai);
                         });
                     });
             })
-            ->where('status', 'terjadwal')
             ->exists();
+        
+        \Log::info('Debug Booking - Hasil cek bentrok:', [
+            'bentrok' => $jadwalBentrok,
+            'urutan_mulai' => $urutanMulai,
+            'urutan_selesai' => $urutanSelesai,
+        ]);
 
         if ($jadwalBentrok) {
-            return redirect()->back()->withInput()->with('error', 'Lab sudah terpakai pada waktu tersebut (jadwal perkuliahan bentrok)');
+            // Debug info untuk development
+            $jadwalYangBentrok = SesiJadwal::whereDate('tanggal', $tanggal)
+                ->where('status', 'terjadwal')
+                ->whereHas('jadwalMaster', function ($query) use ($validated, $urutanMulai, $urutanSelesai, $hari) {
+                    $query->where('laboratorium_id', $validated['laboratorium_id'])
+                        ->where('hari', $hari)
+                        ->where(function ($q) use ($urutanMulai, $urutanSelesai) {
+                            $q->whereHas('slotWaktuMulai', function ($sq) use ($urutanSelesai) {
+                                $sq->where('urutan', '<', $urutanSelesai);
+                            })
+                            ->whereHas('slotWaktuSelesai', function ($sq) use ($urutanMulai) {
+                                $sq->where('urutan', '>', $urutanMulai);
+                            });
+                        });
+                })
+                ->with('jadwalMaster.kelasMatKul.mataKuliah', 'jadwalMaster.slotWaktuMulai', 'jadwalMaster.slotWaktuSelesai')
+                ->first();
+            
+            $debugInfo = '';
+            if ($jadwalYangBentrok) {
+                $debugInfo = sprintf(
+                    ' [DEBUG: %s - Slot %s s/d %s (urutan %d-%d), Status: %s | Booking: urutan %d-%d]',
+                    $jadwalYangBentrok->jadwalMaster->kelasMatKul->mataKuliah->nama ?? 'Unknown',
+                    $jadwalYangBentrok->jadwalMaster->slotWaktuMulai->waktu_mulai ?? '-',
+                    $jadwalYangBentrok->jadwalMaster->slotWaktuSelesai->waktu_selesai ?? '-',
+                    $jadwalYangBentrok->jadwalMaster->slotWaktuMulai->urutan ?? 0,
+                    $jadwalYangBentrok->jadwalMaster->slotWaktuSelesai->urutan ?? 0,
+                    $jadwalYangBentrok->status,
+                    $urutanMulai,
+                    $urutanSelesai
+                );
+            }
+            
+            return redirect()->back()->withInput()->with('error', 'Lab sudah terpakai pada waktu tersebut (jadwal perkuliahan bentrok)' . $debugInfo);
         }
 
         $bookingBentrok = BookingLaboratorium::where('laboratorium_id', $validated['laboratorium_id'])
@@ -387,6 +477,52 @@ class BookingLaboratoriumController extends Controller
 
         if ($bookingBentrok) {
             return redirect()->back()->withInput()->with('error', 'Lab sudah dibooking pada waktu tersebut');
+        }
+
+        // Hapus atau update jadwal "tidak_masuk" yang overlap dengan booking ini
+        // Ini memungkinkan booking menggantikan slot yang tidak digunakan
+        $jadwalTidakMasuk = SesiJadwal::whereDate('tanggal', $tanggal)
+            ->whereIn('status', ['tidak_masuk', 'dibatalkan']) // Include dibatalkan juga
+            ->whereHas('jadwalMaster', function ($query) use ($validated, $urutanMulai, $urutanSelesai, $hari) {
+                $query->where('laboratorium_id', $validated['laboratorium_id'])
+                    ->where('hari', $hari);
+            })
+            ->with('jadwalMaster.slotWaktuMulai', 'jadwalMaster.slotWaktuSelesai')
+            ->get()
+            ->filter(function($jadwal) use ($urutanMulai, $urutanSelesai) {
+                // Filter manual di PHP untuk overlap yang lebih akurat
+                $jadwalMulai = $jadwal->jadwalMaster->slotWaktuMulai->urutan ?? 0;
+                $jadwalSelesai = $jadwal->jadwalMaster->slotWaktuSelesai->urutan ?? 0;
+                
+                // Overlap jika: jadwal_mulai < booking_selesai DAN jadwal_selesai > booking_mulai
+                return ($jadwalMulai < $urutanSelesai) && ($jadwalSelesai > $urutanMulai);
+            });
+        
+        \Log::info('Jadwal tidak_masuk yang akan digantikan:', [
+            'count' => $jadwalTidakMasuk->count(),
+            'tanggal' => $tanggal->format('Y-m-d'),
+            'hari' => $hari,
+            'lab_id' => $validated['laboratorium_id'],
+            'booking_urutan' => [$urutanMulai, $urutanSelesai],
+            'jadwal' => $jadwalTidakMasuk->map(function($j) {
+                return [
+                    'id' => $j->id,
+                    'matkul' => $j->jadwalMaster->kelasMatKul->mataKuliah->nama ?? 'Unknown',
+                    'status' => $j->status,
+                    'urutan' => [
+                        $j->jadwalMaster->slotWaktuMulai->urutan ?? 0,
+                        $j->jadwalMaster->slotWaktuSelesai->urutan ?? 0
+                    ],
+                ];
+            })->toArray()
+        ]);
+        
+        // Update status ke 'dibatalkan' dengan catatan bahwa digantikan oleh booking
+        foreach ($jadwalTidakMasuk as $jadwal) {
+            $jadwal->update([
+                'status' => 'dibatalkan',
+                'catatan' => 'Digantikan oleh booking laboratorium'
+            ]);
         }
 
         BookingLaboratorium::create([
@@ -554,6 +690,7 @@ class BookingLaboratoriumController extends Controller
                 $query->where('semester_id', $selectedSemesterId);
             })
             ->where('pertemuan_ke', $selectedMinggu)
+            ->whereNotIn('status', ['dibatalkan']) // Filter jadwal yang dibatalkan
             ->with([
                 'jadwalMaster.laboratorium.kampus',
                 'jadwalMaster.dosen.user',

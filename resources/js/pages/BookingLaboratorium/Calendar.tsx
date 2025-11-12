@@ -739,8 +739,25 @@ export default function Calendar({
                                                                                                             key={
                                                                                                                 idx
                                                                                                             }
-                                                                                                            className={`bg-gradient-to-br ${colorScheme.from} ${colorScheme.to} border-l-4 ${colorScheme.border} flex h-full flex-col justify-center p-2 ${colorScheme.hover} mx-0.5 my-0.5 rounded-lg shadow-sm transition-all duration-200 hover:shadow-md`}
+                                                                                                            className={`bg-gradient-to-br ${colorScheme.from} ${colorScheme.to} border-l-4 ${colorScheme.border} flex h-full flex-col justify-center p-2 ${colorScheme.hover} mx-0.5 my-0.5 rounded-lg shadow-sm transition-all duration-200 hover:shadow-md relative ${cell.status === 'tidak_masuk' && !cell.is_my_schedule ? 'cursor-pointer ring-2 ring-orange-400 ring-opacity-50' : ''}`}
+                                                                                                            onClick={() => {
+                                                                                                                // Jika tidak_masuk dan bukan jadwal saya, bisa diklik untuk booking
+                                                                                                                if (cell.status === 'tidak_masuk' && !cell.is_my_schedule && h.tanggal) {
+                                                                                                                    handleCellClick(
+                                                                                                                        kampus.id,
+                                                                                                                        h.tanggal,
+                                                                                                                        slot.id,
+                                                                                                                        slot.waktu_mulai,
+                                                                                                                    );
+                                                                                                                }
+                                                                                                            }}
                                                                                                         >
+                                                                                                            {/* Indicator booking available untuk slot tidak_masuk */}
+                                                                                                            {cell.status === 'tidak_masuk' && !cell.is_my_schedule && (
+                                                                                                                <div className="absolute -top-1 -right-1 bg-orange-500 text-white text-xs px-2 py-0.5 rounded-bl-lg rounded-tr-lg font-semibold shadow-md z-10">
+                                                                                                                    📅 Bisa Dibook
+                                                                                                                </div>
+                                                                                                            )}
                                                                                                             {/* Header dengan nama mata kuliah */}
                                                                                                             <div className="mb-2 flex items-start gap-1.5">
                                                                                                                 <BookOpen

@@ -96,9 +96,9 @@ export default function Index({
     const [processing, setProcessing] = useState(false);
 
     const getStatusBadge = (status: string) => {
-        const variants: Record<string, { variant: any; label: string; icon: any }> = {
+        const variants: Record<string, { variant: any; label: string; icon: any; className?: string }> = {
             menunggu: { variant: 'default', label: 'Menunggu', icon: Clock },
-            disetujui: { variant: 'outline', label: 'Disetujui', icon: CheckCircle2 },
+            disetujui: { variant: 'default', label: 'Disetujui', icon: CheckCircle2, className: 'bg-green-100 text-green-800 border-green-300 hover:bg-green-200' },
             ditolak: { variant: 'destructive', label: 'Ditolak', icon: XCircle },
             selesai: { variant: 'secondary', label: 'Selesai', icon: CheckCircle2 },
             dibatalkan: { variant: 'secondary', label: 'Dibatalkan', icon: XCircle },
@@ -108,7 +108,7 @@ export default function Index({
         const Icon = config.icon;
 
         return (
-            <Badge variant={config.variant} className="gap-1">
+            <Badge variant={config.variant} className={`gap-1 ${config.className || ''}`}>
                 <Icon className="h-3 w-3" />
                 {config.label}
             </Badge>
