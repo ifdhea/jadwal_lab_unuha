@@ -59,15 +59,23 @@ class SlotWaktuController extends Controller
 
     public function update(Request $request, SlotWaktu $slotWaktu)
     {
-        $request->validate([
-            'waktu_mulai' => 'required|date_format:H:i',
-            'waktu_selesai' => 'required|date_format:H:i|after:waktu_mulai',
+        $validated = $request->validate([
+            'waktu_mulai' => 'required',
+            'waktu_selesai' => 'required',
             'label' => 'required|string|max:50',
             'urutan' => 'required|integer|min:0',
             'is_aktif' => 'boolean',
         ]);
+        
+        // Pastikan format waktu H:i:s
+        if (strlen($validated['waktu_mulai']) === 5) {
+            $validated['waktu_mulai'] .= ':00';
+        }
+        if (strlen($validated['waktu_selesai']) === 5) {
+            $validated['waktu_selesai'] .= ':00';
+        }
 
-        $slotWaktu->update($request->all());
+        $slotWaktu->update($validated);
 
         return redirect('/slot-waktu')->with('success', 'Slot Waktu berhasil diperbarui.');
     }

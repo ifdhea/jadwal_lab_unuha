@@ -31,6 +31,7 @@ import {
     FlaskConical,
     Home,
     LayoutGrid,
+    User,
     Users,
     UserSquare,
 } from 'lucide-react';
@@ -121,6 +122,11 @@ export function AppSidebar() {
                     title: 'Dosen',
                     href: '/dosen',
                     icon: UserSquare,
+                },
+                {
+                    title: 'User',
+                    href: '/users',
+                    icon: User,
                 },
             ],
         },

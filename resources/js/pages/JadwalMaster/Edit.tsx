@@ -20,7 +20,7 @@ interface JadwalMaster {
     kelas_mata_kuliah_id: number;
     dosen_id: number;
     laboratorium_id: number;
-    hari: number;
+    hari: string; // Changed from number to string
     slot_waktu_mulai_id: number;
     slot_waktu_selesai_id: number;
     catatan: string | null;
@@ -49,7 +49,7 @@ export default function Edit({ jadwalMaster, semester, kelasMatkul, dosen, labor
         kelas_mata_kuliah_id: String(jadwalMaster.kelas_mata_kuliah_id),
         dosen_id: String(jadwalMaster.dosen_id),
         laboratorium_id: String(jadwalMaster.laboratorium_id),
-        hari: String(jadwalMaster.hari),
+        hari: jadwalMaster.hari, // Keep as string (nama hari)
         slot_waktu_mulai_id: String(jadwalMaster.slot_waktu_mulai_id),
         slot_waktu_selesai_id: String(jadwalMaster.slot_waktu_selesai_id),
         catatan: jadwalMaster.catatan || '',
@@ -139,7 +139,7 @@ export default function Edit({ jadwalMaster, semester, kelasMatkul, dosen, labor
                                     <SelectTrigger><SelectValue placeholder="Pilih Hari" /></SelectTrigger>
                                     <SelectContent>
                                         {hari.map((item) => (
-                                            <SelectItem key={item.id} value={String(item.id)}>{item.nama}</SelectItem>
+                                            <SelectItem key={item.id} value={item.nama}>{item.nama}</SelectItem>
                                         ))}
                                     </SelectContent>
                                 </Select>

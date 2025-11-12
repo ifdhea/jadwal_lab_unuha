@@ -25,8 +25,8 @@ export default function Edit({ slotWaktu, breadcrumbs }: Props) {
     const { data, setData, put, errors, processing } = useForm({
         label: slotWaktu.label,
         urutan: slotWaktu.urutan,
-        waktu_mulai: slotWaktu.waktu_mulai,
-        waktu_selesai: slotWaktu.waktu_selesai,
+        waktu_mulai: slotWaktu.waktu_mulai.substring(0, 5), // HH:MM
+        waktu_selesai: slotWaktu.waktu_selesai.substring(0, 5), // HH:MM
         is_aktif: slotWaktu.is_aktif,
     });
 

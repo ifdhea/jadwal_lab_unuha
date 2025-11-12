@@ -17,6 +17,7 @@ use App\Http\Controllers\SesiJadwalController;
 use App\Http\Controllers\SlotWaktuController;
 use App\Http\Controllers\TahunAjaranController;
 use App\Http\Controllers\TukarJadwalController;
+use App\Http\Controllers\UserController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 use Laravel\Fortify\Features;
@@ -83,6 +84,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::resource('kelas-matkul', KelasMataKuliahController::class)->parameters(['kelas_matkul' => 'kelasMatkul']);
         Route::resource('slot-waktu', SlotWaktuController::class);
         Route::resource('dosen', DosenController::class);
+        Route::resource('users', UserController::class);
         Route::resource('jadwal-master', JadwalMasterController::class);
         Route::post('/jadwal/generate', [JadwalGeneratorController::class, 'generate'])->name('jadwal.generate');
     });
