@@ -151,6 +151,68 @@ class JadwalController extends Controller
             }
         }
 
+        // Tambahkan booking yang disetujui ke jadwal
+        if ($tanggalMulai && $selectedMinggu) {
+            $mingguStart = $tanggalMulai->copy()->addWeeks($selectedMinggu - 1)->startOfWeek(Carbon::MONDAY);
+            $weekEnd = $mingguStart->copy()->addDays(5);
+            
+            $bookings = \App\Models\BookingLaboratorium::where('status', 'disetujui')
+                ->whereDate('tanggal', '>=', $mingguStart)
+                ->whereDate('tanggal', '<=', $weekEnd)
+                ->with(['dosen.user', 'laboratorium.kampus', 'slotWaktuMulai', 'slotWaktuSelesai', 'kelasMatKul.mataKuliah', 'kelasMatKul.kelas'])
+                ->get();
+
+            foreach ($bookings as $booking) {
+                $tanggal = Carbon::parse($booking->tanggal);
+                $hariId = $hariMap[$this->getHariIndonesia($tanggal->dayOfWeek)] ?? null;
+                
+                if (!$hariId) continue;
+
+                $kampusId = $booking->laboratorium->kampus_id;
+
+                // Iterasi hanya untuk slot aktif (skip slot istirahat)
+                $currentUrutan = $booking->slotWaktuMulai->urutan;
+                $slotCounter = 0;
+                
+                while ($slotCounter < $booking->durasi_slot) {
+                    $currentSlot = SlotWaktu::where('urutan', $currentUrutan)->first();
+                    
+                    if (!$currentSlot) break;
+                    
+                    // Hanya proses slot aktif
+                    if ($currentSlot->is_aktif) {
+                        $slotId = $currentSlot->id;
+
+                        if (!isset($jadwalData[$kampusId][$selectedMinggu][$hariId][$slotId])) {
+                            $jadwalData[$kampusId][$selectedMinggu][$hariId][$slotId] = [];
+                        }
+
+                        $jadwalData[$kampusId][$selectedMinggu][$hariId][$slotId][] = [
+                            'booking_id' => $booking->id,
+                            'matkul' => $booking->kelasMatKul ? $booking->kelasMatKul->mataKuliah->nama : '-',
+                            'kelas' => $booking->kelasMatKul ? $booking->kelasMatKul->kelas->nama : '-',
+                            'dosen' => $booking->dosen->user->name,
+                            'lab' => $booking->laboratorium->nama,
+                            'sks' => $booking->kelasMatKul ? $booking->kelasMatKul->mataKuliah->sks : $booking->durasi_slot,
+                            'durasi_slot' => $booking->durasi_slot,
+                            'waktu_mulai' => $booking->slotWaktuMulai->waktu_mulai,
+                            'waktu_selesai' => $booking->slotWaktuSelesai->waktu_selesai,
+                            'status' => 'booking',
+                            'tanggal' => $booking->tanggal,
+                            'is_past' => $tanggal->isPast() && !$tanggal->isToday(),
+                            'slot_position' => $slotCounter,
+                            'is_first_slot' => $slotCounter === 0,
+                            'is_last_slot' => $slotCounter === ($booking->durasi_slot - 1),
+                        ];
+                        
+                        $slotCounter++;
+                    }
+                    
+                    $currentUrutan++;
+                }
+            }
+        }
+
         return Inertia::render('Jadwal/Index', [
             'semesters' => $semesters,
             'selectedSemesterId' => $selectedSemesterId,
@@ -165,5 +227,20 @@ class JadwalController extends Controller
                 ['title' => 'Jadwal Final', 'href' => '/jadwal'],
             ],
         ]);
+    }
+
+    private function getHariIndonesia($dayOfWeek)
+    {
+        $hari = [
+            0 => 'Minggu',
+            1 => 'Senin',
+            2 => 'Selasa',
+            3 => 'Rabu',
+            4 => 'Kamis',
+            5 => 'Jumat',
+            6 => 'Sabtu',
+        ];
+
+        return $hari[$dayOfWeek] ?? '';
     }
 }

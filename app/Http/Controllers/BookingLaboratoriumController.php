@@ -112,8 +112,8 @@ class BookingLaboratoriumController extends Controller
             $query->whereDate('tanggal', $request->tanggal);
         }
 
-        $bookings = $query->orderBy('tanggal', 'desc')
-            ->orderBy('slot_waktu_mulai_id')
+        $bookings = $query->orderBy('tanggal_diajukan', 'desc')
+            ->orderBy('created_at', 'desc')
             ->paginate(10)
             ->withQueryString();
 
@@ -294,9 +294,29 @@ class BookingLaboratoriumController extends Controller
         $durasiSlot = $sks;
 
         $slotMulai = SlotWaktu::find($validated['slot_waktu_mulai_id']);
-        $slotSelesai = SlotWaktu::where('urutan', $slotMulai->urutan + $durasiSlot - 1)
-            ->where('is_aktif', true)
-            ->first();
+        
+        // Hitung slot akhir dengan skip slot istirahat (is_aktif = false)
+        $currentUrutan = $slotMulai->urutan;
+        $slotTerpakai = 0;
+        $slotSelesai = null;
+        
+        while ($slotTerpakai < $durasiSlot) {
+            $slot = SlotWaktu::where('urutan', $currentUrutan)->first();
+            
+            if (!$slot) {
+                break;
+            }
+            
+            if ($slot->is_aktif) {
+                $slotTerpakai++;
+                if ($slotTerpakai === $durasiSlot) {
+                    $slotSelesai = $slot;
+                    break;
+                }
+            }
+            
+            $currentUrutan++;
+        }
 
         if (!$slotSelesai) {
             return redirect()->back()->withInput()->with('error', 'Durasi slot mata kuliah melebihi jadwal yang tersedia');
@@ -305,17 +325,33 @@ class BookingLaboratoriumController extends Controller
         $tanggal = Carbon::parse($validated['tanggal']);
         $hari = $this->getHariIndonesia($tanggal->dayOfWeek);
 
+        // Cek jadwal master yang bentrok (overlap detection)
+        $urutanMulai = $slotMulai->urutan;
+        $urutanSelesai = $slotSelesai->urutan;
+        
         $jadwalBentrok = SesiJadwal::whereDate('tanggal', $tanggal)
-            ->whereHas('jadwalMaster', function ($query) use ($validated, $slotMulai, $slotSelesai, $hari) {
+            ->whereHas('jadwalMaster', function ($query) use ($validated, $urutanMulai, $urutanSelesai, $hari) {
                 $query->where('laboratorium_id', $validated['laboratorium_id'])
                     ->where('hari', $hari)
-                    ->where(function ($q) use ($slotMulai, $slotSelesai) {
-                        $q->where(function ($sq) use ($slotMulai, $slotSelesai) {
-                            $sq->whereRaw('slot_waktu_mulai_id BETWEEN ? AND ?', [$slotMulai->id, $slotSelesai->id])
-                               ->orWhereRaw('slot_waktu_selesai_id BETWEEN ? AND ?', [$slotMulai->id, $slotSelesai->id]);
-                        })->orWhere(function ($sq) use ($slotMulai, $slotSelesai) {
-                            $sq->where('slot_waktu_mulai_id', '<=', $slotMulai->id)
-                               ->where('slot_waktu_selesai_id', '>=', $slotSelesai->id);
+                    ->where(function ($q) use ($urutanMulai, $urutanSelesai) {
+                        $q->whereHas('slotWaktuMulai', function ($sq) use ($urutanMulai, $urutanSelesai) {
+                            // Jadwal mulai di antara slot booking (exclusive end)
+                            $sq->where('urutan', '>=', $urutanMulai)
+                               ->where('urutan', '<', $urutanSelesai);
+                        })
+                        ->orWhereHas('slotWaktuSelesai', function ($sq) use ($urutanMulai, $urutanSelesai) {
+                            // Jadwal selesai di antara slot booking (exclusive start)
+                            $sq->where('urutan', '>', $urutanMulai)
+                               ->where('urutan', '<=', $urutanSelesai);
+                        })
+                        ->orWhere(function ($sq) use ($urutanMulai, $urutanSelesai) {
+                            // Jadwal meliputi seluruh slot booking
+                            $sq->whereHas('slotWaktuMulai', function ($s) use ($urutanMulai) {
+                                $s->where('urutan', '<=', $urutanMulai);
+                            })
+                            ->whereHas('slotWaktuSelesai', function ($s) use ($urutanSelesai) {
+                                $s->where('urutan', '>=', $urutanSelesai);
+                            });
                         });
                     });
             })
@@ -329,13 +365,22 @@ class BookingLaboratoriumController extends Controller
         $bookingBentrok = BookingLaboratorium::where('laboratorium_id', $validated['laboratorium_id'])
             ->whereDate('tanggal', $tanggal)
             ->whereIn('status', ['menunggu', 'disetujui'])
-            ->where(function ($q) use ($slotMulai, $slotSelesai) {
-                $q->where(function ($sq) use ($slotMulai, $slotSelesai) {
-                    $sq->whereRaw('slot_waktu_mulai_id BETWEEN ? AND ?', [$slotMulai->id, $slotSelesai->id])
-                       ->orWhereRaw('slot_waktu_selesai_id BETWEEN ? AND ?', [$slotMulai->id, $slotSelesai->id]);
-                })->orWhere(function ($sq) use ($slotMulai, $slotSelesai) {
-                    $sq->where('slot_waktu_mulai_id', '<=', $slotMulai->id)
-                       ->where('slot_waktu_selesai_id', '>=', $slotSelesai->id);
+            ->where(function ($q) use ($urutanMulai, $urutanSelesai) {
+                $q->whereHas('slotWaktuMulai', function ($sq) use ($urutanMulai, $urutanSelesai) {
+                    $sq->where('urutan', '>=', $urutanMulai)
+                       ->where('urutan', '<', $urutanSelesai);
+                })
+                ->orWhereHas('slotWaktuSelesai', function ($sq) use ($urutanMulai, $urutanSelesai) {
+                    $sq->where('urutan', '>', $urutanMulai)
+                       ->where('urutan', '<=', $urutanSelesai);
+                })
+                ->orWhere(function ($sq) use ($urutanMulai, $urutanSelesai) {
+                    $sq->whereHas('slotWaktuMulai', function ($s) use ($urutanMulai) {
+                        $s->where('urutan', '<=', $urutanMulai);
+                    })
+                    ->whereHas('slotWaktuSelesai', function ($s) use ($urutanSelesai) {
+                        $s->where('urutan', '>=', $urutanSelesai);
+                    });
                 });
             })
             ->exists();
@@ -587,34 +632,46 @@ class BookingLaboratoriumController extends Controller
             
             if ($tanggal->lt($weekStart) || $tanggal->gt($weekEnd)) continue;
 
-            for ($i = 0; $i < $booking->durasi_slot; $i++) {
-                $currentSlot = SlotWaktu::where('urutan', $booking->slotWaktuMulai->urutan + $i)->first();
-                if (!$currentSlot) continue;
+            // Iterasi hanya untuk slot aktif (skip slot istirahat)
+            $currentUrutan = $booking->slotWaktuMulai->urutan;
+            $slotCounter = 0;
+            
+            while ($slotCounter < $booking->durasi_slot) {
+                $currentSlot = SlotWaktu::where('urutan', $currentUrutan)->first();
+                
+                if (!$currentSlot) break;
+                
+                // Hanya proses slot aktif
+                if ($currentSlot->is_aktif) {
+                    $slotId = $currentSlot->id;
 
-                $slotId = $currentSlot->id;
+                    if (!isset($jadwalData[$kampusId][$selectedMinggu][$hariId][$slotId])) {
+                        $jadwalData[$kampusId][$selectedMinggu][$hariId][$slotId] = [];
+                    }
 
-                if (!isset($jadwalData[$kampusId][$selectedMinggu][$hariId][$slotId])) {
-                    $jadwalData[$kampusId][$selectedMinggu][$hariId][$slotId] = [];
+                    $jadwalData[$kampusId][$selectedMinggu][$hariId][$slotId][] = [
+                        'booking_id' => $booking->id,
+                        'matkul' => $booking->kelasMatKul ? $booking->kelasMatKul->mataKuliah->nama : '-',
+                        'kelas' => $booking->kelasMatKul ? $booking->kelasMatKul->kelas->nama : '-',
+                        'dosen' => $booking->dosen->user->name,
+                        'lab' => $booking->laboratorium->nama,
+                        'laboratorium_id' => $booking->laboratorium_id,
+                        'sks' => $booking->kelasMatKul ? $booking->kelasMatKul->mataKuliah->sks : $booking->durasi_slot,
+                        'durasi_slot' => $booking->durasi_slot,
+                        'waktu_mulai' => $booking->slotWaktuMulai->waktu_mulai,
+                        'waktu_selesai' => $booking->slotWaktuSelesai->waktu_selesai,
+                        'status' => $booking->status === 'disetujui' ? 'booking' : 'pending',
+                        'keperluan' => $booking->keperluan,
+                        'tanggal' => $booking->tanggal,
+                        'slot_position' => $slotCounter,
+                        'is_first_slot' => $slotCounter === 0,
+                        'is_last_slot' => $slotCounter === ($booking->durasi_slot - 1),
+                    ];
+                    
+                    $slotCounter++;
                 }
-
-                $jadwalData[$kampusId][$selectedMinggu][$hariId][$slotId][] = [
-                    'booking_id' => $booking->id,
-                    'matkul' => $booking->kelasMatKul ? $booking->kelasMatKul->mataKuliah->nama : '-',
-                    'kelas' => $booking->kelasMatKul ? $booking->kelasMatKul->kelas->nama : '-',
-                    'dosen' => $booking->dosen->user->name,
-                    'lab' => $booking->laboratorium->nama,
-                    'laboratorium_id' => $booking->laboratorium_id,
-                    'sks' => $booking->kelasMatKul ? $booking->kelasMatKul->mataKuliah->sks : $booking->durasi_slot,
-                    'durasi_slot' => $booking->durasi_slot,
-                    'waktu_mulai' => $booking->slotWaktuMulai->waktu_mulai,
-                    'waktu_selesai' => $booking->slotWaktuSelesai->waktu_selesai,
-                    'status' => 'booking_' . $booking->status,
-                    'keperluan' => $booking->keperluan,
-                    'tanggal' => $booking->tanggal,
-                    'slot_position' => $i,
-                    'is_first_slot' => $i === 0,
-                    'is_last_slot' => $i === ($booking->durasi_slot - 1),
-                ];
+                
+                $currentUrutan++;
             }
         }
 

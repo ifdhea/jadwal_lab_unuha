@@ -20,8 +20,9 @@ import {
 } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
+import { toast } from '@/hooks/use-toast';
 import AppLayout from '@/layouts/app-layout';
-import { Head, router } from '@inertiajs/react';
+import { Head, router, usePage } from '@inertiajs/react';
 import {
     BookOpen,
     ChevronLeft,
@@ -30,8 +31,10 @@ import {
     MapPin,
     User,
     Plus,
+    CheckCircle2,
+    XCircle,
 } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 // Definisikan tipe data yang diterima dari controller
 interface Semester {
@@ -128,6 +131,7 @@ export default function Calendar({
     myMatKuls,
     breadcrumbs,
 }: Props) {
+    const { flash } = usePage<any>().props;
     const [activeKampus, setActiveKampus] = useState(
         kampusList[0]?.kode || 'B',
     );
@@ -143,6 +147,32 @@ export default function Calendar({
         keperluan: '',
         keterangan: '',
     });
+
+    // Toast notification untuk flash messages
+    useEffect(() => {
+        if (flash?.success) {
+            toast({
+                title: "Berhasil",
+                description: flash.success,
+                variant: "default",
+                className: "bg-green-50 border-green-200 text-green-900",
+                action: (
+                    <CheckCircle2 className="h-5 w-5 text-green-600" />
+                ),
+            });
+        }
+        if (flash?.error) {
+            toast({
+                title: "Gagal",
+                description: flash.error,
+                variant: "destructive",
+                className: "bg-red-50 border-red-200 text-red-900",
+                action: (
+                    <XCircle className="h-5 w-5 text-red-600" />
+                ),
+            });
+        }
+    }, [flash]);
 
     // Cek apakah hari adalah hari ini (GMT+7 Jakarta)
     const isToday = (tanggal?: string) => {
@@ -304,19 +334,17 @@ export default function Calendar({
                     >
                         <ChevronLeft className="h-4 w-4" />
                     </Button>
-                    <div className="text-center">
+                    <div className="text-center min-w-[200px]">
                         <p className="font-semibold">
                             Minggu ke-{selectedMinggu}
                         </p>
                         {currentMinggu && (
-                            <p className="text-xs text-muted-foreground">
-                                {new Date(
-                                    currentMinggu.tanggal_mulai,
-                                ).toLocaleDateString('id-ID')}{' '}
-                                -{' '}
-                                {new Date(
-                                    currentMinggu.tanggal_selesai,
-                                ).toLocaleDateString('id-ID')}
+                            <p className="text-xs text-muted-foreground whitespace-nowrap">
+                                {(() => {
+                                    const start = new Date(currentMinggu.tanggal_mulai);
+                                    const end = new Date(currentMinggu.tanggal_selesai);
+                                    return `${start.toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })} - ${end.toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}`;
+                                })()}
                             </p>
                         )}
                     </div>
