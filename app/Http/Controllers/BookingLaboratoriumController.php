@@ -210,16 +210,15 @@ class BookingLaboratoriumController extends Controller
         ]);
 
         $slotMulai = SlotWaktu::find($validated['slot_waktu_mulai_id']);
-        $slotSelesaiId = SlotWaktu::where('urutan', $slotMulai->urutan + $validated['durasi_slot'] - 1)
-            ->first()
-            ->id ?? null;
+        $slotSelesai = $this->_calculateSlotSelesai($slotMulai, $validated['durasi_slot']);
 
-        if (!$slotSelesaiId) {
+        if (!$slotSelesai) {
             return response()->json([
                 'available' => false,
-                'message' => 'Durasi slot tidak valid',
+                'message' => 'Durasi slot tidak valid atau melebihi jam tersedia.',
             ]);
         }
+        $slotSelesaiId = $slotSelesai->id;
 
         $tanggal = Carbon::parse($validated['tanggal']);
         $hari = $this->getHariIndonesia($tanggal->dayOfWeek);
@@ -327,28 +326,7 @@ class BookingLaboratoriumController extends Controller
 
         $slotMulai = SlotWaktu::find($validated['slot_waktu_mulai_id']);
         
-        // Hitung slot akhir dengan skip slot istirahat (is_aktif = false)
-        $currentUrutan = $slotMulai->urutan;
-        $slotTerpakai = 0;
-        $slotSelesai = null;
-        
-        while ($slotTerpakai < $durasiSlot) {
-            $slot = SlotWaktu::where('urutan', $currentUrutan)->first();
-            
-            if (!$slot) {
-                break;
-            }
-            
-            if ($slot->is_aktif) {
-                $slotTerpakai++;
-                if ($slotTerpakai === $durasiSlot) {
-                    $slotSelesai = $slot;
-                    break;
-                }
-            }
-            
-            $currentUrutan++;
-        }
+        $slotSelesai = $this->_calculateSlotSelesai($slotMulai, $durasiSlot);
 
         if (!$slotSelesai) {
             return redirect()->back()->withInput()->with('error', 'Durasi slot mata kuliah melebihi jadwal yang tersedia');
@@ -479,24 +457,25 @@ class BookingLaboratoriumController extends Controller
             return redirect()->back()->withInput()->with('error', 'Lab sudah dibooking pada waktu tersebut');
         }
 
-        // Hapus atau update jadwal "tidak_masuk" yang overlap dengan booking ini
-        // Ini memungkinkan booking menggantikan slot yang tidak digunakan
+        // Hapus jadwal "tidak_masuk" yang overlap dengan booking ini.
+        // Query ini secara spesifik mencari sesi "tidak_masuk" yang slotnya
+        // tumpang tindih dengan slot booking yang baru, langsung di database.
         $jadwalTidakMasuk = SesiJadwal::whereDate('tanggal', $tanggal)
-            ->whereIn('status', ['tidak_masuk', 'dibatalkan']) // Include dibatalkan juga
-            ->whereHas('jadwalMaster', function ($query) use ($validated, $urutanMulai, $urutanSelesai, $hari) {
+            ->where('status', 'tidak_masuk')
+            ->whereHas('jadwalMaster', function ($query) use ($validated, $hari, $urutanMulai, $urutanSelesai) {
                 $query->where('laboratorium_id', $validated['laboratorium_id'])
-                    ->where('hari', $hari);
+                    ->where('hari', $hari)
+                    // Logika overlap:
+                    // Sebuah jadwal lama (A) tumpang tindih dengan booking baru (B) jika:
+                    // A.mulai < B.selesai DAN A.selesai > B.mulai
+                    ->whereHas('slotWaktuMulai', function ($q) use ($urutanSelesai) {
+                        $q->where('urutan', '<', $urutanSelesai);
+                    })
+                    ->whereHas('slotWaktuSelesai', function ($q) use ($urutanMulai) {
+                        $q->where('urutan', '>', $urutanMulai);
+                    });
             })
-            ->with('jadwalMaster.slotWaktuMulai', 'jadwalMaster.slotWaktuSelesai')
-            ->get()
-            ->filter(function($jadwal) use ($urutanMulai, $urutanSelesai) {
-                // Filter manual di PHP untuk overlap yang lebih akurat
-                $jadwalMulai = $jadwal->jadwalMaster->slotWaktuMulai->urutan ?? 0;
-                $jadwalSelesai = $jadwal->jadwalMaster->slotWaktuSelesai->urutan ?? 0;
-                
-                // Overlap jika: jadwal_mulai < booking_selesai DAN jadwal_selesai > booking_mulai
-                return ($jadwalMulai < $urutanSelesai) && ($jadwalSelesai > $urutanMulai);
-            });
+            ->get();
         
         \Log::info('Jadwal tidak_masuk yang akan digantikan:', [
             'count' => $jadwalTidakMasuk->count(),
@@ -517,12 +496,9 @@ class BookingLaboratoriumController extends Controller
             })->toArray()
         ]);
         
-        // Update status ke 'dibatalkan' dengan catatan bahwa digantikan oleh booking
+        // Hapus jadwal "tidak_masuk" yang overlap dengan booking ini
         foreach ($jadwalTidakMasuk as $jadwal) {
-            $jadwal->update([
-                'status' => 'dibatalkan',
-                'catatan' => 'Digantikan oleh booking laboratorium'
-            ]);
+            $jadwal->delete();
         }
 
         BookingLaboratorium::create([
@@ -613,6 +589,35 @@ class BookingLaboratoriumController extends Controller
         ]);
 
         return redirect()->route('booking-lab.index')->with('success', 'Booking laboratorium dibatalkan');
+    }
+
+    private function _calculateSlotSelesai(SlotWaktu $slotMulai, int $durasiSlot): ?SlotWaktu
+    {
+        // Hitung slot akhir dengan skip slot istirahat (is_aktif = false)
+        $currentUrutan = $slotMulai->urutan;
+        $slotTerpakai = 0;
+        $slotSelesai = null;
+        
+        while ($slotTerpakai < $durasiSlot) {
+            $slot = SlotWaktu::where('urutan', $currentUrutan)->first();
+            
+            if (!$slot) {
+                // Melebihi slot yang ada di database
+                return null;
+            }
+            
+            if ($slot->is_aktif) {
+                $slotTerpakai++;
+                if ($slotTerpakai === $durasiSlot) {
+                    $slotSelesai = $slot;
+                    break;
+                }
+            }
+            
+            $currentUrutan++;
+        }
+
+        return $slotSelesai;
     }
 
     private function getHariIndonesia($dayOfWeek)
@@ -729,6 +734,10 @@ class BookingLaboratoriumController extends Controller
                         $jadwalData[$kampusId][$minggu][$hariId][$slotId] = [];
                     }
 
+                    // Re-calculate date on the fly to ensure synchronization
+                    $weekStartDateForSesi = $tanggalMulai->copy()->addWeeks($sesi->pertemuan_ke - 1)->startOfWeek(Carbon::MONDAY);
+                    $correctDateForSesi = $weekStartDateForSesi->copy()->addDays($hariId - 1);
+                    
                     $jadwalData[$kampusId][$minggu][$hariId][$slotId][] = [
                         'sesi_jadwal_id' => $sesi->id,
                         'matkul' => $master->kelasMatKul->mataKuliah->nama,
@@ -741,7 +750,7 @@ class BookingLaboratoriumController extends Controller
                         'waktu_mulai' => $master->slotWaktuMulai->waktu_mulai,
                         'waktu_selesai' => $master->slotWaktuSelesai->waktu_selesai,
                         'status' => $sesi->status,
-                        'tanggal' => $sesi->tanggal->format('Y-m-d'),
+                        'tanggal' => $correctDateForSesi->format('Y-m-d'),
                         'slot_position' => $i,
                         'is_first_slot' => $i === 0,
                         'is_last_slot' => $i === ($master->durasi_slot - 1),

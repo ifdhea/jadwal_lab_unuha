@@ -134,6 +134,10 @@ class JadwalController extends Controller
                     $isMySchedule = ($master->dosen_id === $user->dosen->id);
                 }
                 
+                // Re-calculate date on the fly to ensure synchronization
+                $weekStartDateForSesi = $tanggalMulai->copy()->addWeeks($sesi->pertemuan_ke - 1)->startOfWeek(Carbon::MONDAY);
+                $correctDateForSesi = $weekStartDateForSesi->copy()->addDays($hariId - 1);
+
                 $jadwalData[$kampusId][$minggu][$hariId][$slotId][] = [
                     'sesi_jadwal_id' => $sesi->id,
                     'matkul' => $master->kelasMatKul->mataKuliah->nama,
@@ -146,8 +150,8 @@ class JadwalController extends Controller
                     'waktu_selesai' => $master->slotWaktuSelesai->waktu_selesai,
                     'status' => $sesi->status,
                     'is_my_schedule' => $isMySchedule,
-                    'tanggal' => $sesi->tanggal->format('Y-m-d'),
-                    'is_past' => $sesi->tanggal->isPast() && !$sesi->tanggal->isToday(),
+                    'tanggal' => $correctDateForSesi->format('Y-m-d'),
+                    'is_past' => $correctDateForSesi->isPast() && !$correctDateForSesi->isToday(),
                     'slot_waktu_mulai_id' => $master->slot_waktu_mulai_id,
                     'laboratorium_id' => $master->laboratorium_id,
                 ];
