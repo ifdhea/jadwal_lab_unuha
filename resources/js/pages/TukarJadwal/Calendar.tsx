@@ -20,8 +20,10 @@ import {
 } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
+import { toast } from '@/hooks/use-toast';
 import AppLayout from '@/layouts/app-layout';
-import { Head, router } from '@inertiajs/react';
+import { Head, router, usePage } from '@inertiajs/react';
+import { useEffect } from 'react';
 import {
     BookOpen,
     Calendar as CalendarIcon,
@@ -33,8 +35,11 @@ import {
     XCircle,
     Send,
     Inbox,
+    MapPin,
+    User,
+    Plus,
 } from 'lucide-react';
-import { useState, useRef } from 'react';
+import { useState } from 'react';
 
 interface Semester {
     id: number;
@@ -142,12 +147,13 @@ export default function Calendar({
     dosenId,
     breadcrumbs,
 }: Props) {
+    const { flash } = usePage<any>().props;
     const [activeKampus, setActiveKampus] = useState(
         kampusList[0]?.kode || 'B',
     );
     const [activeTab, setActiveTab] = useState('calendar');
     const [showSwapDialog, setShowSwapDialog] = useState(false);
-    const [draggedCell, setDraggedCell] = useState<JadwalCell | null>(null);
+    const [selectedMySchedule, setSelectedMySchedule] = useState<JadwalCell | null>(null);
     const [targetCell, setTargetCell] = useState<{
         cell: JadwalCell | null;
         isEmptySlot: boolean;
@@ -157,6 +163,32 @@ export default function Calendar({
     const [swapForm, setSwapForm] = useState({
         alasan: '',
     });
+
+    // Toast notification untuk flash messages
+    useEffect(() => {
+        if (flash?.success) {
+            toast({
+                title: "Berhasil",
+                description: flash.success,
+                variant: "default",
+                className: "bg-green-50 border-green-200 text-green-900",
+                action: (
+                    <CheckCircle2 className="h-5 w-5 text-green-600" />
+                ),
+            });
+        }
+        if (flash?.error) {
+            toast({
+                title: "Gagal",
+                description: flash.error,
+                variant: "destructive",
+                className: "bg-red-50 border-red-200 text-red-900",
+                action: (
+                    <XCircle className="h-5 w-5 text-red-600" />
+                ),
+            });
+        }
+    }, [flash]);
 
     const isToday = (tanggal?: string) => {
         if (!tanggal) return false;
@@ -183,58 +215,72 @@ export default function Calendar({
         );
     };
 
-    const handleDragStart = (cell: JadwalCell, e: React.DragEvent) => {
-        if (!cell.is_my_schedule || cell.is_past) {
-            e.preventDefault();
-            return;
-        }
-        setDraggedCell(cell);
-        e.dataTransfer.effectAllowed = 'move';
-        e.dataTransfer.setData('text/plain', String(cell.sesi_jadwal_id));
+    // Handler untuk klik jadwal sendiri (step 1)
+    const handleMyScheduleClick = (cell: JadwalCell) => {
+        if (!cell.is_my_schedule || cell.is_past) return;
         
-        // Visual feedback
-        if (e.currentTarget instanceof HTMLElement) {
-            e.currentTarget.style.opacity = '0.5';
-        }
+        setSelectedMySchedule(cell);
+        toast({
+            title: "Jadwal dipilih",
+            description: "Sekarang klik jadwal lain untuk tukar, atau klik slot kosong untuk pindah",
+            className: "bg-blue-50 border-blue-200 text-blue-900",
+        });
     };
 
-    const handleDragOver = (e: React.DragEvent) => {
-        if (!draggedCell) return;
-        e.preventDefault();
-        e.dataTransfer.dropEffect = 'move';
-    };
-
-    const handleDragEnd = (e: React.DragEvent) => {
-        // Reset visual feedback
-        if (e.currentTarget instanceof HTMLElement) {
-            e.currentTarget.style.opacity = '1';
-        }
-    };
-
-    const handleDrop = (
+    // Handler untuk klik jadwal dosen lain atau slot kosong (step 2)
+    const handleTargetClick = (
         cellsData: JadwalCell[],
         tanggal: string,
         slot: Slot,
-        e: React.DragEvent,
     ) => {
-        e.preventDefault();
-        if (!draggedCell) return;
-
         const isEmpty = cellsData.length === 0;
         const targetJadwal = cellsData.find(c => !c.is_my_schedule);
-
-        // Tidak bisa drop ke jadwal sendiri
-        if (cellsData.some(c => c.sesi_jadwal_id === draggedCell.sesi_jadwal_id)) {
-            setDraggedCell(null);
+        
+        // Validasi: harus klik jadwal sendiri dulu
+        if (!selectedMySchedule) {
+            toast({
+                title: "Pilih jadwal Anda dulu",
+                description: "Klik jadwal yang ingin Anda tukar/pindahkan terlebih dahulu",
+                variant: "destructive",
+            });
             return;
         }
 
-        // Tidak bisa drop ke jadwal yang sudah lewat
+        // Tidak bisa klik jadwal sendiri yang sama
+        if (cellsData.some(c => c.sesi_jadwal_id === selectedMySchedule.sesi_jadwal_id)) {
+            return;
+        }
+
+        // Tidak bisa klik jadwal yang sudah lewat
         if (cellsData.some(c => c.is_past)) {
-            setDraggedCell(null);
+            toast({
+                title: "Tidak dapat tukar",
+                description: "Tidak dapat tukar dengan jadwal yang sudah lewat",
+                variant: "destructive",
+            });
             return;
         }
 
+        // Validasi tanggal target tidak boleh sudah lewat
+        const today = new Date();
+        const jakartaOffset = 7 * 60;
+        const localOffset = today.getTimezoneOffset();
+        const jakartaTime = new Date(today.getTime() + (jakartaOffset + localOffset) * 60 * 1000);
+        jakartaTime.setHours(0, 0, 0, 0);
+        
+        const targetDate = new Date(tanggal + 'T00:00:00');
+        targetDate.setHours(0, 0, 0, 0);
+
+        if (targetDate < jakartaTime) {
+            toast({
+                title: "Tidak dapat tukar",
+                description: "Tidak dapat tukar/pindah ke tanggal yang sudah lewat",
+                variant: "destructive",
+            });
+            return;
+        }
+
+        // Set target dan buka dialog
         setTargetCell({
             cell: targetJadwal || null,
             isEmptySlot: isEmpty,
@@ -246,10 +292,10 @@ export default function Calendar({
     };
 
     const handleSubmitSwap = () => {
-        if (!draggedCell || !targetCell || !swapForm.alasan.trim()) return;
+        if (!selectedMySchedule || !targetCell || !swapForm.alasan.trim()) return;
 
         const data: any = {
-            sesi_jadwal_pemohon_id: draggedCell.sesi_jadwal_id,
+            sesi_jadwal_pemohon_id: selectedMySchedule.sesi_jadwal_id,
             alasan_pemohon: swapForm.alasan,
         };
 
@@ -266,10 +312,23 @@ export default function Calendar({
         router.post('/tukar-jadwal', data, {
             onSuccess: () => {
                 setShowSwapDialog(false);
-                setDraggedCell(null);
+                setSelectedMySchedule(null);
                 setTargetCell(null);
                 setSwapForm({ alasan: '' });
+                
+                toast({
+                    title: "Berhasil",
+                    description: "Request tukar jadwal berhasil diajukan",
+                    className: "bg-green-50 border-green-200 text-green-900",
+                });
             },
+            onError: () => {
+                toast({
+                    title: "Gagal",
+                    description: "Terjadi kesalahan saat mengajukan request",
+                    variant: "destructive",
+                });
+            }
         });
     };
 
@@ -321,7 +380,7 @@ export default function Calendar({
                     <div>
                         <h1 className="text-3xl font-bold">Tukar Jadwal</h1>
                         <p className="text-muted-foreground">
-                            Drag jadwal Anda ke jadwal lain atau slot kosong untuk tukar/pindah
+                            Klik jadwal Anda, lalu klik jadwal lain atau slot kosong untuk tukar/pindah
                         </p>
                     </div>
                     <div className="w-72">
@@ -408,15 +467,41 @@ export default function Calendar({
                                     <div className="space-y-1 text-sm">
                                         <p className="font-medium text-blue-900">Cara Tukar Jadwal:</p>
                                         <ul className="list-disc list-inside space-y-1 text-blue-700">
-                                            <li>Drag jadwal Anda (yang berwarna hijau) ke jadwal dosen lain untuk <strong>tukar jadwal</strong></li>
-                                            <li>Drag jadwal Anda ke slot kosong untuk <strong>pindah jadwal</strong></li>
+                                            <li><strong>Klik jadwal Anda</strong> yang ingin ditukar/dipindah (ditandai warna hijau)</li>
+                                            <li>Lalu <strong>klik jadwal dosen lain</strong> untuk tukar jadwal</li>
+                                            <li>Atau <strong>klik slot kosong</strong> untuk pindah jadwal</li>
                                             <li>Perubahan bersifat sementara (hanya untuk minggu ini)</li>
-                                            <li>Jika ingin permanen, hubungi admin untuk ubah jadwal master</li>
                                         </ul>
                                     </div>
                                 </div>
                             </CardContent>
                         </Card>
+                        
+                        {/* Selected Schedule Indicator */}
+                        {selectedMySchedule && (
+                            <Card className="bg-green-50 border-green-300">
+                                <CardContent className="pt-4">
+                                    <div className="flex items-center justify-between">
+                                        <div className="flex items-center gap-3">
+                                            <CheckCircle2 className="h-5 w-5 text-green-600" />
+                                            <div>
+                                                <p className="font-medium text-green-900">Jadwal terpilih: {selectedMySchedule.matkul}</p>
+                                                <p className="text-sm text-green-700">
+                                                    {new Date(selectedMySchedule.tanggal).toLocaleDateString('id-ID')} • {selectedMySchedule.waktu_mulai.slice(0, 5)} - {selectedMySchedule.waktu_selesai.slice(0, 5)}
+                                                </p>
+                                            </div>
+                                        </div>
+                                        <Button
+                                            size="sm"
+                                            variant="outline"
+                                            onClick={() => setSelectedMySchedule(null)}
+                                        >
+                                            Batal
+                                        </Button>
+                                    </div>
+                                </CardContent>
+                            </Card>
+                        )}
 
                         {/* Tab Kampus */}
                         <Tabs
@@ -525,69 +610,149 @@ export default function Calendar({
                                                                                     jadwalKampus[selectedMinggu]?.[h.id]?.[slot.id] || [];
                                                                                 
                                                                                 const isEmpty = cellsData.length === 0;
-                                                                                const mySchedule = cellsData.find(c => c.is_my_schedule);
-                                                                                const canDropHere = draggedCell && 
-                                                                                    !cellsData.some(c => c.sesi_jadwal_id === draggedCell.sesi_jadwal_id) &&
-                                                                                    !cellsData.some(c => c.is_past);
+                                                                                const isPast = cellsData.some(c => c.is_past);
 
                                                                                 return (
                                                                                     <td
                                                                                         key={h.id}
-                                                                                        className={`h-24 border p-1 align-middle transition-colors ${
-                                                                                            canDropHere
-                                                                                                ? 'bg-green-50/50 ring-2 ring-inset ring-green-400'
-                                                                                                : ''
-                                                                                        } ${
-                                                                                            !isEmpty && !mySchedule
-                                                                                                ? 'hover:bg-accent/30'
-                                                                                                : isEmpty
-                                                                                                ? 'hover:bg-accent/30'
-                                                                                                : ''
-                                                                                        }`}
-                                                                                        onDragOver={handleDragOver}
-                                                                                        onDrop={(e) => h.tanggal && handleDrop(cellsData, h.tanggal, slot, e)}
+                                                                                        className="h-24 border p-0 align-middle"
                                                                                     >
-                                                                                        {isEmpty ? (
-                                                                                            <div className="flex h-24 items-center justify-center rounded border-2 border-dashed border-gray-300 bg-gray-50/30">
-                                                                                                <span className="text-xs text-gray-500 font-medium">
-                                                                                                    Kosong
-                                                                                                </span>
+                                                                                        {!isEmpty ? (
+                                                                                            <div className="flex h-full flex-col divide-y">
+                                                                                                {cellsData.map((cell, idx) => {
+                                                                                                    // Color scheme generator
+                                                                                                    const getColorScheme = (dosen: string, index: number) => {
+                                                                                                        const colors = [
+                                                                                                            { from: 'from-blue-50', to: 'to-blue-100', border: 'border-blue-500', icon: 'text-blue-600', text: 'text-blue-900', hover: 'hover:from-blue-100 hover:to-blue-200' },
+                                                                                                            { from: 'from-green-50', to: 'to-green-100', border: 'border-green-500', icon: 'text-green-600', text: 'text-green-900', hover: 'hover:from-green-100 hover:to-green-200' },
+                                                                                                            { from: 'from-purple-50', to: 'to-purple-100', border: 'border-purple-500', icon: 'text-purple-600', text: 'text-purple-900', hover: 'hover:from-purple-100 hover:to-purple-200' },
+                                                                                                            { from: 'from-orange-50', to: 'to-orange-100', border: 'border-orange-500', icon: 'text-orange-600', text: 'text-orange-900', hover: 'hover:from-orange-100 hover:to-orange-200' },
+                                                                                                            { from: 'from-pink-50', to: 'to-pink-100', border: 'border-pink-500', icon: 'text-pink-600', text: 'text-pink-900', hover: 'hover:from-pink-100 hover:to-pink-200' },
+                                                                                                            { from: 'from-teal-50', to: 'to-teal-100', border: 'border-teal-500', icon: 'text-teal-600', text: 'text-teal-900', hover: 'hover:from-teal-100 hover:to-teal-200' },
+                                                                                                        ];
+                                                                                                        const hash = dosen.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+                                                                                                        return colors[(hash + index) % colors.length];
+                                                                                                    };
+
+                                                                                                    const colorScheme = getColorScheme(cell.dosen, idx);
+                                                                                                    const isSelected = selectedMySchedule?.sesi_jadwal_id === cell.sesi_jadwal_id;
+                                                                                                    const canClick = cell.is_my_schedule ? !cell.is_past : selectedMySchedule && !cell.is_past;
+
+                                                                                                    return (
+                                                                                                        <div
+                                                                                                            key={idx}
+                                                                                                            className={`bg-gradient-to-br ${colorScheme.from} ${colorScheme.to} border-l-4 ${colorScheme.border} flex h-full flex-col justify-center p-2 ${canClick ? 'cursor-pointer ' + colorScheme.hover : ''} mx-0.5 my-0.5 rounded-lg shadow-sm transition-all duration-200 ${canClick ? 'hover:shadow-md' : ''} relative ${isSelected ? 'ring-4 ring-green-400' : ''} ${cell.is_past ? 'opacity-50' : ''}`}
+                                                                                                            onClick={() => {
+                                                                                                                if (cell.is_past) return;
+                                                                                                                if (cell.is_my_schedule) {
+                                                                                                                    handleMyScheduleClick(cell);
+                                                                                                                } else if (selectedMySchedule && h.tanggal) {
+                                                                                                                    handleTargetClick(cellsData, h.tanggal, slot);
+                                                                                                                }
+                                                                                                            }}
+                                                                                                        >
+                                                                                                            {/* Header */}
+                                                                                                            <div className="mb-2 flex items-start gap-1.5">
+                                                                                                                <BookOpen className={`h-4 w-4 ${colorScheme.icon} mt-0.5 flex-shrink-0`} />
+                                                                                                                <div className="min-w-0 flex-1">
+                                                                                                                    <p className={`font-bold ${colorScheme.text} truncate text-xs leading-tight`}>
+                                                                                                                        {cell.matkul}
+                                                                                                                    </p>
+                                                                                                                    <div className="mt-0.5 flex items-center gap-1">
+                                                                                                                        <Badge variant="secondary" className="truncate px-1.5 py-0.5 text-xs font-medium">
+                                                                                                                            {cell.kelas}
+                                                                                                                        </Badge>
+                                                                                                                    </div>
+                                                                                                                </div>
+                                                                                                            </div>
+
+                                                                                                            {/* Info detail */}
+                                                                                                            <div className="space-y-0.5 text-xs">
+                                                                                                                <div className="flex items-center gap-1 text-gray-700">
+                                                                                                                    <User className="h-3 w-3 flex-shrink-0" />
+                                                                                                                    <span className="flex-1 truncate font-medium">{cell.dosen}</span>
+                                                                                                                </div>
+                                                                                                                <div className="flex items-center gap-1 text-gray-700">
+                                                                                                                    <MapPin className="h-3 w-3 flex-shrink-0" />
+                                                                                                                    <span className="flex-1 truncate font-medium">{cell.lab}</span>
+                                                                                                                </div>
+                                                                                                                <div className="flex items-center gap-1 text-gray-700">
+                                                                                                                    <Clock className="h-3 w-3 flex-shrink-0" />
+                                                                                                                    <span className="flex-1 font-medium">
+                                                                                                                        {cell.waktu_mulai.slice(0, 5)} - {cell.waktu_selesai.slice(0, 5)}
+                                                                                                                    </span>
+                                                                                                                </div>
+                                                                                                            </div>
+
+                                                                                                            {/* Footer */}
+                                                                                                            <div className={`mt-1.5 flex items-center justify-between border-t pt-1.5 ${colorScheme.border.replace('border-', 'border-opacity-20 border-')}`}>
+                                                                                                                <Badge variant="outline" className="px-1.5 py-0.5 text-xs font-medium">
+                                                                                                                    {cell.sks} SKS
+                                                                                                                </Badge>
+                                                                                                                {cell.is_my_schedule && !cell.is_past && (
+                                                                                                                    <Badge variant="default" className="px-1.5 py-0.5 text-xs font-medium bg-green-600">
+                                                                                                                        Jadwal Saya
+                                                                                                                    </Badge>
+                                                                                                                )}
+                                                                                                                {cell.is_past && (
+                                                                                                                    <Badge variant="secondary" className="px-1.5 py-0.5 text-xs font-medium">
+                                                                                                                        Sudah Lewat
+                                                                                                                    </Badge>
+                                                                                                                )}
+                                                                                                            </div>
+                                                                                                        </div>
+                                                                                                    );
+                                                                                                })}
                                                                                             </div>
                                                                                         ) : (
-                                                                                            <div className="space-y-1">
-                                                                                                {cellsData.map((cell, idx) => (
-                                                                                                    <div
-                                                                                                        key={idx}
-                                                                                                        draggable={cell.is_my_schedule && !cell.is_past}
-                                                                                                        onDragStart={(e) => handleDragStart(cell, e)}
-                                                                                                        onDragEnd={handleDragEnd}
-                                                                                                        className={`flex h-full flex-col justify-center gap-1 rounded p-2 transition-opacity ${
-                                                                                                            cell.is_my_schedule
-                                                                                                                ? 'border-2 border-green-500 bg-green-50/50 cursor-move hover:bg-green-100/50 active:cursor-grabbing'
-                                                                                                                : 'border-2 border-blue-500 bg-blue-50/30'
-                                                                                                        } ${cell.is_past ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                                                                            (() => {
+                                                                                                const today = new Date();
+                                                                                                const jakartaOffset = 7 * 60;
+                                                                                                const localOffset = today.getTimezoneOffset();
+                                                                                                const jakartaTime = new Date(today.getTime() + (jakartaOffset + localOffset) * 60 * 1000);
+                                                                                                jakartaTime.setHours(0, 0, 0, 0);
+                                                                                                
+                                                                                                const cellDate = h.tanggal ? new Date(h.tanggal + 'T00:00:00') : null;
+                                                                                                if (cellDate) cellDate.setHours(0, 0, 0, 0);
+                                                                                                
+                                                                                                const isPastDate = cellDate && cellDate < jakartaTime;
+                                                                                                const canClickEmpty = selectedMySchedule && !isPastDate;
+
+                                                                                                return (
+                                                                                                    <div 
+                                                                                                        className={`h-24 flex items-center justify-center transition-colors ${
+                                                                                                            isPastDate 
+                                                                                                                ? 'bg-muted/30 cursor-not-allowed' 
+                                                                                                                : canClickEmpty
+                                                                                                                ? 'cursor-pointer hover:bg-blue-50/50 hover:border-blue-400 border-2 border-dashed border-blue-300 group'
+                                                                                                                : 'border-2 border-dashed border-gray-300'
+                                                                                                        }`}
+                                                                                                        onClick={() => {
+                                                                                                            if (canClickEmpty && h.tanggal) {
+                                                                                                                handleTargetClick([], h.tanggal, slot);
+                                                                                                            }
+                                                                                                        }}
                                                                                                     >
-                                                                                                        <BookOpen className={`h-4 w-4 mx-auto ${cell.is_my_schedule ? 'text-green-600' : 'text-blue-600'}`} />
-                                                                                                        <span className={`text-xs font-semibold text-center truncate ${cell.is_my_schedule ? 'text-green-900' : 'text-blue-900'}`}>
-                                                                                                            {cell.matkul}
-                                                                                                        </span>
-                                                                                                        <span className={`text-xs text-center truncate ${cell.is_my_schedule ? 'text-green-700' : 'text-blue-700'}`}>
-                                                                                                            {cell.dosen}
-                                                                                                        </span>
-                                                                                                        {cell.is_my_schedule && !cell.is_past && (
-                                                                                                            <span className="text-xs text-center text-green-600 font-medium flex items-center justify-center gap-1">
-                                                                                                                <ArrowLeftRight className="h-3 w-3" />
-                                                                                                                Drag untuk tukar
-                                                                                                            </span>
-                                                                                                        )}
-                                                                                                        {cell.is_my_schedule && cell.is_past && (
-                                                                                                            <span className="text-xs text-center text-gray-500 font-medium">
-                                                                                                                Sudah lewat
-                                                                                                            </span>
+                                                                                                        {isPastDate ? (
+                                                                                                            <div className="text-center text-muted-foreground">
+                                                                                                                <Clock className="h-5 w-5 mx-auto mb-1 opacity-50" />
+                                                                                                                <div className="text-xs font-medium">Sudah Lewat</div>
+                                                                                                            </div>
+                                                                                                        ) : canClickEmpty ? (
+                                                                                                            <div className="text-center">
+                                                                                                                <Plus className="h-6 w-6 mx-auto mb-1 text-blue-600 group-hover:text-blue-700" />
+                                                                                                                <div className="text-sm font-medium text-blue-700 group-hover:text-blue-800">
+                                                                                                                    Pindah ke sini
+                                                                                                                </div>
+                                                                                                            </div>
+                                                                                                        ) : (
+                                                                                                            <div className="text-center text-muted-foreground">
+                                                                                                                <div className="text-xs font-medium">Kosong</div>
+                                                                                                            </div>
                                                                                                         )}
                                                                                                     </div>
-                                                                                                ))}
-                                                                                            </div>
+                                                                                                );
+                                                                                            })()
                                                                                         )}
                                                                                     </td>
                                                                                 );
@@ -804,16 +969,16 @@ export default function Calendar({
                                 : 'Ajukan permintaan tukar jadwal dengan dosen lain'}
                         </DialogDescription>
                     </DialogHeader>
-                    {draggedCell && targetCell && (
+                    {selectedMySchedule && targetCell && (
                         <div className="space-y-4 py-4">
                             <div className="grid gap-4">
                                 <div className="space-y-2">
                                     <Label className="font-semibold">Jadwal Anda:</Label>
                                     <div className="rounded-lg border bg-muted/50 p-3 space-y-1 text-sm">
-                                        <p className="font-medium">{draggedCell.matkul}</p>
-                                        <p>{new Date(draggedCell.tanggal).toLocaleDateString('id-ID')}</p>
-                                        <p>{draggedCell.waktu_mulai} - {draggedCell.waktu_selesai}</p>
-                                        <p>{draggedCell.lab}</p>
+                                        <p className="font-medium">{selectedMySchedule.matkul}</p>
+                                        <p>{new Date(selectedMySchedule.tanggal).toLocaleDateString('id-ID')}</p>
+                                        <p>{selectedMySchedule.waktu_mulai.slice(0, 5)} - {selectedMySchedule.waktu_selesai.slice(0, 5)}</p>
+                                        <p>{selectedMySchedule.lab}</p>
                                     </div>
                                 </div>
 
@@ -864,7 +1029,7 @@ export default function Calendar({
                             variant="outline"
                             onClick={() => {
                                 setShowSwapDialog(false);
-                                setDraggedCell(null);
+                                setSelectedMySchedule(null);
                                 setTargetCell(null);
                             }}
                         >
