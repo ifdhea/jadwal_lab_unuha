@@ -181,7 +181,6 @@ export default function Calendar({
             toast({
                 title: "Gagal",
                 description: flash.error,
-                variant: "destructive",
                 className: "bg-red-50 border-red-200 text-red-900",
                 action: (
                     <XCircle className="h-5 w-5 text-red-600" />
@@ -204,14 +203,17 @@ export default function Calendar({
         );
     };
 
-    const handleMingguChange = (minggu: number) => {
+    const handleMingguChange = (minggu: number | string) => {
+        const mingguNum = Number(minggu);
+        if (isNaN(mingguNum) || mingguNum < 1) return;
+
         router.get(
             '/tukar-jadwal/calendar',
             {
                 semester_id: selectedSemesterId,
-                minggu,
+                minggu: mingguNum,
             },
-            { preserveState: true },
+            { preserveState: true, preserveScroll: true },
         );
     };
 
@@ -241,7 +243,7 @@ export default function Calendar({
             toast({
                 title: "Pilih jadwal Anda dulu",
                 description: "Klik jadwal yang ingin Anda tukar/pindahkan terlebih dahulu",
-                variant: "destructive",
+                className: "bg-yellow-50 border-yellow-200 text-yellow-900",
             });
             return;
         }
@@ -256,7 +258,7 @@ export default function Calendar({
             toast({
                 title: "Tidak dapat tukar",
                 description: "Tidak dapat tukar dengan jadwal yang sudah lewat",
-                variant: "destructive",
+                className: "bg-red-50 border-red-200 text-red-900",
             });
             return;
         }
@@ -275,7 +277,7 @@ export default function Calendar({
             toast({
                 title: "Tidak dapat tukar",
                 description: "Tidak dapat tukar/pindah ke tanggal yang sudah lewat",
-                variant: "destructive",
+                className: "bg-red-50 border-red-200 text-red-900",
             });
             return;
         }
@@ -322,11 +324,15 @@ export default function Calendar({
                     className: "bg-green-50 border-green-200 text-green-900",
                 });
             },
-            onError: () => {
+            onError: (errors) => {
+                const errorMessage = errors?.message || Object.values(errors || {}).flat().join(', ') || "Terjadi kesalahan saat mengajukan request";
                 toast({
                     title: "Gagal",
-                    description: "Terjadi kesalahan saat mengajukan request",
-                    variant: "destructive",
+                    description: errorMessage,
+                    className: "bg-red-50 border-red-200 text-red-900",
+                    action: (
+                        <XCircle className="h-5 w-5 text-red-600" />
+                    ),
                 });
             }
         });
@@ -411,32 +417,30 @@ export default function Calendar({
                     <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => handleMingguChange(selectedMinggu - 1)}
-                        disabled={selectedMinggu <= 1}
+                        onClick={() => handleMingguChange(Number(selectedMinggu) - 1)}
+                        disabled={Number(selectedMinggu) <= 1}
                     >
                         <ChevronLeft className="h-4 w-4" />
                     </Button>
-                    <div className="text-center">
+                    <div className="text-center min-w-[200px]">
                         <p className="font-semibold">
                             Minggu ke-{selectedMinggu}
                         </p>
                         {currentMinggu && (
-                            <p className="text-xs text-muted-foreground">
-                                {new Date(
-                                    currentMinggu.tanggal_mulai,
-                                ).toLocaleDateString('id-ID')}{' '}
-                                -{' '}
-                                {new Date(
-                                    currentMinggu.tanggal_selesai,
-                                ).toLocaleDateString('id-ID')}
+                            <p className="text-xs text-muted-foreground whitespace-nowrap">
+                                {(() => {
+                                    const start = new Date(currentMinggu.tanggal_mulai);
+                                    const end = new Date(currentMinggu.tanggal_selesai);
+                                    return `${start.toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })} - ${end.toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}`;
+                                })()}
                             </p>
                         )}
                     </div>
                     <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => handleMingguChange(selectedMinggu + 1)}
-                        disabled={selectedMinggu >= mingguList.length}
+                        onClick={() => handleMingguChange(Number(selectedMinggu) + 1)}
+                        disabled={Number(selectedMinggu) >= mingguList.length}
                     >
                         <ChevronRight className="h-4 w-4" />
                     </Button>
@@ -579,44 +583,85 @@ export default function Calendar({
                                                             </tr>
                                                         </thead>
                                                         <tbody>
-                                                            {slots.map((slot) => {
-                                                                const isBreakTime = slot.waktu_mulai === '11:45:00' && slot.waktu_selesai === '13:15:00';
-                                                                
-                                                                return (
-                                                                    <tr
-                                                                        key={slot.id}
-                                                                        className={isBreakTime ? 'h-16' : 'h-24'}
-                                                                    >
-                                                                        <td className={`sticky left-0 border p-2 text-center font-mono text-xs font-semibold ${
-                                                                            isBreakTime ? 'bg-muted/50 h-16' : 'bg-background h-24'
-                                                                        }`}>
-                                                                            {slot.waktu_mulai.slice(0, 5)} - {slot.waktu_selesai.slice(0, 5)}
-                                                                        </td>
-                                                                        {isBreakTime ? (
-                                                                            <td 
-                                                                                colSpan={hari.length} 
-                                                                                className="border bg-muted/50 p-4 text-center h-16"
-                                                                            >
-                                                                                <div className="flex items-center justify-center gap-2">
-                                                                                    <Clock className="h-4 w-4 text-muted-foreground" />
-                                                                                    <span className="font-semibold text-muted-foreground">
-                                                                                        ISTIRAHAT
-                                                                                    </span>
-                                                                                </div>
-                                                                            </td>
-                                                                        ) : (
-                                                                            hari.map((h) => {
-                                                                                const cellsData =
-                                                                                    jadwalKampus[selectedMinggu]?.[h.id]?.[slot.id] || [];
-                                                                                
-                                                                                const isEmpty = cellsData.length === 0;
-                                                                                const isPast = cellsData.some(c => c.is_past);
+                                                            {(() => {
+                                                                // Track slot yang sudah di-render untuk rowspan (per hari)
+                                                                const renderedCells: Record<number, Set<number>> = {};
+                                                                hari.forEach((h) => {
+                                                                    renderedCells[h.id] = new Set<number>();
+                                                                });
 
-                                                                                return (
-                                                                                    <td
-                                                                                        key={h.id}
-                                                                                        className="h-24 border p-0 align-middle"
-                                                                                    >
+                                                                return slots.map((slot, slotIdx) => {
+                                                                    const isBreakTime = slot.waktu_mulai === '11:45:00' && slot.waktu_selesai === '13:15:00';
+                                                                    
+                                                                    return (
+                                                                        <tr
+                                                                            key={slot.id}
+                                                                            className={isBreakTime ? 'h-16' : 'h-24'}
+                                                                        >
+                                                                            <td className={`sticky left-0 border p-2 text-center font-mono text-xs font-semibold ${
+                                                                                isBreakTime ? 'bg-muted/50 h-16' : 'bg-background h-24'
+                                                                            }`}>
+                                                                                {slot.waktu_mulai.slice(0, 5)} - {slot.waktu_selesai.slice(0, 5)}
+                                                                            </td>
+                                                                            {isBreakTime ? (
+                                                                                <td 
+                                                                                    colSpan={hari.length} 
+                                                                                    className="border bg-muted/50 p-4 text-center h-16"
+                                                                                >
+                                                                                    <div className="flex items-center justify-center gap-2">
+                                                                                        <Clock className="h-4 w-4 text-muted-foreground" />
+                                                                                        <span className="font-semibold text-muted-foreground">
+                                                                                            ISTIRAHAT
+                                                                                        </span>
+                                                                                    </div>
+                                                                                </td>
+                                                                            ) : (
+                                                                                hari.map((h) => {
+                                                                                    // Skip jika cell ini sudah di-render sebagai bagian dari rowspan
+                                                                                    if (renderedCells[h.id].has(slot.id)) {
+                                                                                        return null;
+                                                                                    }
+
+                                                                                    const cellsData =
+                                                                                        jadwalKampus[selectedMinggu]?.[h.id]?.[slot.id] || [];
+                                                                                    
+                                                                                    // Hitung rowspan dinamis berdasarkan durasi_slot
+                                                                                    let maxRowSpan = 1;
+                                                                                    if (cellsData.length > 0) {
+                                                                                        maxRowSpan = Math.max(...cellsData.map((cell) => {
+                                                                                            const startIdx = slots.findIndex((s) =>
+                                                                                                s.waktu_mulai <= cell.waktu_mulai &&
+                                                                                                s.waktu_selesai > cell.waktu_mulai,
+                                                                                            );
+                                                                                            const endIdx = slots.findIndex((s) =>
+                                                                                                s.waktu_mulai < cell.waktu_selesai &&
+                                                                                                s.waktu_selesai >= cell.waktu_selesai,
+                                                                                            );
+                                                                                            if (startIdx !== -1 && endIdx !== -1) {
+                                                                                                return endIdx - startIdx + 1;
+                                                                                            }
+                                                                                            return cell.durasi_slot || 1;
+                                                                                        }));
+
+                                                                                        // Mark cells yang akan di-span
+                                                                                        for (let i = 0; i < maxRowSpan; i++) {
+                                                                                            const spanSlotIdx = slotIdx + i;
+                                                                                            if (spanSlotIdx < slots.length) {
+                                                                                                const spanSlotId = slots[spanSlotIdx].id;
+                                                                                                renderedCells[h.id].add(spanSlotId);
+                                                                                            }
+                                                                                        }
+                                                                                    }
+
+                                                                                    const isEmpty = cellsData.length === 0;
+
+                                                                                    return (
+                                                                                        <td
+                                                                                            key={h.id}
+                                                                                            className="h-full border p-0 align-middle"
+                                                                                            rowSpan={maxRowSpan}
+                                                                                            style={{ height: `${maxRowSpan * 6}rem` }}
+                                                                                        >
                                                                                         {!isEmpty ? (
                                                                                             <div className="flex h-full flex-col divide-y">
                                                                                                 {cellsData.map((cell, idx) => {
@@ -754,13 +799,14 @@ export default function Calendar({
                                                                                                 );
                                                                                             })()
                                                                                         )}
-                                                                                    </td>
-                                                                                );
-                                                                            })
-                                                                        )}
-                                                                    </tr>
-                                                                );
-                                                            })}
+                                                                                        </td>
+                                                                                    );
+                                                                                })
+                                                                            )}
+                                                                        </tr>
+                                                                    );
+                                                                });
+                                                            })()}
                                                         </tbody>
                                                     </table>
                                                 </div>
