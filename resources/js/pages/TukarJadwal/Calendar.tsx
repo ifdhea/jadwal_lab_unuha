@@ -187,7 +187,7 @@ export default function Calendar({
                 ),
             });
         }
-    }, [flash]);
+    }, [flash?.success, flash?.error]);  // ✅ Only trigger on flash change
 
     const isToday = (tanggal?: string) => {
         if (!tanggal) return false;
@@ -222,11 +222,12 @@ export default function Calendar({
         if (!cell.is_my_schedule || cell.is_past) return;
         
         setSelectedMySchedule(cell);
-        toast({
-            title: "Jadwal dipilih",
-            description: "Sekarang klik jadwal lain untuk tukar, atau klik slot kosong untuk pindah",
-            className: "bg-blue-50 border-blue-200 text-blue-900",
-        });
+        // ✅ Hapus toast, indicator card sudah cukup
+        // toast({
+        //     title: "Jadwal dipilih",
+        //     description: "Sekarang klik jadwal lain untuk tukar, atau klik slot kosong untuk pindah",
+        //     className: "bg-blue-50 border-blue-200 text-blue-900",
+        // });
     };
 
     // Handler untuk klik jadwal dosen lain atau slot kosong (step 2)
@@ -321,12 +322,7 @@ export default function Calendar({
                 setSelectedMySchedule(null);
                 setTargetCell(null);
                 setSwapForm({ alasan: '' });
-                
-                toast({
-                    title: "Berhasil",
-                    description: "Request tukar jadwal berhasil diajukan",
-                    className: "bg-green-50 border-green-200 text-green-900",
-                });
+                // ✅ Hapus toast di sini, biar pakai flash message aja
             },
             onError: (errors) => {
                 const errorMessage = errors?.message || Object.values(errors || {}).flat().join(', ') || "Terjadi kesalahan saat mengajukan request";

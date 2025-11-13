@@ -234,20 +234,52 @@ class TukarJadwalController extends Controller
             DB::beginTransaction();
             try {
                 // Debug log
-                \Log::info('Pindah Jadwal', [
-                    'sesi_id' => $sesiPemohon->id,
-                    'tanggal_lama' => $sesiPemohon->tanggal,
-                    'tanggal_baru' => $tanggalTujuan,
-                    'minggu_lama' => $sesiPemohon->pertemuan_ke,
-                    'minggu_baru' => $mingguTujuan,
+                \Log::info('========== PINDAH JADWAL START ==========');
+                \Log::info('Request Data', [
+                    'tanggal_tujuan' => $tanggalTujuan,
+                    'minggu_tujuan' => $mingguTujuan,
+                ]);
+                \Log::info('Sesi Pemohon - Before', [
+                    'id' => $sesiPemohon->id,
+                    'jadwal_master_id' => $sesiPemohon->jadwal_master_id,
+                    'tanggal' => $sesiPemohon->tanggal,
+                    'pertemuan_ke' => $sesiPemohon->pertemuan_ke,
                 ]);
                 
-                // Update sesi jadwal untuk minggu ini saja
-                $sesiPemohon->tanggal = $tanggalTujuan;
-                $sesiPemohon->pertemuan_ke = $mingguTujuan;
-                $sesiPemohon->save();
+                // Check current value di DB
+                $currentDbValue = DB::table('sesi_jadwal')->where('id', $sesiPemohon->id)->first();
+                \Log::info('Current DB Value - Before Update', [
+                    'id' => $currentDbValue->id,
+                    'tanggal' => $currentDbValue->tanggal,
+                    'pertemuan_ke' => $currentDbValue->pertemuan_ke,
+                ]);
+                
+                // Update menggunakan query builder langsung
+                $updated = DB::table('sesi_jadwal')
+                    ->where('id', $sesiPemohon->id)
+                    ->update([
+                        'tanggal' => $tanggalTujuan,
+                        'pertemuan_ke' => (int)$mingguTujuan,
+                        'updated_at' => now(),
+                    ]);
 
-                TukarJadwal::create([
+                \Log::info('Update Query Executed', [
+                    'affected_rows' => $updated,
+                    'id' => $sesiPemohon->id,
+                    'new_tanggal' => $tanggalTujuan,
+                    'new_pertemuan_ke' => $mingguTujuan,
+                ]);
+
+                // Check value after update
+                $afterUpdate = DB::table('sesi_jadwal')->where('id', $sesiPemohon->id)->first();
+                \Log::info('DB Value - After Update', [
+                    'id' => $afterUpdate->id,
+                    'tanggal' => $afterUpdate->tanggal,
+                    'pertemuan_ke' => $afterUpdate->pertemuan_ke,
+                ]);
+
+                // Create tukar jadwal record
+                $tukarJadwal = TukarJadwal::create([
                     'pemohon_id' => $dosen->id,
                     'sesi_jadwal_pemohon_id' => $validated['sesi_jadwal_pemohon_id'],
                     'mitra_id' => null,
@@ -258,17 +290,31 @@ class TukarJadwalController extends Controller
                     'tanggal_diproses' => now(),
                 ]);
 
+                \Log::info('TukarJadwal Record Created', ['id' => $tukarJadwal->id]);
+
+                // IMPORTANT: Commit BEFORE verify
                 DB::commit();
+                \Log::info('Transaction COMMITTED');
                 
-                \Log::info('Pindah Jadwal Success', [
-                    'sesi_id' => $sesiPemohon->id,
-                    'tanggal_final' => $sesiPemohon->fresh()->tanggal,
+                // Verify after commit
+                $verified = DB::table('sesi_jadwal')->where('id', $sesiPemohon->id)->first();
+                \Log::info('Final Verification - After Commit', [
+                    'id' => $verified->id,
+                    'tanggal' => $verified->tanggal,
+                    'pertemuan_ke' => $verified->pertemuan_ke,
+                    'success' => ($verified->tanggal === $tanggalTujuan && $verified->pertemuan_ke == $mingguTujuan),
                 ]);
+                \Log::info('========== PINDAH JADWAL END ==========');
                 
-                return redirect()->back()->with('success', 'Jadwal berhasil dipindahkan ke ' . Carbon::parse($tanggalTujuan)->format('d M Y'));
+                return redirect()->route('tukar-jadwal.calendar', [
+                    'semester_id' => request()->get('semester_id'),
+                    'minggu' => $mingguTujuan
+                ])->with('success', 'Jadwal berhasil dipindahkan ke ' . Carbon::parse($tanggalTujuan)->format('d M Y'));
             } catch (\Exception $e) {
                 DB::rollBack();
-                \Log::error('Pindah Jadwal Failed', ['error' => $e->getMessage()]);
+                \Log::error('========== PINDAH JADWAL FAILED ==========');
+                \Log::error('Error Message', ['error' => $e->getMessage()]);
+                \Log::error('Stack Trace', ['trace' => $e->getTraceAsString()]);
                 return redirect()->back()->with('error', 'Gagal memproses pindah jadwal: ' . $e->getMessage());
             }
         }
@@ -313,7 +359,7 @@ class TukarJadwalController extends Controller
             $sesiMitra = $tukarJadwal->sesiJadwalMitra;
 
             // Debug log
-            \Log::info('Tukar Jadwal - Before', [
+            \Log::info('Tukar Jadwal - Start', [
                 'pemohon_id' => $sesiPemohon->id,
                 'pemohon_tanggal' => $sesiPemohon->tanggal,
                 'pemohon_minggu' => $sesiPemohon->pertemuan_ke,
@@ -327,27 +373,53 @@ class TukarJadwalController extends Controller
             $tempTanggalPemohon = $sesiPemohon->tanggal;
             $tempPertemuanPemohon = $sesiPemohon->pertemuan_ke;
             
-            // Tukar tanggal dan pertemuan
-            $sesiPemohon->tanggal = $sesiMitra->tanggal;
-            $sesiPemohon->pertemuan_ke = $sesiMitra->pertemuan_ke;
-            $sesiPemohon->save();
+            // Update menggunakan query builder langsung
+            $updated1 = DB::table('sesi_jadwal')
+                ->where('id', $sesiPemohon->id)
+                ->update([
+                    'tanggal' => $sesiMitra->tanggal,
+                    'pertemuan_ke' => $sesiMitra->pertemuan_ke,
+                    'updated_at' => now(),
+                ]);
             
-            $sesiMitra->tanggal = $tempTanggalPemohon;
-            $sesiMitra->pertemuan_ke = $tempPertemuanPemohon;
-            $sesiMitra->save();
+            $updated2 = DB::table('sesi_jadwal')
+                ->where('id', $sesiMitra->id)
+                ->update([
+                    'tanggal' => $tempTanggalPemohon,
+                    'pertemuan_ke' => $tempPertemuanPemohon,
+                    'updated_at' => now(),
+                ]);
+
+            \Log::info('Tukar Jadwal - Update Results', [
+                'pemohon_updated' => $updated1,
+                'mitra_updated' => $updated2,
+            ]);
 
             // Update status tukar jadwal
-            $tukarJadwal->status = 'disetujui';
-            $tukarJadwal->tanggal_diproses = now();
-            $tukarJadwal->save();
+            DB::table('tukar_jadwal')
+                ->where('id', $tukarJadwal->id)
+                ->update([
+                    'status' => 'disetujui',
+                    'tanggal_diproses' => now(),
+                    'updated_at' => now(),
+                ]);
 
             DB::commit();
             
-            \Log::info('Tukar Jadwal - After', [
-                'pemohon_id' => $sesiPemohon->id,
-                'pemohon_tanggal' => $sesiPemohon->fresh()->tanggal,
-                'mitra_id' => $sesiMitra->id,
-                'mitra_tanggal' => $sesiMitra->fresh()->tanggal,
+            // Verify
+            $verifiedPemohon = SesiJadwal::find($sesiPemohon->id);
+            $verifiedMitra = SesiJadwal::find($sesiMitra->id);
+            \Log::info('Tukar Jadwal - Verified', [
+                'pemohon' => [
+                    'id' => $verifiedPemohon->id,
+                    'tanggal' => $verifiedPemohon->tanggal,
+                    'pertemuan_ke' => $verifiedPemohon->pertemuan_ke,
+                ],
+                'mitra' => [
+                    'id' => $verifiedMitra->id,
+                    'tanggal' => $verifiedMitra->tanggal,
+                    'pertemuan_ke' => $verifiedMitra->pertemuan_ke,
+                ],
             ]);
             
             return redirect()->route('tukar-jadwal.index')->with('success', 'Permintaan tukar jadwal berhasil disetujui (hanya untuk minggu ini)');
@@ -452,11 +524,14 @@ class TukarJadwalController extends Controller
 
         $slots = \App\Models\SlotWaktu::where('is_aktif', true)->orderBy('urutan')->get();
 
-        // Get jadwal data
+        // Get jadwal data - PENTING: Query berdasarkan TANGGAL bukan pertemuan_ke
+        // Karena jadwal bisa dipindah/ditukar ke tanggal lain dalam minggu yang berbeda
+        $mingguEnd = $mingguStart->copy()->addDays(5); // Senin sampai Sabtu
+        
         $sesiJadwals = SesiJadwal::whereHas('jadwalMaster.kelasMatKul', function ($query) use ($selectedSemesterId) {
                 $query->where('semester_id', $selectedSemesterId);
             })
-            ->where('pertemuan_ke', $selectedMinggu)
+            ->whereBetween('tanggal', [$mingguStart->format('Y-m-d'), $mingguEnd->format('Y-m-d')])
             ->with([
                 'jadwalMaster.laboratorium.kampus',
                 'jadwalMaster.dosen.user',
@@ -466,6 +541,12 @@ class TukarJadwalController extends Controller
                 'jadwalMaster.slotWaktuSelesai'
             ])
             ->get();
+        
+        \Log::info('Calendar Query', [
+            'selected_minggu' => $selectedMinggu,
+            'date_range' => [$mingguStart->format('Y-m-d'), $mingguEnd->format('Y-m-d')],
+            'total_sesi' => $sesiJadwals->count(),
+        ]);
 
         $jadwalData = [];
         $hariMap = [
@@ -480,19 +561,27 @@ class TukarJadwalController extends Controller
         foreach ($sesiJadwals as $sesi) {
             $master = $sesi->jadwalMaster;
             $kampusId = $master->laboratorium->kampus_id;
-            $hariId = $hariMap[$master->hari] ?? null;
+            
+            // PENTING: Gunakan hari dari TANGGAL SESI, bukan dari master
+            // Karena sesi bisa dipindah ke hari lain
+            $tanggalSesi = Carbon::parse($sesi->tanggal);
+            $hariNamaSesi = $tanggalSesi->locale('id')->dayName;
+            $hariNamaSesiCapitalized = ucfirst($hariNamaSesi);
+            $hariId = $hariMap[$hariNamaSesiCapitalized] ?? null;
+            
             $slotId = $master->slot_waktu_mulai_id;
-            $minggu = $sesi->pertemuan_ke;
 
             if ($hariId) {
-                if (!isset($jadwalData[$kampusId][$minggu][$hariId][$slotId])) {
-                    $jadwalData[$kampusId][$minggu][$hariId][$slotId] = [];
+                // Gunakan minggu yang ditampilkan (selectedMinggu) bukan pertemuan_ke
+                // Karena kita query by date range
+                if (!isset($jadwalData[$kampusId][$selectedMinggu][$hariId][$slotId])) {
+                    $jadwalData[$kampusId][$selectedMinggu][$hariId][$slotId] = [];
                 }
                 
                 $isMySchedule = $master->dosen_id === $dosen->id;
                 $isPast = $sesi->tanggal->isPast();
                 
-                $jadwalData[$kampusId][$minggu][$hariId][$slotId][] = [
+                $jadwalData[$kampusId][$selectedMinggu][$hariId][$slotId][] = [
                     'sesi_jadwal_id' => $sesi->id,
                     'matkul' => $master->kelasMatKul->mataKuliah->nama,
                     'kelas' => $master->kelasMatKul->kelas->nama,
