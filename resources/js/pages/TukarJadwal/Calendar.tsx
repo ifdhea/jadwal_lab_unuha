@@ -303,12 +303,16 @@ export default function Calendar({
 
         if (!targetCell.isEmptySlot && targetCell.cell) {
             // Tukar dengan jadwal dosen lain
+            data.jenis = 'tukar';
             data.sesi_jadwal_mitra_id = targetCell.cell.sesi_jadwal_id;
             data.mitra_id = targetCell.cell.dosen_id;
         } else {
             // Pindah ke slot kosong
+            data.jenis = 'pindah';
             data.sesi_jadwal_mitra_id = null;
             data.mitra_id = null;
+            data.tanggal_tujuan = targetCell.tanggal;
+            data.minggu_tujuan = selectedMinggu;
         }
 
         router.post('/tukar-jadwal', data, {
@@ -681,14 +685,15 @@ export default function Calendar({
 
                                                                                                     const colorScheme = getColorScheme(cell.dosen, idx);
                                                                                                     const isSelected = selectedMySchedule?.sesi_jadwal_id === cell.sesi_jadwal_id;
-                                                                                                    const canClick = cell.is_my_schedule ? !cell.is_past : selectedMySchedule && !cell.is_past;
+                                                                                                    const isBooking = cell.status === 'booking';
+                                                                                                    const canClick = cell.is_my_schedule && !cell.is_past && !isBooking ? true : (selectedMySchedule && !cell.is_past && !isBooking);
 
                                                                                                     return (
                                                                                                         <div
                                                                                                             key={idx}
-                                                                                                            className={`bg-gradient-to-br ${colorScheme.from} ${colorScheme.to} border-l-4 ${colorScheme.border} flex h-full flex-col justify-center p-2 ${canClick ? 'cursor-pointer ' + colorScheme.hover : ''} mx-0.5 my-0.5 rounded-lg shadow-sm transition-all duration-200 ${canClick ? 'hover:shadow-md' : ''} relative ${isSelected ? 'ring-4 ring-green-400' : ''} ${cell.is_past ? 'opacity-50' : ''}`}
+                                                                                                            className={`bg-gradient-to-br ${colorScheme.from} ${colorScheme.to} border-l-4 ${colorScheme.border} flex h-full flex-col justify-center p-2 ${canClick ? 'cursor-pointer ' + colorScheme.hover : isBooking ? 'cursor-not-allowed' : ''} mx-0.5 my-0.5 rounded-lg shadow-sm transition-all duration-200 ${canClick ? 'hover:shadow-md' : ''} relative ${isSelected ? 'ring-4 ring-green-400' : ''} ${cell.is_past || isBooking ? 'opacity-50' : ''}`}
                                                                                                             onClick={() => {
-                                                                                                                if (cell.is_past) return;
+                                                                                                                if (cell.is_past || isBooking) return;
                                                                                                                 if (cell.is_my_schedule) {
                                                                                                                     handleMyScheduleClick(cell);
                                                                                                                 } else if (selectedMySchedule && h.tanggal) {
@@ -734,16 +739,38 @@ export default function Calendar({
                                                                                                                 <Badge variant="outline" className="px-1.5 py-0.5 text-xs font-medium">
                                                                                                                     {cell.sks} SKS
                                                                                                                 </Badge>
-                                                                                                                {cell.is_my_schedule && !cell.is_past && (
-                                                                                                                    <Badge variant="default" className="px-1.5 py-0.5 text-xs font-medium bg-green-600">
-                                                                                                                        Jadwal Saya
-                                                                                                                    </Badge>
-                                                                                                                )}
-                                                                                                                {cell.is_past && (
-                                                                                                                    <Badge variant="secondary" className="px-1.5 py-0.5 text-xs font-medium">
-                                                                                                                        Sudah Lewat
-                                                                                                                    </Badge>
-                                                                                                                )}
+                                                                                                                <div className="flex gap-1">
+                                                                                                                    {/* Badge Status */}
+                                                                                                                    {cell.status === 'booking' && (
+                                                                                                                        <Badge variant="default" className="px-1.5 py-0.5 text-xs font-medium bg-orange-500">
+                                                                                                                            Booking
+                                                                                                                        </Badge>
+                                                                                                                    )}
+                                                                                                                    {cell.status === 'terjadwal' && !cell.is_past && (
+                                                                                                                        <Badge variant="default" className="px-1.5 py-0.5 text-xs font-medium bg-blue-500">
+                                                                                                                            Terjadwal
+                                                                                                                        </Badge>
+                                                                                                                    )}
+                                                                                                                    {cell.status === 'selesai' && (
+                                                                                                                        <Badge variant="secondary" className="px-1.5 py-0.5 text-xs font-medium">
+                                                                                                                            Selesai
+                                                                                                                        </Badge>
+                                                                                                                    )}
+                                                                                                                    
+                                                                                                                    {/* Badge Jadwal Saya */}
+                                                                                                                    {cell.is_my_schedule && !cell.is_past && cell.status !== 'booking' && (
+                                                                                                                        <Badge variant="default" className="px-1.5 py-0.5 text-xs font-medium bg-green-600">
+                                                                                                                            Jadwal Saya
+                                                                                                                        </Badge>
+                                                                                                                    )}
+                                                                                                                    
+                                                                                                                    {/* Badge Sudah Lewat */}
+                                                                                                                    {cell.is_past && (
+                                                                                                                        <Badge variant="secondary" className="px-1.5 py-0.5 text-xs font-medium">
+                                                                                                                            Sudah Lewat
+                                                                                                                        </Badge>
+                                                                                                                    )}
+                                                                                                                </div>
                                                                                                             </div>
                                                                                                         </div>
                                                                                                     );

@@ -127,7 +127,7 @@ export default function Create({ semester, kelasMatkul, dosen, laboratorium, slo
                                     <SelectTrigger><SelectValue placeholder="Pilih Hari" /></SelectTrigger>
                                     <SelectContent>
                                         {hari.map((item) => (
-                                            <SelectItem key={item.id} value={String(item.id)}>{item.nama}</SelectItem>
+                                            <SelectItem key={item.id} value={item.nama}>{item.nama}</SelectItem>
                                         ))}
                                     </SelectContent>
                                 </Select>

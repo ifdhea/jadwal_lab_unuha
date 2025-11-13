@@ -206,14 +206,14 @@ class TukarJadwalController extends Controller
         $sesiPemohon = SesiJadwal::with('jadwalMaster')->find($validated['sesi_jadwal_pemohon_id']);
         
         if ($validated['jenis'] === 'pindah' && !$validated['mitra_id'] && !$validated['sesi_jadwal_mitra_id']) {
-            $tanggalPemohon = $sesiPemohon->tanggal;
+            $tanggalTujuan = $request->tanggal_tujuan;
+            $mingguTujuan = $request->minggu_tujuan;
             $jadwalPemohon = $sesiPemohon->jadwalMaster;
             
-            $bentrok = SesiJadwal::whereDate('tanggal', $tanggalPemohon)
-                ->where('id', '!=', $sesiPemohon->id)
+            // Cek bentrok di tanggal tujuan
+            $bentrok = SesiJadwal::whereDate('tanggal', $tanggalTujuan)
                 ->whereHas('jadwalMaster', function ($q) use ($jadwalPemohon) {
                     $q->where('laboratorium_id', $jadwalPemohon->laboratorium_id)
-                        ->where('hari', $jadwalPemohon->hari)
                         ->where(function ($sq) use ($jadwalPemohon) {
                             $sq->where(function ($s) use ($jadwalPemohon) {
                                 $s->whereRaw('slot_waktu_mulai_id BETWEEN ? AND ?', [$jadwalPemohon->slot_waktu_mulai_id, $jadwalPemohon->slot_waktu_selesai_id])
@@ -233,10 +233,19 @@ class TukarJadwalController extends Controller
 
             DB::beginTransaction();
             try {
-                $sesiPemohon->update([
-                    'tanggal' => $request->tanggal_tujuan,
-                    'pertemuan_ke' => $request->minggu_tujuan,
+                // Debug log
+                \Log::info('Pindah Jadwal', [
+                    'sesi_id' => $sesiPemohon->id,
+                    'tanggal_lama' => $sesiPemohon->tanggal,
+                    'tanggal_baru' => $tanggalTujuan,
+                    'minggu_lama' => $sesiPemohon->pertemuan_ke,
+                    'minggu_baru' => $mingguTujuan,
                 ]);
+                
+                // Update sesi jadwal untuk minggu ini saja
+                $sesiPemohon->tanggal = $tanggalTujuan;
+                $sesiPemohon->pertemuan_ke = $mingguTujuan;
+                $sesiPemohon->save();
 
                 TukarJadwal::create([
                     'pemohon_id' => $dosen->id,
@@ -250,9 +259,16 @@ class TukarJadwalController extends Controller
                 ]);
 
                 DB::commit();
-                return redirect()->route('tukar-jadwal.index')->with('success', 'Jadwal berhasil dipindahkan (langsung disetujui karena slot kosong)');
+                
+                \Log::info('Pindah Jadwal Success', [
+                    'sesi_id' => $sesiPemohon->id,
+                    'tanggal_final' => $sesiPemohon->fresh()->tanggal,
+                ]);
+                
+                return redirect()->back()->with('success', 'Jadwal berhasil dipindahkan ke ' . Carbon::parse($tanggalTujuan)->format('d M Y'));
             } catch (\Exception $e) {
                 DB::rollBack();
+                \Log::error('Pindah Jadwal Failed', ['error' => $e->getMessage()]);
                 return redirect()->back()->with('error', 'Gagal memproses pindah jadwal: ' . $e->getMessage());
             }
         }
@@ -293,24 +309,51 @@ class TukarJadwalController extends Controller
 
         DB::beginTransaction();
         try {
-            // Tukar dosen di jadwal master
-            $jadwalMasterPemohon = $tukarJadwal->sesiJadwalPemohon->jadwalMaster;
-            $jadwalMasterMitra = $tukarJadwal->sesiJadwalMitra->jadwalMaster;
+            $sesiPemohon = $tukarJadwal->sesiJadwalPemohon;
+            $sesiMitra = $tukarJadwal->sesiJadwalMitra;
 
-            $tempDosenId = $jadwalMasterPemohon->dosen_id;
-            $jadwalMasterPemohon->update(['dosen_id' => $jadwalMasterMitra->dosen_id]);
-            $jadwalMasterMitra->update(['dosen_id' => $tempDosenId]);
-
-            // Update status tukar jadwal
-            $tukarJadwal->update([
-                'status' => 'disetujui',
-                'tanggal_diproses' => now(),
+            // Debug log
+            \Log::info('Tukar Jadwal - Before', [
+                'pemohon_id' => $sesiPemohon->id,
+                'pemohon_tanggal' => $sesiPemohon->tanggal,
+                'pemohon_minggu' => $sesiPemohon->pertemuan_ke,
+                'mitra_id' => $sesiMitra->id,
+                'mitra_tanggal' => $sesiMitra->tanggal,
+                'mitra_minggu' => $sesiMitra->pertemuan_ke,
             ]);
 
+            // Tukar hanya tanggal dan minggu, BUKAN dosen atau SKS
+            // Simpan data asli
+            $tempTanggalPemohon = $sesiPemohon->tanggal;
+            $tempPertemuanPemohon = $sesiPemohon->pertemuan_ke;
+            
+            // Tukar tanggal dan pertemuan
+            $sesiPemohon->tanggal = $sesiMitra->tanggal;
+            $sesiPemohon->pertemuan_ke = $sesiMitra->pertemuan_ke;
+            $sesiPemohon->save();
+            
+            $sesiMitra->tanggal = $tempTanggalPemohon;
+            $sesiMitra->pertemuan_ke = $tempPertemuanPemohon;
+            $sesiMitra->save();
+
+            // Update status tukar jadwal
+            $tukarJadwal->status = 'disetujui';
+            $tukarJadwal->tanggal_diproses = now();
+            $tukarJadwal->save();
+
             DB::commit();
-            return redirect()->route('tukar-jadwal.index')->with('success', 'Permintaan tukar jadwal berhasil disetujui');
+            
+            \Log::info('Tukar Jadwal - After', [
+                'pemohon_id' => $sesiPemohon->id,
+                'pemohon_tanggal' => $sesiPemohon->fresh()->tanggal,
+                'mitra_id' => $sesiMitra->id,
+                'mitra_tanggal' => $sesiMitra->fresh()->tanggal,
+            ]);
+            
+            return redirect()->route('tukar-jadwal.index')->with('success', 'Permintaan tukar jadwal berhasil disetujui (hanya untuk minggu ini)');
         } catch (\Exception $e) {
             DB::rollBack();
+            \Log::error('Tukar Jadwal Failed', ['error' => $e->getMessage(), 'trace' => $e->getTraceAsString()]);
             return redirect()->back()->with('error', 'Gagal memproses tukar jadwal: ' . $e->getMessage());
         }
     }
@@ -383,12 +426,18 @@ class TukarJadwalController extends Controller
         }
 
         $totalMinggu = $selectedSemester->total_minggu ?? 20;
-        $selectedMinggu = $request->get('minggu', 1);
+        
+        // Hitung minggu saat ini berdasarkan tanggal
+        $tanggalMulai = Carbon::parse($selectedSemester->tanggal_mulai);
+        $today = Carbon::today();
+        $diffInWeeks = $tanggalMulai->diffInWeeks($today);
+        $currentWeek = (int) min(max(1, $diffInWeeks + 1), $totalMinggu);
+        
+        $selectedMinggu = (int) $request->get('minggu', $currentWeek);
 
         $kampusList = \App\Models\Kampus::where('is_aktif', true)->get();
         
         // Generate hari dengan tanggal
-        $tanggalMulai = Carbon::parse($selectedSemester->tanggal_mulai);
         $mingguStart = $tanggalMulai->copy()->addWeeks($selectedMinggu - 1)->startOfWeek();
         
         $hari = [];
@@ -459,6 +508,61 @@ class TukarJadwalController extends Controller
                     'tanggal' => $sesi->tanggal->format('Y-m-d'),
                     'is_my_schedule' => $isMySchedule,
                     'is_past' => $isPast,
+                ];
+            }
+        }
+
+        // Tambahkan jadwal booking yang disetujui
+        $bookings = \App\Models\BookingLaboratorium::where('status', 'disetujui')
+            ->whereBetween('tanggal', [$mingguStart->format('Y-m-d'), $mingguStart->copy()->addDays(5)->format('Y-m-d')])
+            ->with([
+                'dosen.user',
+                'kelasMatKul.kelas',
+                'kelasMatKul.mataKuliah',
+                'laboratorium.kampus',
+                'slotWaktuMulai',
+            ])
+            ->get();
+
+        foreach ($bookings as $booking) {
+            $kampusId = $booking->laboratorium->kampus_id;
+            $tanggalBooking = Carbon::parse($booking->tanggal);
+            $hariNama = $tanggalBooking->locale('id')->dayName;
+            $hariNamaCapitalized = ucfirst($hariNama);
+            $hariId = $hariMap[$hariNamaCapitalized] ?? null;
+            $slotId = $booking->slot_waktu_mulai_id;
+
+            if ($hariId) {
+                if (!isset($jadwalData[$kampusId][$selectedMinggu][$hariId][$slotId])) {
+                    $jadwalData[$kampusId][$selectedMinggu][$hariId][$slotId] = [];
+                }
+                
+                $isMySchedule = $booking->dosen_id === $dosen->id;
+                $isPast = $tanggalBooking->isPast();
+                
+                // Hitung waktu selesai dari slot waktu
+                $slotWaktuSelesai = \App\Models\SlotWaktu::where('urutan', '>=', $booking->slotWaktuMulai->urutan)
+                    ->orderBy('urutan')
+                    ->skip($booking->durasi_slot - 1)
+                    ->first();
+                
+                $jadwalData[$kampusId][$selectedMinggu][$hariId][$slotId][] = [
+                    'booking_id' => $booking->id,
+                    'matkul' => $booking->kelasMatKul ? $booking->kelasMatKul->mataKuliah->nama : 'Booking Lab',
+                    'kelas' => $booking->kelasMatKul ? $booking->kelasMatKul->kelas->nama : '-',
+                    'dosen' => $booking->dosen->user->name,
+                    'dosen_id' => $booking->dosen->id,
+                    'lab' => $booking->laboratorium->nama,
+                    'laboratorium_id' => $booking->laboratorium_id,
+                    'sks' => $booking->kelasMatKul ? $booking->kelasMatKul->mataKuliah->sks : 2,
+                    'durasi_slot' => $booking->durasi_slot,
+                    'waktu_mulai' => $booking->slotWaktuMulai->waktu_mulai,
+                    'waktu_selesai' => $slotWaktuSelesai ? $slotWaktuSelesai->waktu_selesai : $booking->slotWaktuMulai->waktu_selesai,
+                    'status' => 'booking',
+                    'tanggal' => $tanggalBooking->format('Y-m-d'),
+                    'is_my_schedule' => $isMySchedule,
+                    'is_past' => $isPast,
+                    'keperluan' => $booking->keperluan,
                 ];
             }
         }
