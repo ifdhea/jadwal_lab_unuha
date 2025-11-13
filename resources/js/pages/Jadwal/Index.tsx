@@ -332,65 +332,107 @@ export default function Index({
                                                                                 ] ||
                                                                                 [];
 
-                                                                            // Hitung rowspan dinamis berdasarkan waktu mulai dan selesai aktual
-                                                                            let maxRowSpan = 1;
-                                                                            if (
-                                                                                cellsData.length >
-                                                                                0
-                                                                            ) {
-                                                                                maxRowSpan =
-                                                                                    Math.max(
-                                                                                        ...cellsData.map(
-                                                                                            (
-                                                                                                cell,
-                                                                                            ) => {
-                                                                                                const startIdx =
-                                                                                                    slots.findIndex(
-                                                                                                        (
-                                                                                                            s,
-                                                                                                        ) =>
-                                                                                                            s.waktu_mulai <=
-                                                                                                                cell.waktu_mulai &&
-                                                                                                            s.waktu_selesai >
-                                                                                                                cell.waktu_mulai,
-                                                                                                    );
-                                                                                                const endIdx =
-                                                                                                    slots.findIndex(
-                                                                                                        (
-                                                                                                            s,
-                                                                                                        ) =>
-                                                                                                            s.waktu_mulai <
-                                                                                                                cell.waktu_selesai &&
-                                                                                                            s.waktu_selesai >=
-                                                                                                                cell.waktu_selesai,
-                                                                                                    );
-                                                                                                if (
-                                                                                                    startIdx !==
-                                                                                                        -1 &&
-                                                                                                    endIdx !==
-                                                                                                        -1
-                                                                                                ) {
-                                                                                                    return (
-                                                                                                        endIdx -
-                                                                                                        startIdx +
-                                                                                                        1
-                                                                                                    );
-                                                                                                }
-                                                                                                return (
-                                                                                                    cell.durasi_slot ||
-                                                                                                    1
-                                                                                                );
-                                                                                            },
-                                                                                        ),
-                                                                                    );
+                                                                                                                                                            // Hitung rowspan dinamis berdasarkan waktu mulai dan selesai aktual
 
-                                                                                // Mark cells yang akan di-span
-                                                                                for (
-                                                                                    let i = 0;
-                                                                                    i <
-                                                                                    maxRowSpan;
-                                                                                    i++
-                                                                                ) {
+                                                                                                                                                            // PENTING: Untuk minggu tertentu, seharusnya hanya ada 1 jadwal per slot
+
+                                                                                                                                                            // Jika ada lebih dari 1, ambil jadwal pertama saja
+
+                                                                                                                                                            let maxRowSpan = 1;
+
+                                                                                                                                                            if (
+
+                                                                                                                                                                cellsData.length >
+
+                                                                                                                                                                0
+
+                                                                                                                                                            ) {
+
+                                                                                                                                                                // Gunakan jadwal pertama untuk menentukan rowspan
+
+                                                                                                                                                                // Karena seharusnya tidak ada overlap di minggu yang sama
+
+                                                                                                                                                                const firstCell = cellsData[0];
+
+                                                                                                                                                                const startIdx =
+
+                                                                                                                                                                    slots.findIndex(
+
+                                                                                                                                                                        (s) =>
+
+                                                                                                                                                                            s.waktu_mulai <=
+
+                                                                                                                                                                                firstCell.waktu_mulai &&
+
+                                                                                                                                                                            s.waktu_selesai >
+
+                                                                                                                                                                                firstCell.waktu_mulai,
+
+                                                                                                                                                                    );
+
+                                                                                                                                                                const endIdx =
+
+                                                                                                                                                                    slots.findIndex(
+
+                                                                                                                                                                        (s) =>
+
+                                                                                                                                                                            s.waktu_mulai <
+
+                                                                                                                                                                                firstCell.waktu_selesai &&
+
+                                                                                                                                                                            s.waktu_selesai >=
+
+                                                                                                                                                                                firstCell.waktu_selesai,
+
+                                                                                                                                                                    );
+
+                                                                                                                                                                if (
+
+                                                                                                                                                                    startIdx !==
+
+                                                                                                                                                                        -1 &&
+
+                                                                                                                                                                    endIdx !==
+
+                                                                                                                                                                        -1
+
+                                                                                                                                                                ) {
+
+                                                                                                                                                                    maxRowSpan =
+
+                                                                                                                                                                        endIdx -
+
+                                                                                                                                                                        startIdx +
+
+                                                                                                                                                                        1;
+
+                                                                                                                                                                } else {
+
+                                                                                                                                                                    maxRowSpan =
+
+                                                                                                                                                                        firstCell.durasi_slot ||
+
+                                                                                                                                                                        1;
+
+                                                                                                                                                                }
+
+                                                                            
+
+                                                                                                                                                                // Mark cells yang akan di-span
+
+                                                                                                                                                                for (
+
+                                                                                                                                                                    let i = 0;
+
+                                                                                                                                                                    i <
+
+                                                                                                                                                                    maxRowSpan;
+
+                                                                                                                                                                    i++
+
+                                                                                                                                                                ) {
+
+                                                                            
                                                                                     const spanSlotIdx =
                                                                                         slotIdx +
                                                                                         i;
