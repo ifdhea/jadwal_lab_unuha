@@ -201,6 +201,10 @@ class TukarJadwalController extends Controller
             'sesi_jadwal_mitra_id' => 'nullable|exists:sesi_jadwal,id',
             'alasan_pemohon' => 'required|string|max:1000',
             'jenis' => 'required|in:tukar,pindah',
+            // For pindah jadwal - slot tujuan
+            'slot_tujuan_mulai_id' => 'nullable|exists:slot_waktu,id',
+            'slot_tujuan_selesai_id' => 'nullable|exists:slot_waktu,id',
+            'lab_tujuan_id' => 'nullable|exists:laboratorium,id',
         ]);
 
         $sesiPemohon = SesiJadwal::with('jadwalMaster')->find($validated['sesi_jadwal_pemohon_id']);
@@ -255,19 +259,31 @@ class TukarJadwalController extends Controller
                 ]);
                 
                 // Update menggunakan query builder langsung
+                // PINDAH = Update tanggal + minggu + OVERRIDE slot & lab
+                $updateData = [
+                    'tanggal' => $tanggalTujuan,
+                    'pertemuan_ke' => (int)$mingguTujuan,
+                    'updated_at' => now(),
+                ];
+                
+                // Tambah override jika slot/lab tujuan berbeda
+                if ($request->has('slot_tujuan_mulai_id')) {
+                    $updateData['override_slot_waktu_mulai_id'] = $request->slot_tujuan_mulai_id;
+                    $updateData['override_slot_waktu_selesai_id'] = $request->slot_tujuan_selesai_id;
+                }
+                
+                if ($request->has('lab_tujuan_id')) {
+                    $updateData['override_laboratorium_id'] = $request->lab_tujuan_id;
+                }
+                
                 $updated = DB::table('sesi_jadwal')
                     ->where('id', $sesiPemohon->id)
-                    ->update([
-                        'tanggal' => $tanggalTujuan,
-                        'pertemuan_ke' => (int)$mingguTujuan,
-                        'updated_at' => now(),
-                    ]);
+                    ->update($updateData);
 
                 \Log::info('Update Query Executed', [
                     'affected_rows' => $updated,
                     'id' => $sesiPemohon->id,
-                    'new_tanggal' => $tanggalTujuan,
-                    'new_pertemuan_ke' => $mingguTujuan,
+                    'update_data' => $updateData,
                 ]);
 
                 // Check value after update
@@ -368,27 +384,101 @@ class TukarJadwalController extends Controller
                 'mitra_minggu' => $sesiMitra->pertemuan_ke,
             ]);
 
-            // Tukar hanya tanggal dan minggu, BUKAN dosen atau SKS
-            // Simpan data asli
-            $tempTanggalPemohon = $sesiPemohon->tanggal;
-            $tempPertemuanPemohon = $sesiPemohon->pertemuan_ke;
+            // Cek apakah same day swap (tanggal dan minggu sama)
+            $isSameDay = ($sesiPemohon->tanggal->format('Y-m-d') === $sesiMitra->tanggal->format('Y-m-d'));
             
-            // Update menggunakan query builder langsung
-            $updated1 = DB::table('sesi_jadwal')
-                ->where('id', $sesiPemohon->id)
-                ->update([
-                    'tanggal' => $sesiMitra->tanggal,
-                    'pertemuan_ke' => $sesiMitra->pertemuan_ke,
-                    'updated_at' => now(),
+            \Log::info('Tukar Jadwal - Same Day Check', [
+                'is_same_day' => $isSameDay,
+                'pemohon_date' => $sesiPemohon->tanggal->format('Y-m-d'),
+                'mitra_date' => $sesiMitra->tanggal->format('Y-m-d'),
+            ]);
+
+            if ($isSameDay) {
+                // SAME DAY SWAP: Tukar slot MULAI saja (bukan selesai)
+                // Durasi tetap mengikuti jadwal masing-masing
+                $masterPemohon = $sesiPemohon->jadwalMaster;
+                $masterMitra = $sesiMitra->jadwalMaster;
+                
+                // Hitung slot selesai berdasarkan durasi masing-masing
+                $pemohonDurasi = $masterPemohon->durasi_slot;
+                $mitraDurasi = $masterMitra->durasi_slot;
+                
+                // Pemohon pakai slot mulai mitra, tapi durasi tetap sendiri
+                $pemohonSlotSelesai = $masterMitra->slot_waktu_mulai_id + $pemohonDurasi - 1;
+                
+                // Mitra pakai slot mulai pemohon, tapi durasi tetap sendiri  
+                $mitraSlotSelesai = $masterPemohon->slot_waktu_mulai_id + $mitraDurasi - 1;
+                
+                $updated1 = DB::table('sesi_jadwal')
+                    ->where('id', $sesiPemohon->id)
+                    ->update([
+                        'override_slot_waktu_mulai_id' => $masterMitra->slot_waktu_mulai_id,
+                        'override_slot_waktu_selesai_id' => $pemohonSlotSelesai,
+                        'override_laboratorium_id' => $masterMitra->laboratorium_id,
+                        'updated_at' => now(),
+                    ]);
+                
+                $updated2 = DB::table('sesi_jadwal')
+                    ->where('id', $sesiMitra->id)
+                    ->update([
+                        'override_slot_waktu_mulai_id' => $masterPemohon->slot_waktu_mulai_id,
+                        'override_slot_waktu_selesai_id' => $mitraSlotSelesai,
+                        'override_laboratorium_id' => $masterPemohon->laboratorium_id,
+                        'updated_at' => now(),
+                    ]);
+                
+                \Log::info('Tukar Jadwal - Same Day Swap', [
+                    'pemohon_override_slot' => $masterMitra->slot_waktu_mulai_id . '-' . $pemohonSlotSelesai . ' (durasi: ' . $pemohonDurasi . ')',
+                    'mitra_override_slot' => $masterPemohon->slot_waktu_mulai_id . '-' . $mitraSlotSelesai . ' (durasi: ' . $mitraDurasi . ')',
                 ]);
-            
-            $updated2 = DB::table('sesi_jadwal')
-                ->where('id', $sesiMitra->id)
-                ->update([
-                    'tanggal' => $tempTanggalPemohon,
-                    'pertemuan_ke' => $tempPertemuanPemohon,
-                    'updated_at' => now(),
+            } else {
+                // DIFFERENT DAY SWAP: Tukar tanggal DAN jam mulai
+                // Tapi durasi tetap pakai punyanya sendiri
+                $masterPemohon = $sesiPemohon->jadwalMaster;
+                $masterMitra = $sesiMitra->jadwalMaster;
+                
+                $pemohonDurasi = $masterPemohon->durasi_slot;
+                $mitraDurasi = $masterMitra->durasi_slot;
+                
+                // Pemohon ke hari mitra, pakai jam mulai mitra, tapi durasi sendiri
+                $pemohonSlotSelesai = $masterMitra->slot_waktu_mulai_id + $pemohonDurasi - 1;
+                
+                // Mitra ke hari pemohon, pakai jam mulai pemohon, tapi durasi sendiri
+                $mitraSlotSelesai = $masterPemohon->slot_waktu_mulai_id + $mitraDurasi - 1;
+                
+                $tempTanggalPemohon = $sesiPemohon->tanggal;
+                $tempPertemuanPemohon = $sesiPemohon->pertemuan_ke;
+                
+                $updated1 = DB::table('sesi_jadwal')
+                    ->where('id', $sesiPemohon->id)
+                    ->update([
+                        'tanggal' => $sesiMitra->tanggal,
+                        'pertemuan_ke' => $sesiMitra->pertemuan_ke,
+                        'override_slot_waktu_mulai_id' => $masterMitra->slot_waktu_mulai_id,
+                        'override_slot_waktu_selesai_id' => $pemohonSlotSelesai,
+                        'override_laboratorium_id' => $masterMitra->laboratorium_id,
+                        'updated_at' => now(),
+                    ]);
+                
+                $updated2 = DB::table('sesi_jadwal')
+                    ->where('id', $sesiMitra->id)
+                    ->update([
+                        'tanggal' => $tempTanggalPemohon,
+                        'pertemuan_ke' => $tempPertemuanPemohon,
+                        'override_slot_waktu_mulai_id' => $masterPemohon->slot_waktu_mulai_id,
+                        'override_slot_waktu_selesai_id' => $mitraSlotSelesai,
+                        'override_laboratorium_id' => $masterPemohon->laboratorium_id,
+                        'updated_at' => now(),
+                    ]);
+                
+                \Log::info('Tukar Jadwal - Different Day Swap', [
+                    'pemohon_new_date' => $sesiMitra->tanggal->format('Y-m-d'),
+                    'pemohon_new_slot' => $masterMitra->slot_waktu_mulai_id . '-' . $pemohonSlotSelesai . ' (durasi: ' . $pemohonDurasi . ')',
+                    'mitra_new_date' => $tempTanggalPemohon->format('Y-m-d'),
+                    'mitra_new_slot' => $masterPemohon->slot_waktu_mulai_id . '-' . $mitraSlotSelesai . ' (durasi: ' . $mitraDurasi . ')',
+                    'note' => 'Tukar hari dan jam mulai, durasi tetap masing-masing',
                 ]);
+            }
 
             \Log::info('Tukar Jadwal - Update Results', [
                 'pemohon_updated' => $updated1,
@@ -538,7 +628,10 @@ class TukarJadwalController extends Controller
                 'jadwalMaster.kelasMatKul.kelas',
                 'jadwalMaster.kelasMatKul.mataKuliah',
                 'jadwalMaster.slotWaktuMulai',
-                'jadwalMaster.slotWaktuSelesai'
+                'jadwalMaster.slotWaktuSelesai',
+                'overrideSlotWaktuMulai',
+                'overrideSlotWaktuSelesai',
+                'overrideLaboratorium',
             ])
             ->get();
         
@@ -569,7 +662,20 @@ class TukarJadwalController extends Controller
             $hariNamaSesiCapitalized = ucfirst($hariNamaSesi);
             $hariId = $hariMap[$hariNamaSesiCapitalized] ?? null;
             
-            $slotId = $master->slot_waktu_mulai_id;
+            // Gunakan override jika ada (untuk same-day swap)
+            $slotMulaiId = $sesi->override_slot_waktu_mulai_id ?? $master->slot_waktu_mulai_id;
+            $slotSelesaiId = $sesi->override_slot_waktu_selesai_id ?? $master->slot_waktu_selesai_id;
+            $labId = $sesi->override_laboratorium_id ?? $master->laboratorium_id;
+            
+            // Hitung durasi_slot yang BENAR berdasarkan slot aktual (dengan override)
+            $durasiSlot = $slotSelesaiId - $slotMulaiId + 1;
+            
+            // Load actual slot/lab objects
+            $slotMulai = $sesi->overrideSlotWaktuMulai ?? $master->slotWaktuMulai;
+            $slotSelesai = $sesi->overrideSlotWaktuSelesai ?? $master->slotWaktuSelesai;
+            $lab = $sesi->overrideLaboratorium ?? $master->laboratorium;
+            
+            $slotId = $slotMulaiId;
 
             if ($hariId) {
                 // Gunakan minggu yang ditampilkan (selectedMinggu) bukan pertemuan_ke
@@ -587,16 +693,17 @@ class TukarJadwalController extends Controller
                     'kelas' => $master->kelasMatKul->kelas->nama,
                     'dosen' => $master->dosen->user->name,
                     'dosen_id' => $master->dosen->id,
-                    'lab' => $master->laboratorium->nama,
-                    'laboratorium_id' => $master->laboratorium_id,
+                    'lab' => $lab->nama,
+                    'laboratorium_id' => $labId,
                     'sks' => $master->kelasMatKul->mataKuliah->sks,
-                    'durasi_slot' => $master->durasi_slot,
-                    'waktu_mulai' => $master->slotWaktuMulai->waktu_mulai,
-                    'waktu_selesai' => $master->slotWaktuSelesai->waktu_selesai,
+                    'durasi_slot' => $durasiSlot, // Gunakan durasi yang dihitung dari slot aktual
+                    'waktu_mulai' => $slotMulai->waktu_mulai,
+                    'waktu_selesai' => $slotSelesai->waktu_selesai,
                     'status' => $sesi->status,
                     'tanggal' => $sesi->tanggal->format('Y-m-d'),
                     'is_my_schedule' => $isMySchedule,
                     'is_past' => $isPast,
+                    'has_override' => $sesi->override_slot_waktu_mulai_id !== null,
                 ];
             }
         }

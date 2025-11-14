@@ -15,6 +15,9 @@ class SesiJadwal extends Model
         'tanggal',
         'status',
         'catatan',
+        'override_slot_waktu_mulai_id',
+        'override_slot_waktu_selesai_id',
+        'override_laboratorium_id',
     ];
     
     protected $casts = [
@@ -24,6 +27,22 @@ class SesiJadwal extends Model
     public function jadwalMaster(): BelongsTo
     {
         return $this->belongsTo(JadwalMaster::class);
+    }
+    
+    // Override relations
+    public function overrideSlotWaktuMulai(): BelongsTo
+    {
+        return $this->belongsTo(SlotWaktu::class, 'override_slot_waktu_mulai_id');
+    }
+    
+    public function overrideSlotWaktuSelesai(): BelongsTo
+    {
+        return $this->belongsTo(SlotWaktu::class, 'override_slot_waktu_selesai_id');
+    }
+    
+    public function overrideLaboratorium(): BelongsTo
+    {
+        return $this->belongsTo(Laboratorium::class, 'override_laboratorium_id');
     }
     
     public function scopeTerjadwal($query)

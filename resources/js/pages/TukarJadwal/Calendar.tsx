@@ -23,7 +23,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { toast } from '@/hooks/use-toast';
 import AppLayout from '@/layouts/app-layout';
 import { Head, router, usePage } from '@inertiajs/react';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import {
     BookOpen,
     Calendar as CalendarIcon,
@@ -39,7 +39,6 @@ import {
     User,
     Plus,
 } from 'lucide-react';
-import { useState } from 'react';
 
 interface Semester {
     id: number;
@@ -314,10 +313,25 @@ export default function Calendar({
             data.mitra_id = null;
             data.tanggal_tujuan = targetCell.tanggal;
             data.minggu_tujuan = selectedMinggu;
+            
+            // Hitung slot selesai berdasarkan durasi dari jadwal pemohon
+            const slotMulaiId = targetCell.slot.id;
+            const durasiSlot = selectedMySchedule.durasi_slot; // Berapa slot yang digunakan
+            const slotSelesaiId = slotMulaiId + durasiSlot - 1; // Misal mulai slot 1, durasi 4 → selesai slot 4
+            
+            data.slot_tujuan_mulai_id = slotMulaiId;
+            data.slot_tujuan_selesai_id = slotSelesaiId;
+            data.lab_tujuan_id = selectedMySchedule.laboratorium_id;
+            
+            console.log('Pindah Jadwal - Data yang dikirim:', data);
         }
 
         router.post('/tukar-jadwal', data, {
-            onSuccess: () => {
+            onBefore: () => {
+                console.log('Request started - Data:', data);
+            },
+            onSuccess: (response) => {
+                console.log('Request success:', response);
                 setShowSwapDialog(false);
                 setSelectedMySchedule(null);
                 setTargetCell(null);
@@ -325,6 +339,7 @@ export default function Calendar({
                 // ✅ Hapus toast di sini, biar pakai flash message aja
             },
             onError: (errors) => {
+                console.error('Request error:', errors);
                 const errorMessage = errors?.message || Object.values(errors || {}).flat().join(', ') || "Terjadi kesalahan saat mengajukan request";
                 toast({
                     title: "Gagal",
@@ -626,22 +641,10 @@ export default function Calendar({
                                                                                         jadwalKampus[selectedMinggu]?.[h.id]?.[slot.id] || [];
                                                                                     
                                                                                     // Hitung rowspan dinamis berdasarkan durasi_slot
+                                                                                    // Langsung pakai durasi_slot dari backend (sudah include override)
                                                                                     let maxRowSpan = 1;
                                                                                     if (cellsData.length > 0) {
-                                                                                        maxRowSpan = Math.max(...cellsData.map((cell) => {
-                                                                                            const startIdx = slots.findIndex((s) =>
-                                                                                                s.waktu_mulai <= cell.waktu_mulai &&
-                                                                                                s.waktu_selesai > cell.waktu_mulai,
-                                                                                            );
-                                                                                            const endIdx = slots.findIndex((s) =>
-                                                                                                s.waktu_mulai < cell.waktu_selesai &&
-                                                                                                s.waktu_selesai >= cell.waktu_selesai,
-                                                                                            );
-                                                                                            if (startIdx !== -1 && endIdx !== -1) {
-                                                                                                return endIdx - startIdx + 1;
-                                                                                            }
-                                                                                            return cell.durasi_slot || 1;
-                                                                                        }));
+                                                                                        maxRowSpan = Math.max(...cellsData.map((cell) => cell.durasi_slot || 1));
 
                                                                                         // Mark cells yang akan di-span
                                                                                         for (let i = 0; i < maxRowSpan; i++) {
