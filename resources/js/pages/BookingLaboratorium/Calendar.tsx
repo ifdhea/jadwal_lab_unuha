@@ -77,6 +77,7 @@ interface JadwalCell {
     is_my_schedule?: boolean;
     tanggal: string;
     is_past?: boolean;
+    is_active?: boolean;
 }
 type JadwalData = Record<
     number,
@@ -838,17 +839,61 @@ export default function Calendar({
                                                                                                                         SKS
                                                                                                                     </Badge>
                                                                                                                 </div>
-                                                                                                                <Badge
-                                                                                                                    variant={getStatusVariant(
-                                                                                                                        cell.status,
+                                                                                                                
+                                                                                                                {/* Status Badges - Same as TukarJadwal & Jadwal Utama */}
+                                                                                                                <div className="flex flex-wrap gap-1">
+                                                                                                                    {/* Badge Berlangsung - Highest Priority */}
+                                                                                                                    {cell.is_active && !cell.is_past && (
+                                                                                                                        <Badge variant="default" className="px-1.5 py-0.5 text-xs font-medium bg-yellow-500 text-white">
+                                                                                                                            Berlangsung
+                                                                                                                        </Badge>
                                                                                                                     )}
-                                                                                                                    className="px-1.5 py-0.5 text-xs font-medium"
-                                                                                                                >
-                                                                                                                    {cell.status === 'terjadwal' ? 'Terjadwal' : 
-                                                                                                                     cell.status === 'selesai' ? 'Selesai' :
-                                                                                                                     cell.status === 'tidak_masuk' ? 'Tidak Masuk' :
-                                                                                                                     cell.status === 'dibatalkan' ? 'Dibatalkan' : cell.status}
-                                                                                                                </Badge>
+                                                                                                                    
+                                                                                                                    {/* Badge Sudah Lewat */}
+                                                                                                                    {cell.is_past && (
+                                                                                                                        <Badge variant="secondary" className="px-1.5 py-0.5 text-xs font-medium">
+                                                                                                                            Sudah Lewat
+                                                                                                                        </Badge>
+                                                                                                                    )}
+                                                                                                                    
+                                                                                                                    {/* Badge Booking */}
+                                                                                                                    {cell.status === 'booking' && !cell.is_past && !cell.is_active && (
+                                                                                                                        <Badge variant="default" className="px-1.5 py-0.5 text-xs font-medium bg-orange-500">
+                                                                                                                            Booking
+                                                                                                                        </Badge>
+                                                                                                                    )}
+                                                                                                                    
+                                                                                                                    {/* Badge Jadwal Saya */}
+                                                                                                                    {cell.is_my_schedule && !cell.is_past && !cell.is_active && cell.status !== 'booking' && cell.status === 'terjadwal' && (
+                                                                                                                        <Badge variant="default" className="px-1.5 py-0.5 text-xs font-medium bg-green-600">
+                                                                                                                            Jadwal Saya
+                                                                                                                        </Badge>
+                                                                                                                    )}
+                                                                                                                    
+                                                                                                                    {/* Badge Terjadwal */}
+                                                                                                                    {cell.status === 'terjadwal' && !cell.is_past && !cell.is_active && !cell.is_my_schedule && (
+                                                                                                                        <Badge variant="default" className="px-1.5 py-0.5 text-xs font-medium bg-blue-500">
+                                                                                                                            Terjadwal
+                                                                                                                        </Badge>
+                                                                                                                    )}
+                                                                                                                    
+                                                                                                                    {/* Badge Other Status */}
+                                                                                                                    {cell.status === 'selesai' && (
+                                                                                                                        <Badge variant="secondary" className="px-1.5 py-0.5 text-xs font-medium">
+                                                                                                                            Selesai
+                                                                                                                        </Badge>
+                                                                                                                    )}
+                                                                                                                    {cell.status === 'tidak_masuk' && (
+                                                                                                                        <Badge variant="outline" className="px-1.5 py-0.5 text-xs font-medium">
+                                                                                                                            Tidak Masuk
+                                                                                                                        </Badge>
+                                                                                                                    )}
+                                                                                                                    {cell.status === 'dibatalkan' && (
+                                                                                                                        <Badge variant="destructive" className="px-1.5 py-0.5 text-xs font-medium">
+                                                                                                                            Dibatalkan
+                                                                                                                        </Badge>
+                                                                                                                    )}
+                                                                                                                </div>
                                                                                                             </div>
 
                                                                                                             {/* Button Tidak Masuk (hanya untuk dosen pemilik jadwal) */}

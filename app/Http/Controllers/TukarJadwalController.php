@@ -686,7 +686,32 @@ class TukarJadwalController extends Controller
                 }
                 
                 $isMySchedule = $master->dosen_id === $dosen->id;
-                $isPast = $sesi->tanggal->isPast();
+                
+                // Check if this is a swapped schedule
+                $isSwapped = TukarJadwal::where(function($q) use ($sesi) {
+                        $q->where('sesi_jadwal_pemohon_id', $sesi->id)
+                          ->orWhere('sesi_jadwal_mitra_id', $sesi->id);
+                    })
+                    ->where('status', 'disetujui')
+                    ->where('jenis', 'tukar')
+                    ->exists();
+                
+                // Check if past using timezone-aware comparison
+                $now = now(); // Already uses Asia/Jakarta from config
+                $sesiDate = Carbon::parse($sesi->tanggal)->setTimezone('Asia/Jakarta');
+                $sesiDate->setHours(23, 59, 59); // End of day
+                $isPast = $now->greaterThan($sesiDate);
+                
+                // Check if currently active (berlangsung)
+                $jadwalStart = Carbon::parse($sesi->tanggal)->setTimezone('Asia/Jakarta')->setTimeFromTimeString($slotMulai->waktu_mulai);
+                $jadwalEnd = Carbon::parse($sesi->tanggal)->setTimezone('Asia/Jakarta')->setTimeFromTimeString($slotSelesai->waktu_selesai);
+                $isActive = $now->between($jadwalStart, $jadwalEnd);
+                
+                // Re-check isPast: if schedule ended, mark as past
+                if ($now->greaterThan($jadwalEnd)) {
+                    $isPast = true;
+                    $isActive = false;
+                }
                 
                 $jadwalData[$kampusId][$selectedMinggu][$hariId][$slotId][] = [
                     'sesi_jadwal_id' => $sesi->id,
@@ -704,6 +729,8 @@ class TukarJadwalController extends Controller
                     'tanggal' => $sesi->tanggal->format('Y-m-d'),
                     'is_my_schedule' => $isMySchedule,
                     'is_past' => $isPast,
+                    'is_active' => $isActive,
+                    'is_swapped' => $isSwapped,
                     'has_override' => $sesi->override_slot_waktu_mulai_id !== null,
                 ];
             }
@@ -735,13 +762,19 @@ class TukarJadwalController extends Controller
                 }
                 
                 $isMySchedule = $booking->dosen_id === $dosen->id;
-                $isPast = $tanggalBooking->isPast();
                 
                 // Hitung waktu selesai dari slot waktu
                 $slotWaktuSelesai = \App\Models\SlotWaktu::where('urutan', '>=', $booking->slotWaktuMulai->urutan)
                     ->orderBy('urutan')
                     ->skip($booking->durasi_slot - 1)
                     ->first();
+                
+                // Check if past and active using timezone-aware comparison
+                $now = now(); // Already uses Asia/Jakarta from config
+                $bookingStart = Carbon::parse($booking->tanggal)->setTimezone('Asia/Jakarta')->setTimeFromTimeString($booking->slotWaktuMulai->waktu_mulai);
+                $bookingEnd = Carbon::parse($booking->tanggal)->setTimezone('Asia/Jakarta')->setTimeFromTimeString($slotWaktuSelesai ? $slotWaktuSelesai->waktu_selesai : $booking->slotWaktuMulai->waktu_selesai);
+                $isActive = $now->between($bookingStart, $bookingEnd);
+                $isPast = $now->greaterThan($bookingEnd);
                 
                 $jadwalData[$kampusId][$selectedMinggu][$hariId][$slotId][] = [
                     'booking_id' => $booking->id,
@@ -759,6 +792,8 @@ class TukarJadwalController extends Controller
                     'tanggal' => $tanggalBooking->format('Y-m-d'),
                     'is_my_schedule' => $isMySchedule,
                     'is_past' => $isPast,
+                    'is_active' => $isActive,
+                    'is_swapped' => false,
                     'keperluan' => $booking->keperluan,
                 ];
             }

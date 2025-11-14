@@ -187,7 +187,21 @@ class JadwalController extends Controller
                     $isMySchedule = ($master->dosen_id === $user->dosen->id);
                 }
                 
-                $isPast = $sesi->tanggal->isPast();
+                // Check if this is a swapped schedule
+                $isSwapped = \App\Models\TukarJadwal::where(function($q) use ($sesi) {
+                        $q->where('sesi_jadwal_pemohon_id', $sesi->id)
+                          ->orWhere('sesi_jadwal_mitra_id', $sesi->id);
+                    })
+                    ->where('status', 'disetujui')
+                    ->where('jenis', 'tukar')
+                    ->exists();
+                
+                // Check if past and active using timezone-aware comparison
+                $now = now(); // Already uses Asia/Jakarta from config
+                $jadwalStart = Carbon::parse($sesi->tanggal)->setTimezone('Asia/Jakarta')->setTimeFromTimeString($slotMulai->waktu_mulai);
+                $jadwalEnd = Carbon::parse($sesi->tanggal)->setTimezone('Asia/Jakarta')->setTimeFromTimeString($slotSelesai->waktu_selesai);
+                $isActive = $now->between($jadwalStart, $jadwalEnd);
+                $isPast = $now->greaterThan($jadwalEnd);
                 
                 $jadwalData[$kampusId][$selectedMinggu][$hariId][$slotId][] = [
                     'sesi_jadwal_id' => $sesi->id,
@@ -203,6 +217,8 @@ class JadwalController extends Controller
                     'is_my_schedule' => $isMySchedule,
                     'tanggal' => $sesi->tanggal->format('Y-m-d'),
                     'is_past' => $isPast,
+                    'is_active' => $isActive,
+                    'is_swapped' => $isSwapped,
                     'slot_waktu_mulai_id' => $slotMulaiId,
                     'laboratorium_id' => $labId,
                     'has_override' => $sesi->override_slot_waktu_mulai_id !== null,
@@ -246,6 +262,20 @@ class JadwalController extends Controller
                             $jadwalData[$kampusId][$selectedMinggu][$hariId][$slotId] = [];
                         }
 
+                        // Check if past and active using timezone-aware comparison
+                        $now = now(); // Already uses Asia/Jakarta from config
+                        $jadwalStart = Carbon::parse($tanggal)->setTimezone('Asia/Jakarta')->setTimeFromTimeString($booking->slotWaktuMulai->waktu_mulai);
+                        $jadwalEnd = Carbon::parse($tanggal)->setTimezone('Asia/Jakarta')->setTimeFromTimeString($booking->slotWaktuSelesai->waktu_selesai);
+                        $isActive = $now->between($jadwalStart, $jadwalEnd);
+                        $isPast = $now->greaterThan($jadwalEnd);
+                        
+                        // Check if this is my schedule
+                        $user = $request->user();
+                        $isMySchedule = false;
+                        if ($user && $user->peran === 'dosen' && $user->dosen) {
+                            $isMySchedule = ($booking->dosen_id === $user->dosen->id);
+                        }
+                        
                         $jadwalData[$kampusId][$selectedMinggu][$hariId][$slotId][] = [
                             'booking_id' => $booking->id,
                             'matkul' => $booking->kelasMatKul ? $booking->kelasMatKul->mataKuliah->nama : '-',
@@ -258,7 +288,10 @@ class JadwalController extends Controller
                             'waktu_selesai' => $booking->slotWaktuSelesai->waktu_selesai,
                             'status' => 'booking',
                             'tanggal' => $booking->tanggal,
-                            'is_past' => $tanggal->isPast() && !$tanggal->isToday(),
+                            'is_my_schedule' => $isMySchedule,
+                            'is_past' => $isPast,
+                            'is_active' => $isActive,
+                            'is_swapped' => false,
                             'slot_position' => $slotCounter,
                             'is_first_slot' => $slotCounter === 0,
                             'is_last_slot' => $slotCounter === ($booking->durasi_slot - 1),
