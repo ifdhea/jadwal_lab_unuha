@@ -162,9 +162,6 @@ class DashboardController extends Controller
             'pertemuan_selesai' => 0,
         ];
 
-        $jadwalMingguIni = [];
-        $jadwalBulanIni = [];
-
         if ($semesterAktif) {
             // Jadwal Master dosen
             $jadwalMasterIds = JadwalMaster::where('dosen_id', $dosen->id)
@@ -189,15 +186,25 @@ class DashboardController extends Controller
                 ->count('kelas_mata_kuliah.kelas_id');
 
             $stats['total_pertemuan'] = SesiJadwal::whereIn('jadwal_master_id', $jadwalMasterIds)->count();
+            
+            // PERBAIKAN: Hitung pertemuan selesai berdasarkan jadwal yang sudah lewat
+            $now = Carbon::now();
             $stats['pertemuan_selesai'] = SesiJadwal::whereIn('jadwal_master_id', $jadwalMasterIds)
-                ->where('status', 'selesai')
+                ->where(function($query) use ($now) {
+                    // Status selesai ATAU jadwal sudah lewat
+                    $query->where('status', 'selesai')
+                          ->orWhere(function($q) use ($now) {
+                              $q->whereDate('tanggal', '<', $now->toDateString());
+                          });
+                })
                 ->count();
 
             // Jadwal Hari Ini - Menampilkan SEMUA jadwal (generate, booking, tukar, pindah)
             $today = Carbon::today();
             $now = Carbon::now();
             
-            $jadwalHariIni = SesiJadwal::whereIn('jadwal_master_id', $jadwalMasterIds)
+            // 1. Ambil sesi jadwal dari jadwal master
+            $sesiJadwalHariIni = SesiJadwal::whereIn('jadwal_master_id', $jadwalMasterIds)
                 ->whereDate('tanggal', $today)
                 ->with([
                     'jadwalMaster.laboratorium.kampus',
@@ -205,110 +212,107 @@ class DashboardController extends Controller
                     'jadwalMaster.kelasMatKul.mataKuliah',
                     'jadwalMaster.slotWaktuMulai',
                     'jadwalMaster.slotWaktuSelesai',
-                    'jadwalMaster.dosen.user'
+                    'jadwalMaster.dosen.user',
+                    'overrideSlotWaktuMulai',
+                    'overrideSlotWaktuSelesai',
+                    'overrideLaboratorium.kampus'
                 ])
-                ->get()
-                ->map(function ($sesi) use ($dosen, $today, $now) {
-                    $master = $sesi->jadwalMaster;
-                    
-                    // Cek apakah jadwal sudah lewat atau sedang berlangsung
-                    $tanggalWaktuMulai = Carbon::parse($sesi->tanggal . ' ' . $master->slotWaktuMulai->waktu_mulai);
-                    $tanggalWaktuSelesai = Carbon::parse($sesi->tanggal . ' ' . $master->slotWaktuSelesai->waktu_selesai);
-                    $isPast = $now->greaterThan($tanggalWaktuSelesai);
-                    $isActive = $now->between($tanggalWaktuMulai, $tanggalWaktuSelesai);
-                    
-                    // Cek apakah jadwal milik dosen ini
-                    $isMySchedule = $master->dosen_id == $dosen->id;
-                    
-                    // Cek apakah jadwal hasil tukar
-                    $isSwapped = $sesi->is_swapped ?? false;
-                    
-                    return [
-                        'id' => $sesi->id,
-                        'tanggal' => $sesi->tanggal,
-                        'hari' => $master->hari,
-                        'mata_kuliah' => $master->kelasMatKul->mataKuliah->nama,
-                        'kelas' => $master->kelasMatKul->kelas->nama,
-                        'laboratorium' => $master->laboratorium->nama,
-                        'kampus' => $master->laboratorium->kampus->nama,
-                        'waktu_mulai' => $master->slotWaktuMulai->waktu_mulai,
-                        'waktu_selesai' => $master->slotWaktuSelesai->waktu_selesai,
-                        'status' => $sesi->status,
-                        'pertemuan_ke' => $sesi->pertemuan_ke,
-                        'is_my_schedule' => $isMySchedule,
-                        'is_past' => $isPast,
-                        'is_active' => $isActive,
-                        'is_swapped' => $isSwapped,
-                    ];
-                })
-                ->sortBy('waktu_mulai')
-                ->values();
-
-            // Jadwal Minggu Ini
-            $startOfWeek = Carbon::now()->startOfWeek();
-            $endOfWeek = Carbon::now()->endOfWeek();
-
-            $jadwalMingguIni = SesiJadwal::whereIn('jadwal_master_id', $jadwalMasterIds)
-                ->whereBetween('tanggal', [$startOfWeek, $endOfWeek])
+                ->get();
+            
+            // 2. Ambil booking hari ini yang disetujui
+            $bookingHariIni = \App\Models\BookingLaboratorium::where('dosen_id', $dosen->id)
+                ->where('status', 'disetujui')
+                ->whereDate('tanggal', $today)
                 ->with([
-                    'jadwalMaster.laboratorium.kampus',
-                    'jadwalMaster.kelasMatKul.kelas',
-                    'jadwalMaster.kelasMatKul.mataKuliah',
-                    'jadwalMaster.slotWaktuMulai',
-                    'jadwalMaster.slotWaktuSelesai'
+                    'laboratorium.kampus',
+                    'kelasMatKul.kelas',
+                    'kelasMatKul.mataKuliah',
+                    'slotWaktuMulai',
+                    'slotWaktuSelesai'
                 ])
-                ->get()
-                ->map(function ($sesi) {
-                    $master = $sesi->jadwalMaster;
-                    return [
-                        'id' => $sesi->id,
-                        'tanggal' => $sesi->tanggal,
-                        'hari' => $master->hari,
-                        'mata_kuliah' => $master->kelasMatKul->mataKuliah->nama,
-                        'kelas' => $master->kelasMatKul->kelas->nama,
-                        'laboratorium' => $master->laboratorium->nama,
-                        'kampus' => $master->laboratorium->kampus->nama,
-                        'waktu_mulai' => $master->slotWaktuMulai->waktu_mulai,
-                        'waktu_selesai' => $master->slotWaktuSelesai->waktu_selesai,
-                        'status' => $sesi->status,
-                        'pertemuan_ke' => $sesi->pertemuan_ke,
-                    ];
-                })
-                ->sortBy('tanggal')
-                ->values();
-
-            // Jadwal Bulan Ini
-            $startOfMonth = Carbon::now()->startOfMonth();
-            $endOfMonth = Carbon::now()->endOfMonth();
-
-            $jadwalBulanIni = SesiJadwal::whereIn('jadwal_master_id', $jadwalMasterIds)
-                ->whereBetween('tanggal', [$startOfMonth, $endOfMonth])
-                ->with([
-                    'jadwalMaster.laboratorium.kampus',
-                    'jadwalMaster.kelasMatKul.kelas',
-                    'jadwalMaster.kelasMatKul.mataKuliah',
-                    'jadwalMaster.slotWaktuMulai',
-                    'jadwalMaster.slotWaktuSelesai'
-                ])
-                ->get()
-                ->map(function ($sesi) {
-                    $master = $sesi->jadwalMaster;
-                    return [
-                        'id' => $sesi->id,
-                        'tanggal' => $sesi->tanggal,
-                        'hari' => $master->hari,
-                        'mata_kuliah' => $master->kelasMatKul->mataKuliah->nama,
-                        'kelas' => $master->kelasMatKul->kelas->nama,
-                        'laboratorium' => $master->laboratorium->nama,
-                        'kampus' => $master->laboratorium->kampus->nama,
-                        'waktu_mulai' => $master->slotWaktuMulai->waktu_mulai,
-                        'waktu_selesai' => $master->slotWaktuSelesai->waktu_selesai,
-                        'status' => $sesi->status,
-                        'pertemuan_ke' => $sesi->pertemuan_ke,
-                    ];
-                })
-                ->sortBy('tanggal')
-                ->values();
+                ->get();
+            
+            // Gabungkan kedua collection
+            $jadwalHariIni = collect();
+            
+            // Proses sesi jadwal
+            foreach ($sesiJadwalHariIni as $sesi) {
+                $master = $sesi->jadwalMaster;
+                
+                // Gunakan override jika ada
+                $slotMulai = $sesi->overrideSlotWaktuMulai ?? $master->slotWaktuMulai;
+                $slotSelesai = $sesi->overrideSlotWaktuSelesai ?? $master->slotWaktuSelesai;
+                $lab = $sesi->overrideLaboratorium ?? $master->laboratorium;
+                
+                // Cek apakah jadwal sudah lewat atau sedang berlangsung
+                $tanggalWaktuMulai = Carbon::parse($sesi->tanggal . ' ' . $slotMulai->waktu_mulai);
+                $tanggalWaktuSelesai = Carbon::parse($sesi->tanggal . ' ' . $slotSelesai->waktu_selesai);
+                $isPast = $now->greaterThan($tanggalWaktuSelesai);
+                $isActive = $now->between($tanggalWaktuMulai, $tanggalWaktuSelesai);
+                
+                // Cek apakah jadwal milik dosen ini
+                $isMySchedule = $master->dosen_id == $dosen->id;
+                
+                // Cek apakah jadwal hasil tukar
+                $isSwapped = \App\Models\TukarJadwal::where(function($q) use ($sesi) {
+                        $q->where('sesi_jadwal_pemohon_id', $sesi->id)
+                          ->orWhere('sesi_jadwal_mitra_id', $sesi->id);
+                    })
+                    ->where('status', 'disetujui')
+                    ->where('jenis', 'tukar')
+                    ->exists();
+                
+                $jadwalHariIni->push([
+                    'id' => $sesi->id,
+                    'tanggal' => $sesi->tanggal,
+                    'hari' => $master->hari,
+                    'mata_kuliah' => $master->kelasMatKul->mataKuliah->nama,
+                    'kelas' => $master->kelasMatKul->kelas->nama,
+                    'laboratorium' => $lab->nama,
+                    'kampus' => $lab->kampus->nama,
+                    'waktu_mulai' => $slotMulai->waktu_mulai,
+                    'waktu_selesai' => $slotSelesai->waktu_selesai,
+                    'status' => $sesi->status,
+                    'pertemuan_ke' => $sesi->pertemuan_ke,
+                    'is_my_schedule' => $isMySchedule,
+                    'is_past' => $isPast,
+                    'is_active' => $isActive,
+                    'is_swapped' => $isSwapped,
+                    'source' => 'jadwal',
+                ]);
+            }
+            
+            // Proses booking
+            foreach ($bookingHariIni as $booking) {
+                // Parse tanggal dengan benar (tanggal sudah datetime, ambil hanya tanggalnya)
+                $tanggalOnly = Carbon::parse($booking->tanggal)->format('Y-m-d');
+                $tanggalWaktuMulai = Carbon::parse($tanggalOnly . ' ' . $booking->slotWaktuMulai->waktu_mulai);
+                $tanggalWaktuSelesai = Carbon::parse($tanggalOnly . ' ' . $booking->slotWaktuSelesai->waktu_selesai);
+                $isPast = $now->greaterThan($tanggalWaktuSelesai);
+                $isActive = $now->between($tanggalWaktuMulai, $tanggalWaktuSelesai);
+                
+                $jadwalHariIni->push([
+                    'id' => 'booking_' . $booking->id,
+                    'tanggal' => $tanggalOnly,
+                    'hari' => Carbon::parse($booking->tanggal)->locale('id')->dayName,
+                    'mata_kuliah' => $booking->kelasMatKul ? $booking->kelasMatKul->mataKuliah->nama : $booking->keperluan,
+                    'kelas' => $booking->kelasMatKul ? $booking->kelasMatKul->kelas->nama : '-',
+                    'laboratorium' => $booking->laboratorium->nama,
+                    'kampus' => $booking->laboratorium->kampus->nama,
+                    'waktu_mulai' => $booking->slotWaktuMulai->waktu_mulai,
+                    'waktu_selesai' => $booking->slotWaktuSelesai->waktu_selesai,
+                    'status' => 'booking',
+                    'pertemuan_ke' => null,
+                    'is_my_schedule' => true,
+                    'is_past' => $isPast,
+                    'is_active' => $isActive,
+                    'is_swapped' => false,
+                    'source' => 'booking',
+                ]);
+            }
+            
+            // Sort by waktu_mulai
+            $jadwalHariIni = $jadwalHariIni->sortBy('waktu_mulai')->values()->all();
         } else {
             $jadwalHariIni = [];
         }
@@ -328,8 +332,6 @@ class DashboardController extends Controller
             ] : null,
             'stats' => $stats,
             'jadwalHariIni' => $jadwalHariIni,
-            'jadwalMingguIni' => $jadwalMingguIni,
-            'jadwalBulanIni' => $jadwalBulanIni,
         ]);
     }
 

@@ -314,10 +314,59 @@ class JadwalController extends Controller
             'hari' => $hari,
             'slots' => $slots,
             'jadwalData' => $jadwalData,
+            'isEmbed' => $request->has('embed'),
             'breadcrumbs' => [
                 ['title' => 'Dashboard', 'href' => '/dashboard'],
                 ['title' => 'Jadwal Final', 'href' => '/jadwal'],
             ],
+        ]);
+    }
+
+    public function embed(Request $request)
+    {
+        // Gunakan logic yang sama dengan index(), tapi render ke layout embed
+        $semesters = Semester::where('is_aktif', true)->orderBy('tanggal_mulai', 'desc')->get();
+        $selectedSemesterId = $request->input('semester_id', $semesters->first()->id ?? null);
+
+        if (!$selectedSemesterId) {
+            return Inertia::render('Jadwal/Embed', [
+                'semesters' => $semesters,
+                'selectedSemesterId' => null,
+                'kampusList' => [],
+                'mingguList' => [],
+                'selectedMinggu' => 1,
+                'hari' => [],
+                'slots' => [],
+                'jadwalData' => [],
+            ]);
+        }
+
+        $semester = Semester::find($selectedSemesterId);
+
+        // Auto-navigate to current week if not specified
+        $selectedMinggu = (int) $request->input('minggu');
+        if ($semester && !$request->has('minggu')) {
+            $tanggalMulai = Carbon::parse($semester->tanggal_mulai);
+            $today = Carbon::now();
+            $totalMinggu = $semester->total_minggu ?? 16;
+
+            if ($today->lt($tanggalMulai)) {
+                $selectedMinggu = 1;
+            } else {
+                $diffInDays = $tanggalMulai->startOfDay()->diffInDays($today->startOfDay());
+                $currentWeek = (int)floor($diffInDays / 7) + 1;
+                $selectedMinggu = max(1, min($currentWeek, $totalMinggu));
+            }
+        } elseif (!$selectedMinggu) {
+            $selectedMinggu = 1;
+        }
+        
+        // Panggil method index untuk mendapatkan data
+        // Tapi kita perlu duplikasi logic atau extract ke method terpisah
+        // Untuk sementara, redirect ke index dengan parameter yang sama
+        return redirect()->route('jadwal.index', [
+            'semester_id' => $selectedSemesterId,
+            'minggu' => $selectedMinggu
         ]);
     }
 

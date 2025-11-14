@@ -55,8 +55,6 @@ interface DosenDashboardProps {
     dosen: Dosen;
     stats: Stats;
     jadwalHariIni: JadwalItem[];
-    jadwalMingguIni: JadwalItem[];
-    jadwalBulanIni: JadwalItem[];
     semesterAktif: SemesterAktif | null;
     error?: string;
 }
@@ -65,8 +63,6 @@ export default function DosenDashboard({
     dosen,
     stats,
     jadwalHariIni,
-    jadwalMingguIni,
-    jadwalBulanIni,
     semesterAktif,
     error,
 }: DosenDashboardProps) {
@@ -253,11 +249,14 @@ export default function DosenDashboard({
                                             {/* Badge dinamis */}
                                             {getStatusBadge(jadwal)}
                                         </div>
-                                        <span className="text-sm font-medium text-muted-foreground">
-                                            Pertemuan ke-{jadwal.pertemuan_ke}
-                                        </span>
-                                        {/* Tombol Tidak Hadir - hanya untuk jadwal saya yang terjadwal dan belum lewat */}
-                                        {jadwal.is_my_schedule && !jadwal.is_past && jadwal.status === 'terjadwal' && (
+                                        {/* Tampilkan pertemuan_ke hanya jika bukan booking */}
+                                        {jadwal.pertemuan_ke && (
+                                            <span className="text-sm font-medium text-muted-foreground">
+                                                Pertemuan ke-{jadwal.pertemuan_ke}
+                                            </span>
+                                        )}
+                                        {/* Tombol Tidak Hadir - hanya untuk jadwal saya yang terjadwal dan belum lewat dan bukan booking */}
+                                        {jadwal.is_my_schedule && !jadwal.is_past && jadwal.status === 'terjadwal' && !jadwal.id.toString().startsWith('booking_') && (
                                             <Button
                                                 variant="outline"
                                                 size="sm"
@@ -274,8 +273,8 @@ export default function DosenDashboard({
                                                 Tidak Hadir
                                             </Button>
                                         )}
-                                        {/* Tombol Reset Status - untuk yang sudah tidak masuk */}
-                                        {jadwal.is_my_schedule && !jadwal.is_past && jadwal.status === 'tidak_masuk' && (
+                                        {/* Tombol Reset Status - untuk yang sudah tidak masuk dan bukan booking */}
+                                        {jadwal.is_my_schedule && !jadwal.is_past && jadwal.status === 'tidak_masuk' && !jadwal.id.toString().startsWith('booking_') && (
                                             <Button
                                                 variant="default"
                                                 size="sm"
@@ -307,7 +306,7 @@ export default function DosenDashboard({
                 </CardContent>
             </Card>
 
-            {/* Tabel Jadwal Utama - Menggantikan Jadwal Minggu & Bulan Ini */}
+            {/* Tabel Jadwal Utama - Embed Iframe */}
             <Card>
                 <CardHeader>
                     <CardTitle className="flex items-center gap-2">
@@ -315,24 +314,16 @@ export default function DosenDashboard({
                         Jadwal Lengkap Saya
                     </CardTitle>
                     <CardDescription>
-                        Lihat semua jadwal Anda di halaman jadwal utama untuk fitur lengkap
+                        Jadwal lengkap dengan fitur interaktif - scroll untuk melihat lebih banyak
                     </CardDescription>
                 </CardHeader>
-                <CardContent>
-                    <div className="flex flex-col items-center justify-center py-8 gap-4">
-                        <Calendar className="h-16 w-16 text-muted-foreground/50" />
-                        <p className="text-sm text-muted-foreground text-center max-w-md">
-                            Untuk melihat jadwal lengkap, melakukan tukar jadwal, atau menandai kehadiran, 
-                            silakan kunjungi halaman Jadwal Utama.
-                        </p>
-                        <Button
-                            onClick={() => router.visit('/jadwal')}
-                            className="mt-2"
-                        >
-                            <BookOpen className="mr-2 h-4 w-4" />
-                            Buka Jadwal Utama
-                        </Button>
-                    </div>
+                <CardContent className="p-0">
+                    <iframe 
+                        src="/jadwal?embed=1"
+                        className="w-full border-0"
+                        style={{ height: '800px', minHeight: '600px' }}
+                        title="Jadwal Lengkap"
+                    />
                 </CardContent>
             </Card>
         </div>

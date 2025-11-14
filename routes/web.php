@@ -33,6 +33,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     Route::get('/jadwal', [JadwalController::class, 'index'])->name('jadwal.index');
     
+    // Jadwal Embed (tanpa layout untuk iframe di dashboard)
+    Route::get('/jadwal/embed', [JadwalController::class, 'embed'])->name('jadwal.embed');
+    
     // Tukar Jadwal - Dosen only
     Route::middleware(['peran:dosen'])->group(function () {
         Route::get('/tukar-jadwal', [TukarJadwalController::class, 'calendar'])->name('tukar-jadwal.index');

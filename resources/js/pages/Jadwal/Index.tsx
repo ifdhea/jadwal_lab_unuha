@@ -81,6 +81,7 @@ interface Props {
     hari: Hari[];
     slots: Slot[];
     jadwalData: JadwalData;
+    isEmbed?: boolean;
     breadcrumbs: Array<{ title: string; href: string }>;
 }
 
@@ -93,6 +94,7 @@ export default function Index({
     hari,
     slots,
     jadwalData,
+    isEmbed = false,
     breadcrumbs,
 }: Props) {
     const [activeKampus, setActiveKampus] = useState(
@@ -130,17 +132,15 @@ export default function Index({
 
     const currentMinggu = mingguList.find((m) => m.nomor === selectedMinggu);
 
-    return (
-        <AppLayout breadcrumbs={breadcrumbs}>
-            <Head title="Jadwal Final" />
-
-            <div className="space-y-4 p-4">
-                <div className="flex items-center justify-between">
-                    <div>
-                        <h1 className="text-3xl font-bold">Jadwal Final</h1>
-                        <p className="text-muted-foreground">
-                            Tampilan jadwal mingguan per kampus
-                        </p>
+    // Jika embed mode, render tanpa AppLayout
+    const content = (
+        <div className="space-y-4 p-4">
+            <div className="flex items-center justify-between">
+                <div>
+                    <h1 className="text-3xl font-bold">Jadwal Final</h1>
+                    <p className="text-muted-foreground">
+                        Tampilan jadwal mingguan per kampus
+                    </p>
                     </div>
                     <div className="w-72">
                         <Select
@@ -838,6 +838,22 @@ export default function Index({
                     </div>
                 )}
             </div>
+    );
+
+    // Render dengan atau tanpa layout
+    if (isEmbed) {
+        return (
+            <>
+                <Head title="Jadwal Final" />
+                {content}
+            </>
+        );
+    }
+
+    return (
+        <AppLayout breadcrumbs={breadcrumbs}>
+            <Head title="Jadwal Final" />
+            {content}
         </AppLayout>
     );
 }
