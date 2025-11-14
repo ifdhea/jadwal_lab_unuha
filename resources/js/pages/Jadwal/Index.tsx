@@ -112,22 +112,20 @@ export default function Index({
     };
 
     const handleSemesterChange = (semesterId: string) => {
-        router.get(
-            '/jadwal',
-            { semester_id: semesterId, minggu: 1 },
-            { preserveState: true },
-        );
+        const params: any = { semester_id: semesterId, minggu: 1 };
+        if (isEmbed) params.embed = 1;
+        
+        router.get('/jadwal', params, { preserveState: true });
     };
 
     const handleMingguChange = (minggu: number) => {
-        router.get(
-            '/jadwal',
-            {
-                semester_id: selectedSemesterId,
-                minggu,
-            },
-            { preserveState: true },
-        );
+        const params: any = {
+            semester_id: selectedSemesterId,
+            minggu,
+        };
+        if (isEmbed) params.embed = 1;
+        
+        router.get('/jadwal', params, { preserveState: true });
     };
 
     const currentMinggu = mingguList.find((m) => m.nomor === selectedMinggu);
