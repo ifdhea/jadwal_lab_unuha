@@ -193,19 +193,36 @@ class DashboardController extends Controller
                 ->where('status', 'selesai')
                 ->count();
 
-            // Jadwal Hari Ini
+            // Jadwal Hari Ini - Menampilkan SEMUA jadwal (generate, booking, tukar, pindah)
+            $today = Carbon::today();
+            $now = Carbon::now();
+            
             $jadwalHariIni = SesiJadwal::whereIn('jadwal_master_id', $jadwalMasterIds)
-                ->whereDate('tanggal', Carbon::today())
+                ->whereDate('tanggal', $today)
                 ->with([
                     'jadwalMaster.laboratorium.kampus',
                     'jadwalMaster.kelasMatKul.kelas',
                     'jadwalMaster.kelasMatKul.mataKuliah',
                     'jadwalMaster.slotWaktuMulai',
-                    'jadwalMaster.slotWaktuSelesai'
+                    'jadwalMaster.slotWaktuSelesai',
+                    'jadwalMaster.dosen.user'
                 ])
                 ->get()
-                ->map(function ($sesi) {
+                ->map(function ($sesi) use ($dosen, $today, $now) {
                     $master = $sesi->jadwalMaster;
+                    
+                    // Cek apakah jadwal sudah lewat atau sedang berlangsung
+                    $tanggalWaktuMulai = Carbon::parse($sesi->tanggal . ' ' . $master->slotWaktuMulai->waktu_mulai);
+                    $tanggalWaktuSelesai = Carbon::parse($sesi->tanggal . ' ' . $master->slotWaktuSelesai->waktu_selesai);
+                    $isPast = $now->greaterThan($tanggalWaktuSelesai);
+                    $isActive = $now->between($tanggalWaktuMulai, $tanggalWaktuSelesai);
+                    
+                    // Cek apakah jadwal milik dosen ini
+                    $isMySchedule = $master->dosen_id == $dosen->id;
+                    
+                    // Cek apakah jadwal hasil tukar
+                    $isSwapped = $sesi->is_swapped ?? false;
+                    
                     return [
                         'id' => $sesi->id,
                         'tanggal' => $sesi->tanggal,
@@ -218,6 +235,10 @@ class DashboardController extends Controller
                         'waktu_selesai' => $master->slotWaktuSelesai->waktu_selesai,
                         'status' => $sesi->status,
                         'pertemuan_ke' => $sesi->pertemuan_ke,
+                        'is_my_schedule' => $isMySchedule,
+                        'is_past' => $isPast,
+                        'is_active' => $isActive,
+                        'is_swapped' => $isSwapped,
                     ];
                 })
                 ->sortBy('waktu_mulai')

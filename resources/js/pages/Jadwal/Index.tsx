@@ -702,7 +702,9 @@ export default function Index({
                                                                                                                     </Badge>
                                                                                                                     {/* Icon Tukar */}
                                                                                                                     {cell.is_swapped && (
-                                                                                                                        <ArrowLeftRight className="h-3 w-3 text-purple-600" title="Jadwal Ditukar" />
+                                                                                                                        <div title="Jadwal Ditukar">
+                                                                                                                            <ArrowLeftRight className="h-3 w-3 text-purple-600" />
+                                                                                                                        </div>
                                                                                                                     )}
                                                                                                                 </div>
                                                                                                                 
