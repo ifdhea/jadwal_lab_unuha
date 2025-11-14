@@ -395,13 +395,13 @@ class TukarJadwalController extends Controller
 
             if ($isSameDay) {
                 // SAME DAY SWAP: Tukar slot MULAI saja (bukan selesai)
-                // Durasi tetap mengikuti jadwal masing-masing
+                // Durasi tetap mengikuti jadwal masing-masing (dari SKS MK asli)
                 $masterPemohon = $sesiPemohon->jadwalMaster;
                 $masterMitra = $sesiMitra->jadwalMaster;
                 
-                // Hitung slot selesai berdasarkan durasi masing-masing
-                $pemohonDurasi = $masterPemohon->durasi_slot;
-                $mitraDurasi = $masterMitra->durasi_slot;
+                // PENTING: Ambil durasi dari SKS Mata Kuliah, bukan dari durasi_slot master lama!
+                $pemohonDurasi = $masterPemohon->kelasMatKul->mataKuliah->sks;
+                $mitraDurasi = $masterMitra->kelasMatKul->mataKuliah->sks;
                 
                 // Pemohon pakai slot mulai mitra, tapi durasi tetap sendiri
                 $pemohonSlotSelesai = $masterMitra->slot_waktu_mulai_id + $pemohonDurasi - 1;
@@ -433,12 +433,13 @@ class TukarJadwalController extends Controller
                 ]);
             } else {
                 // DIFFERENT DAY SWAP: Tukar tanggal DAN jam mulai
-                // Tapi durasi tetap pakai punyanya sendiri
+                // Tapi durasi tetap pakai punyanya sendiri (dari SKS MK asli)
                 $masterPemohon = $sesiPemohon->jadwalMaster;
                 $masterMitra = $sesiMitra->jadwalMaster;
                 
-                $pemohonDurasi = $masterPemohon->durasi_slot;
-                $mitraDurasi = $masterMitra->durasi_slot;
+                // PENTING: Ambil durasi dari SKS Mata Kuliah, bukan dari durasi_slot master lama!
+                $pemohonDurasi = $masterPemohon->kelasMatKul->mataKuliah->sks;
+                $mitraDurasi = $masterMitra->kelasMatKul->mataKuliah->sks;
                 
                 // Pemohon ke hari mitra, pakai jam mulai mitra, tapi durasi sendiri
                 $pemohonSlotSelesai = $masterMitra->slot_waktu_mulai_id + $pemohonDurasi - 1;
