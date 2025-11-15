@@ -12,6 +12,7 @@ use App\Http\Controllers\KelasMataKuliahController;
 use App\Http\Controllers\LaboratoriumController;
 use App\Http\Controllers\MataKuliahController;
 use App\Http\Controllers\ProgramStudiController;
+use App\Http\Controllers\PublicController;
 use App\Http\Controllers\SemesterController;
 use App\Http\Controllers\SesiJadwalController;
 use App\Http\Controllers\SlotWaktuController;
@@ -22,11 +23,11 @@ use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 use Laravel\Fortify\Features;
 
-Route::get('/', function () {
-    return Inertia::render('welcome', [
-        'canRegister' => Features::enabled(Features::registration()),
-    ]);
-})->name('home');
+// Public Routes
+Route::get('/', [PublicController::class, 'beranda'])->name('home');
+Route::get('/beranda', [PublicController::class, 'beranda'])->name('beranda');
+Route::get('/jadwal-lab', [PublicController::class, 'jadwal'])->name('jadwal-lab');
+Route::get('/tentang', [PublicController::class, 'tentang'])->name('tentang');
 
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('dashboard', [DashboardController::class, 'index'])->name('dashboard');

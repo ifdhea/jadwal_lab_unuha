@@ -2,24 +2,34 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\JadwalMaster;
-use App\Models\SesiJadwal;
 use App\Models\Kampus;
 use App\Models\Semester;
 use App\Models\SlotWaktu;
+use App\Models\SesiJadwal;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Carbon\Carbon;
 
-class JadwalController extends Controller
+class PublicController extends Controller
 {
-    public function index(Request $request)
+    public function beranda()
+    {
+        $activeSemester = Semester::where('is_aktif', true)->first();
+        $totalKampus = Kampus::where('is_aktif', true)->count();
+        
+        return Inertia::render('Public/Beranda', [
+            'activeSemester' => $activeSemester,
+            'totalKampus' => $totalKampus,
+        ]);
+    }
+
+    public function jadwal(Request $request)
     {
         $semesters = Semester::where('is_aktif', true)->orderBy('tanggal_mulai', 'desc')->get();
         $selectedSemesterId = $request->input('semester_id', $semesters->first()->id ?? null);
 
         if (!$selectedSemesterId) {
-            return Inertia::render('Jadwal/Index', [
+            return Inertia::render('Public/Jadwal', [
                 'semesters' => $semesters,
                 'selectedSemesterId' => null,
                 'kampusList' => [],
@@ -28,10 +38,7 @@ class JadwalController extends Controller
                 'hari' => [],
                 'slots' => [],
                 'jadwalData' => [],
-                'breadcrumbs' => [
-                    ['title' => 'Dashboard', 'href' => '/dashboard'],
-                    ['title' => 'Jadwal Final', 'href' => '/jadwal'],
-                ],
+                'tableData' => [],
             ]);
         }
 
@@ -75,7 +82,7 @@ class JadwalController extends Controller
             
             for ($i = 1; $i <= $totalMinggu; $i++) {
                 $start = $tanggalMulai->copy()->addWeeks($i - 1)->startOfWeek(Carbon::MONDAY);
-                $end = $start->copy()->addDays(5); // Senin + 5 hari = Sabtu
+                $end = $start->copy()->addDays(5);
                 $mingguList[] = [
                     'nomor' => $i,
                     'tanggal_mulai' => $start->format('Y-m-d'),
@@ -110,13 +117,11 @@ class JadwalController extends Controller
         $slots = SlotWaktu::orderBy('waktu_mulai')
             ->get(['id', 'waktu_mulai', 'waktu_selesai']);
 
-        // Ambil sesi jadwal - QUERY BY DATE RANGE bukan pertemuan_ke
-        // Gunakan $tanggalMulai dan $mingguStart yang sudah ada di atas
+        // Ambil sesi jadwal
         if ($tanggalMulai) {
             $mingguStart = $tanggalMulai->copy()->addWeeks($selectedMinggu - 1)->startOfWeek();
-            $mingguEnd = $mingguStart->copy()->addDays(5); // Senin - Sabtu
+            $mingguEnd = $mingguStart->copy()->addDays(5);
         } else {
-            // Fallback jika tanggalMulai null
             $mingguStart = Carbon::now()->startOfWeek();
             $mingguEnd = $mingguStart->copy()->addDays(5);
         }
@@ -133,16 +138,10 @@ class JadwalController extends Controller
                 'jadwalMaster.slotWaktuMulai',
                 'jadwalMaster.slotWaktuSelesai'
             ])
-            ->whereNotIn('status', ['dibatalkan']) // Filter jadwal yang dibatalkan
+            ->whereNotIn('status', ['dibatalkan'])
             ->get();
-        
-        \Log::info('Jadwal Utama - Calendar Query', [
-            'selected_minggu' => $selectedMinggu,
-            'date_range' => [$mingguStart->format('Y-m-d'), $mingguEnd->format('Y-m-d')],
-            'total_sesi' => $sesiJadwals->count(),
-        ]);
 
-        // Struktur data: jadwalData[kampus_id][minggu][hari_id][slot_id][] = { matkul, kelas, dosen, lab, sks, durasi_slot, waktu_mulai, waktu_selesai }
+        // Struktur data untuk kalender
         $jadwalData = [];
         $hariMap = [
             'Senin' => 1,
@@ -157,22 +156,17 @@ class JadwalController extends Controller
             $master = $sesi->jadwalMaster;
             $kampusId = $master->laboratorium->kampus_id;
             
-            // PENTING: Gunakan hari dari TANGGAL SESI, bukan dari master
-            // Karena sesi bisa dipindah ke hari lain via tukar jadwal
             $tanggalSesi = Carbon::parse($sesi->tanggal);
             $hariNamaSesi = $tanggalSesi->locale('id')->dayName;
             $hariNamaSesiCapitalized = ucfirst($hariNamaSesi);
             $hariId = $hariMap[$hariNamaSesiCapitalized] ?? null;
             
-            // Gunakan override jika ada (untuk jadwal yang ditukar)
             $slotMulaiId = $sesi->override_slot_waktu_mulai_id ?? $master->slot_waktu_mulai_id;
             $slotSelesaiId = $sesi->override_slot_waktu_selesai_id ?? $master->slot_waktu_selesai_id;
             $labId = $sesi->override_laboratorium_id ?? $master->laboratorium_id;
             
-            // Hitung durasi_slot yang BENAR berdasarkan slot aktual (dengan override)
             $durasiSlot = $slotSelesaiId - $slotMulaiId + 1;
             
-            // Load actual slot/lab objects
             $slotMulai = $sesi->overrideSlotWaktuMulai ?? $master->slotWaktuMulai;
             $slotSelesai = $sesi->overrideSlotWaktuSelesai ?? $master->slotWaktuSelesai;
             $lab = $sesi->overrideLaboratorium ?? $master->laboratorium;
@@ -180,19 +174,10 @@ class JadwalController extends Controller
             $slotId = $slotMulaiId;
 
             if ($hariId) {
-                // Gunakan selectedMinggu sebagai key, bukan pertemuan_ke
                 if (!isset($jadwalData[$kampusId][$selectedMinggu][$hariId][$slotId])) {
                     $jadwalData[$kampusId][$selectedMinggu][$hariId][$slotId] = [];
                 }
                 
-                // Cek apakah user adalah dosen pemilik jadwal ini
-                $user = $request->user();
-                $isMySchedule = false;
-                if ($user && $user->peran === 'dosen' && $user->dosen) {
-                    $isMySchedule = ($master->dosen_id === $user->dosen->id);
-                }
-                
-                // Check if this is a swapped schedule
                 $isSwapped = \App\Models\TukarJadwal::where(function($q) use ($sesi) {
                         $q->where('sesi_jadwal_pemohon_id', $sesi->id)
                           ->orWhere('sesi_jadwal_mitra_id', $sesi->id);
@@ -201,8 +186,7 @@ class JadwalController extends Controller
                     ->where('jenis', 'tukar')
                     ->exists();
                 
-                // Check if past and active using timezone-aware comparison
-                $now = now(); // Already uses Asia/Jakarta from config
+                $now = now();
                 $jadwalStart = Carbon::parse($sesi->tanggal)->setTimezone('Asia/Jakarta')->setTimeFromTimeString($slotMulai->waktu_mulai);
                 $jadwalEnd = Carbon::parse($sesi->tanggal)->setTimezone('Asia/Jakarta')->setTimeFromTimeString($slotSelesai->waktu_selesai);
                 $isActive = $now->between($jadwalStart, $jadwalEnd);
@@ -215,11 +199,10 @@ class JadwalController extends Controller
                     'dosen' => $master->dosen->user->name,
                     'lab' => $lab->nama,
                     'sks' => $master->kelasMatKul->mataKuliah->sks,
-                    'durasi_slot' => $durasiSlot, // Gunakan durasi yang dihitung dari slot aktual
+                    'durasi_slot' => $durasiSlot,
                     'waktu_mulai' => $slotMulai->waktu_mulai,
                     'waktu_selesai' => $slotSelesai->waktu_selesai,
                     'status' => $sesi->status,
-                    'is_my_schedule' => $isMySchedule,
                     'tanggal' => $sesi->tanggal->format('Y-m-d'),
                     'is_past' => $isPast,
                     'is_active' => $isActive,
@@ -227,11 +210,12 @@ class JadwalController extends Controller
                     'slot_waktu_mulai_id' => $slotMulaiId,
                     'laboratorium_id' => $labId,
                     'has_override' => $sesi->override_slot_waktu_mulai_id !== null,
+                    'kampus' => $master->laboratorium->kampus->nama,
                 ];
             }
         }
 
-        // Tambahkan booking yang disetujui ke jadwal
+        // Tambahkan booking yang disetujui
         if ($tanggalMulai && $selectedMinggu) {
             $mingguStart = $tanggalMulai->copy()->addWeeks($selectedMinggu - 1)->startOfWeek(Carbon::MONDAY);
             $weekEnd = $mingguStart->copy()->addDays(5);
@@ -250,7 +234,6 @@ class JadwalController extends Controller
 
                 $kampusId = $booking->laboratorium->kampus_id;
 
-                // Iterasi hanya untuk slot aktif (skip slot istirahat)
                 $currentUrutan = $booking->slotWaktuMulai->urutan;
                 $slotCounter = 0;
                 
@@ -259,7 +242,6 @@ class JadwalController extends Controller
                     
                     if (!$currentSlot) break;
                     
-                    // Hanya proses slot aktif
                     if ($currentSlot->is_aktif) {
                         $slotId = $currentSlot->id;
 
@@ -267,19 +249,11 @@ class JadwalController extends Controller
                             $jadwalData[$kampusId][$selectedMinggu][$hariId][$slotId] = [];
                         }
 
-                        // Check if past and active using timezone-aware comparison
-                        $now = now(); // Already uses Asia/Jakarta from config
+                        $now = now();
                         $jadwalStart = Carbon::parse($tanggal)->setTimezone('Asia/Jakarta')->setTimeFromTimeString($booking->slotWaktuMulai->waktu_mulai);
                         $jadwalEnd = Carbon::parse($tanggal)->setTimezone('Asia/Jakarta')->setTimeFromTimeString($booking->slotWaktuSelesai->waktu_selesai);
                         $isActive = $now->between($jadwalStart, $jadwalEnd);
                         $isPast = $now->greaterThan($jadwalEnd);
-                        
-                        // Check if this is my schedule
-                        $user = $request->user();
-                        $isMySchedule = false;
-                        if ($user && $user->peran === 'dosen' && $user->dosen) {
-                            $isMySchedule = ($booking->dosen_id === $user->dosen->id);
-                        }
                         
                         $jadwalData[$kampusId][$selectedMinggu][$hariId][$slotId][] = [
                             'booking_id' => $booking->id,
@@ -293,13 +267,13 @@ class JadwalController extends Controller
                             'waktu_selesai' => $booking->slotWaktuSelesai->waktu_selesai,
                             'status' => 'booking',
                             'tanggal' => $booking->tanggal,
-                            'is_my_schedule' => $isMySchedule,
                             'is_past' => $isPast,
                             'is_active' => $isActive,
                             'is_swapped' => false,
                             'slot_position' => $slotCounter,
                             'is_first_slot' => $slotCounter === 0,
                             'is_last_slot' => $slotCounter === ($booking->durasi_slot - 1),
+                            'kampus' => $booking->laboratorium->kampus->nama,
                         ];
                         
                         $slotCounter++;
@@ -310,31 +284,21 @@ class JadwalController extends Controller
             }
         }
 
-        // Build table data
+        // Prepare table data - flatten all schedules
         $tableData = [];
-        foreach ($jadwalData as $kampusId => $mingguData2) {
-            $kampus = $kampusList->firstWhere('id', $kampusId);
-            foreach ($mingguData2 as $minggu => $hariData) {
+        foreach ($jadwalData as $kampusId => $mingguData) {
+            foreach ($mingguData as $minggu => $hariData) {
                 foreach ($hariData as $hariId => $slotData) {
-                    foreach ($slotData as $slotId => $cells) {
-                        foreach ($cells as $cell) {
-                            $tableData[] = array_merge($cell, [
-                                'kampus' => $kampus ? $kampus->nama : '-',
-                            ]);
+                    foreach ($slotData as $slotId => $jadwalList) {
+                        foreach ($jadwalList as $jadwal) {
+                            $tableData[] = $jadwal;
                         }
                     }
                 }
             }
         }
 
-        // Sort by tanggal and waktu_mulai
-        usort($tableData, function ($a, $b) {
-            $dateCompare = strcmp($a['tanggal'], $b['tanggal']);
-            if ($dateCompare !== 0) return $dateCompare;
-            return strcmp($a['waktu_mulai'], $b['waktu_mulai']);
-        });
-
-        return Inertia::render('Jadwal/Index', [
+        return Inertia::render('Public/Jadwal', [
             'semesters' => $semesters,
             'selectedSemesterId' => $selectedSemesterId,
             'kampusList' => $kampusList,
@@ -344,60 +308,12 @@ class JadwalController extends Controller
             'slots' => $slots,
             'jadwalData' => $jadwalData,
             'tableData' => $tableData,
-            'isEmbed' => $request->has('embed'),
-            'breadcrumbs' => [
-                ['title' => 'Dashboard', 'href' => '/dashboard'],
-                ['title' => 'Jadwal Final', 'href' => '/jadwal'],
-            ],
         ]);
     }
 
-    public function embed(Request $request)
+    public function tentang()
     {
-        // Gunakan logic yang sama dengan index(), tapi render ke layout embed
-        $semesters = Semester::where('is_aktif', true)->orderBy('tanggal_mulai', 'desc')->get();
-        $selectedSemesterId = $request->input('semester_id', $semesters->first()->id ?? null);
-
-        if (!$selectedSemesterId) {
-            return Inertia::render('Jadwal/Embed', [
-                'semesters' => $semesters,
-                'selectedSemesterId' => null,
-                'kampusList' => [],
-                'mingguList' => [],
-                'selectedMinggu' => 1,
-                'hari' => [],
-                'slots' => [],
-                'jadwalData' => [],
-            ]);
-        }
-
-        $semester = Semester::find($selectedSemesterId);
-
-        // Auto-navigate to current week if not specified
-        $selectedMinggu = (int) $request->input('minggu');
-        if ($semester && !$request->has('minggu')) {
-            $tanggalMulai = Carbon::parse($semester->tanggal_mulai);
-            $today = Carbon::now();
-            $totalMinggu = $semester->total_minggu ?? 16;
-
-            if ($today->lt($tanggalMulai)) {
-                $selectedMinggu = 1;
-            } else {
-                $diffInDays = $tanggalMulai->startOfDay()->diffInDays($today->startOfDay());
-                $currentWeek = (int)floor($diffInDays / 7) + 1;
-                $selectedMinggu = max(1, min($currentWeek, $totalMinggu));
-            }
-        } elseif (!$selectedMinggu) {
-            $selectedMinggu = 1;
-        }
-        
-        // Panggil method index untuk mendapatkan data
-        // Tapi kita perlu duplikasi logic atau extract ke method terpisah
-        // Untuk sementara, redirect ke index dengan parameter yang sama
-        return redirect()->route('jadwal.index', [
-            'semester_id' => $selectedSemesterId,
-            'minggu' => $selectedMinggu
-        ]);
+        return Inertia::render('Public/Tentang');
     }
 
     private function getHariIndonesia($dayOfWeek)

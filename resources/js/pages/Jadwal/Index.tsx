@@ -9,6 +9,15 @@ import {
     SelectValue,
 } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import {
+    Table,
+    TableBody,
+    TableCell,
+    TableHead,
+    TableHeader,
+    TableRow,
+} from '@/components/ui/table';
+import { Input } from '@/components/ui/input';
 import AppLayout from '@/layouts/app-layout';
 import { Head, router } from '@inertiajs/react';
 import {
@@ -19,8 +28,9 @@ import {
     MapPin,
     User,
     ArrowLeftRight,
+    Search,
 } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 
 // Definisikan tipe data yang diterima dari controller
 interface Semester {
@@ -66,6 +76,7 @@ interface JadwalCell {
     is_swapped?: boolean;
     slot_waktu_mulai_id?: number;
     laboratorium_id?: number;
+    kampus?: string;
 }
 type JadwalData = Record<
     number,
@@ -81,6 +92,7 @@ interface Props {
     hari: Hari[];
     slots: Slot[];
     jadwalData: JadwalData;
+    tableData: JadwalCell[];
     isEmbed?: boolean;
     breadcrumbs: Array<{ title: string; href: string }>;
 }
@@ -94,12 +106,35 @@ export default function Index({
     hari,
     slots,
     jadwalData,
+    tableData,
     isEmbed = false,
     breadcrumbs,
 }: Props) {
     const [activeKampus, setActiveKampus] = useState(
         kampusList[0]?.kode || 'B',
     );
+    const [activeTab, setActiveTab] = useState<'calendar' | 'table'>('calendar');
+    const [searchQuery, setSearchQuery] = useState('');
+    const [filterKampus, setFilterKampus] = useState<string>('all');
+    const [filterStatus, setFilterStatus] = useState<string>('all');
+
+    // Filter table data
+    const filteredTableData = useMemo(() => {
+        return tableData.filter((item) => {
+            const matchSearch =
+                searchQuery === '' ||
+                item.matkul.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                item.dosen.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                item.kelas.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                item.lab.toLowerCase().includes(searchQuery.toLowerCase());
+
+            const matchKampus = filterKampus === 'all' || item.kampus === filterKampus;
+            
+            const matchStatus = filterStatus === 'all' || item.status === filterStatus;
+
+            return matchSearch && matchKampus && matchStatus;
+        });
+    }, [tableData, searchQuery, filterKampus, filterStatus]);
 
     // Cek apakah hari adalah hari ini
     const isToday = (tanggal?: string) => {
@@ -199,8 +234,17 @@ export default function Index({
                     </Button>
                 </div>
 
-                {/* Tab Kampus */}
-                <Tabs value={activeKampus} onValueChange={setActiveKampus}>
+                {/* Main Tabs */}
+                <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'calendar' | 'table')}>
+                    <TabsList className="grid w-full grid-cols-2">
+                        <TabsTrigger value="calendar">Kalender</TabsTrigger>
+                        <TabsTrigger value="table">Tabel</TabsTrigger>
+                    </TabsList>
+
+                    {/* Calendar Tab */}
+                    <TabsContent value="calendar" className="space-y-4">
+                        {/* Tab Kampus */}
+                        <Tabs value={activeKampus} onValueChange={setActiveKampus}>
                     <TabsList
                         className="grid w-full"
                         style={{
@@ -825,6 +869,152 @@ export default function Index({
                             </TabsContent>
                         );
                     })}
+                        </Tabs>
+                    </TabsContent>
+
+                    {/* Table Tab */}
+                    <TabsContent value="table" className="space-y-4">
+                        <Card>
+                            <CardHeader>
+                                <CardTitle>Daftar Jadwal</CardTitle>
+                            </CardHeader>
+                            <CardContent className="space-y-4">
+                                {/* Filters */}
+                                <div className="flex flex-col gap-4 sm:flex-row">
+                                    <div className="relative flex-1">
+                                        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                                        <Input
+                                            placeholder="Cari mata kuliah, dosen, kelas, lab..."
+                                            value={searchQuery}
+                                            onChange={(e) => setSearchQuery(e.target.value)}
+                                            className="pl-9"
+                                        />
+                                    </div>
+                                    <Select value={filterKampus} onValueChange={setFilterKampus}>
+                                        <SelectTrigger className="w-full sm:w-48">
+                                            <SelectValue placeholder="Semua Kampus" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="all">Semua Kampus</SelectItem>
+                                            {kampusList.map((k) => (
+                                                <SelectItem key={k.id} value={k.nama}>
+                                                    Kampus {k.nama}
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                    <Select value={filterStatus} onValueChange={setFilterStatus}>
+                                        <SelectTrigger className="w-full sm:w-48">
+                                            <SelectValue placeholder="Semua Status" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="all">Semua Status</SelectItem>
+                                            <SelectItem value="terjadwal">Terjadwal</SelectItem>
+                                            <SelectItem value="booking">Booking</SelectItem>
+                                            <SelectItem value="tidak_masuk">Tidak Masuk</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+
+                                {/* Table */}
+                                <div className="rounded-md border">
+                                    <Table>
+                                        <TableHeader>
+                                            <TableRow>
+                                                <TableHead>Tanggal</TableHead>
+                                                <TableHead>Waktu</TableHead>
+                                                <TableHead>Mata Kuliah</TableHead>
+                                                <TableHead>Kelas</TableHead>
+                                                <TableHead>Dosen</TableHead>
+                                                <TableHead>Lab</TableHead>
+                                                <TableHead>Kampus</TableHead>
+                                                <TableHead>SKS</TableHead>
+                                                <TableHead>Status</TableHead>
+                                            </TableRow>
+                                        </TableHeader>
+                                        <TableBody>
+                                            {filteredTableData.length > 0 ? (
+                                                filteredTableData.map((item, idx) => (
+                                                    <TableRow 
+                                                        key={idx}
+                                                        className={item.is_my_schedule ? 'bg-green-50/50 dark:bg-green-950/20' : ''}
+                                                    >
+                                                        <TableCell>
+                                                            {new Date(item.tanggal).toLocaleDateString(
+                                                                'id-ID',
+                                                                {
+                                                                    weekday: 'short',
+                                                                    day: '2-digit',
+                                                                    month: 'short',
+                                                                }
+                                                            )}
+                                                        </TableCell>
+                                                        <TableCell className="font-mono text-xs">
+                                                            {item.waktu_mulai.slice(0, 5)} -{' '}
+                                                            {item.waktu_selesai.slice(0, 5)}
+                                                        </TableCell>
+                                                        <TableCell className="font-medium">
+                                                            {item.matkul}
+                                                        </TableCell>
+                                                        <TableCell>
+                                                            <Badge variant="secondary">{item.kelas}</Badge>
+                                                        </TableCell>
+                                                        <TableCell>{item.dosen}</TableCell>
+                                                        <TableCell>{item.lab}</TableCell>
+                                                        <TableCell>{item.kampus}</TableCell>
+                                                        <TableCell>{item.sks} SKS</TableCell>
+                                                        <TableCell>
+                                                            {item.is_active && !item.is_past && (
+                                                                <Badge className="bg-yellow-500 hover:bg-yellow-500">
+                                                                    Berlangsung
+                                                                </Badge>
+                                                            )}
+                                                            {item.is_past && !item.is_active && (
+                                                                <Badge variant="secondary">Sudah Lewat</Badge>
+                                                            )}
+                                                            {!item.is_past && !item.is_active && (
+                                                                <>
+                                                                    {item.status === 'booking' && (
+                                                                        <Badge className="bg-orange-500 hover:bg-orange-500">
+                                                                            Booking
+                                                                        </Badge>
+                                                                    )}
+                                                                    {item.is_my_schedule && item.status === 'terjadwal' && (
+                                                                        <Badge className="bg-green-600 hover:bg-green-600">
+                                                                            Jadwal Saya
+                                                                        </Badge>
+                                                                    )}
+                                                                    {!item.is_my_schedule && item.status === 'terjadwal' && (
+                                                                        <Badge className="bg-blue-500 hover:bg-blue-500">
+                                                                            Terjadwal
+                                                                        </Badge>
+                                                                    )}
+                                                                    {item.status === 'tidak_masuk' && (
+                                                                        <Badge variant="outline">
+                                                                            Tidak Masuk
+                                                                        </Badge>
+                                                                    )}
+                                                                </>
+                                                            )}
+                                                        </TableCell>
+                                                    </TableRow>
+                                                ))
+                                            ) : (
+                                                <TableRow>
+                                                    <TableCell
+                                                        colSpan={9}
+                                                        className="h-24 text-center text-muted-foreground"
+                                                    >
+                                                        Tidak ada jadwal ditemukan
+                                                    </TableCell>
+                                                </TableRow>
+                                            )}
+                                        </TableBody>
+                                    </Table>
+                                </div>
+                            </CardContent>
+                        </Card>
+                    </TabsContent>
                 </Tabs>
 
                 {mingguList.length === 0 && (

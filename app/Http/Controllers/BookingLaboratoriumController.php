@@ -682,9 +682,14 @@ class BookingLaboratoriumController extends Controller
             if ($today->lt($tanggalMulai)) {
                 $selectedMinggu = 1;
             } else {
-                // Use diffInDays and floor division for accurate week calculation
-                $diffInDays = $tanggalMulai->startOfDay()->diffInDays($today->startOfDay());
-                $currentWeek = (int)floor($diffInDays / 7) + 1;
+                // Hitung minggu dengan memperhitungkan hari Senin sebagai awal minggu
+                // Cari Senin dari tanggal mulai semester
+                $seninPertama = $tanggalMulai->copy()->startOfWeek(Carbon::MONDAY);
+                // Cari Senin dari minggu saat ini
+                $seninSekarang = $today->copy()->startOfWeek(Carbon::MONDAY);
+                // Hitung selisih minggu
+                $diffInWeeks = $seninPertama->diffInWeeks($seninSekarang);
+                $currentWeek = $diffInWeeks + 1;
                 $selectedMinggu = max(1, min($currentWeek, $totalMinggu));
             }
         } elseif (!$selectedMinggu) {

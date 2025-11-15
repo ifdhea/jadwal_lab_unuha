@@ -46,8 +46,8 @@ export default function Edit({ semester, tahunAjaran, breadcrumbs }: Props) {
         tahun_ajaran_id: semester.tahun_ajaran_id.toString(),
         nama: semester.nama,
         tipe: semester.tipe,
-        tanggal_mulai: semester.tanggal_mulai.split('T')[0],
-        tanggal_selesai: semester.tanggal_selesai.split('T')[0],
+        tanggal_mulai: semester.tanggal_mulai,
+        tanggal_selesai: semester.tanggal_selesai,
         is_aktif: semester.is_aktif,
     });
 

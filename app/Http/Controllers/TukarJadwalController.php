@@ -590,18 +590,34 @@ class TukarJadwalController extends Controller
 
         $totalMinggu = $selectedSemester->total_minggu ?? 20;
         
-        // Hitung minggu saat ini berdasarkan tanggal
-        $tanggalMulai = Carbon::parse($selectedSemester->tanggal_mulai);
-        $today = Carbon::today();
-        $diffInWeeks = $tanggalMulai->diffInWeeks($today);
-        $currentWeek = (int) min(max(1, $diffInWeeks + 1), $totalMinggu);
-        
-        $selectedMinggu = (int) $request->get('minggu', $currentWeek);
+        // Auto-navigate to current week if not specified
+        $selectedMinggu = (int) $request->input('minggu');
+        if (!$request->has('minggu')) {
+            $tanggalMulai = Carbon::parse($selectedSemester->tanggal_mulai);
+            $today = Carbon::now();
+
+            if ($today->lt($tanggalMulai)) {
+                $selectedMinggu = 1;
+            } else {
+                // Hitung minggu dengan memperhitungkan hari Senin sebagai awal minggu
+                // Cari Senin dari tanggal mulai semester
+                $seninPertama = $tanggalMulai->copy()->startOfWeek(Carbon::MONDAY);
+                // Cari Senin dari minggu saat ini
+                $seninSekarang = $today->copy()->startOfWeek(Carbon::MONDAY);
+                // Hitung selisih minggu
+                $diffInWeeks = $seninPertama->diffInWeeks($seninSekarang);
+                $currentWeek = $diffInWeeks + 1;
+                $selectedMinggu = max(1, min($currentWeek, $totalMinggu));
+            }
+        } elseif (!$selectedMinggu) {
+            $selectedMinggu = 1;
+        }
 
         $kampusList = \App\Models\Kampus::where('is_aktif', true)->get();
         
+        $tanggalMulai = Carbon::parse($selectedSemester->tanggal_mulai);
         // Generate hari dengan tanggal
-        $mingguStart = $tanggalMulai->copy()->addWeeks($selectedMinggu - 1)->startOfWeek();
+        $mingguStart = $tanggalMulai->copy()->addWeeks($selectedMinggu - 1)->startOfWeek(Carbon::MONDAY);
         
         $hari = [];
         foreach ([1 => 'Senin', 2 => 'Selasa', 3 => 'Rabu', 4 => 'Kamis', 5 => 'Jumat', 6 => 'Sabtu'] as $id => $nama) {

@@ -51,9 +51,19 @@ class ProfileController extends Controller
             $validated['foto_profil'] = $path;
         }
         
-        $user->fill($validated);
+        // Only update fields that have values
+        $dataToUpdate = array_filter($validated, function($value) {
+            return !is_null($value) && $value !== '';
+        });
+        
+        // Remove foto_profil from array_filter result if it was already handled
+        if ($request->hasFile('foto_profil')) {
+            $dataToUpdate['foto_profil'] = $validated['foto_profil'];
+        }
+        
+        $user->fill($dataToUpdate);
 
-        if ($user->isDirty('email')) {
+        if (isset($dataToUpdate['email']) && $user->isDirty('email')) {
             $user->email_verified_at = null;
         }
 
@@ -61,11 +71,16 @@ class ProfileController extends Controller
         
         // Update dosen data if user is dosen
         if ($user->isDosen() && $user->dosen) {
-            $dosenData = $request->only([
+            $dosenData = array_filter($request->only([
                 'nidn', 'nip', 'gelar_depan', 'gelar_belakang', 
                 'no_telp', 'alamat'
-            ]);
-            $user->dosen->update($dosenData);
+            ]), function($value) {
+                return !is_null($value);
+            });
+            
+            if (!empty($dosenData)) {
+                $user->dosen->update($dosenData);
+            }
         }
 
         return to_route('profile.edit');

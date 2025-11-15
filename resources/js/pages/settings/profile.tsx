@@ -2,7 +2,7 @@ import ProfileController from '@/actions/App/Http/Controllers/Settings/ProfileCo
 import { send } from '@/routes/verification';
 import { type BreadcrumbItem, type SharedData } from '@/types';
 import { Transition } from '@headlessui/react';
-import { Form, Head, Link, usePage } from '@inertiajs/react';
+import { Form, Head, Link, usePage, router } from '@inertiajs/react';
 import { useState, useRef } from 'react';
 
 import DeleteUser from '@/components/delete-user';
@@ -36,17 +36,35 @@ export default function Profile({
 }) {
     const { auth } = usePage<SharedData>().props;
     const [previewImage, setPreviewImage] = useState<string | null>(auth.user.avatar || null);
+    const [selectedFile, setSelectedFile] = useState<File | null>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (file) {
+            setSelectedFile(file);
             const reader = new FileReader();
             reader.onloadend = () => {
                 setPreviewImage(reader.result as string);
             };
             reader.readAsDataURL(file);
         }
+    };
+
+    const handlePhotoSubmit = (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!selectedFile) return;
+
+        const formData = new FormData();
+        formData.append('foto_profil', selectedFile);
+        formData.append('_method', 'PATCH');
+
+        router.post(ProfileController.update().url, formData, {
+            preserveScroll: true,
+            onSuccess: () => {
+                setSelectedFile(null);
+            },
+        });
     };
 
     return (
@@ -60,54 +78,64 @@ export default function Profile({
                         description="Perbarui foto profil, nama, email, dan informasi pribadi Anda"
                     />
 
+                    {/* Separate Form for Photo Upload */}
+                    <form onSubmit={handlePhotoSubmit} className="space-y-4">
+                        {/* Photo Upload Section */}
+                        <div className="grid gap-4">
+                            <Label>Foto Profil</Label>
+                            <div className="flex items-center gap-6">
+                                <Avatar className="h-24 w-24">
+                                    <AvatarImage src={previewImage || undefined} alt={auth.user.name} />
+                                    <AvatarFallback className="text-2xl bg-neutral-200 text-black dark:bg-neutral-700 dark:text-white">
+                                        {auth.user.name.charAt(0).toUpperCase()}
+                                    </AvatarFallback>
+                                </Avatar>
+                                <div className="flex flex-col gap-2">
+                                    <input
+                                        type="file"
+                                        ref={fileInputRef}
+                                        name="foto_profil"
+                                        accept="image/*"
+                                        onChange={handleImageChange}
+                                        className="hidden"
+                                    />
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        onClick={() => fileInputRef.current?.click()}
+                                    >
+                                        <Upload className="mr-2 h-4 w-4" />
+                                        Unggah Foto
+                                    </Button>
+                                    <p className="text-xs text-muted-foreground">
+                                        JPG, PNG atau GIF (maks. 2MB)
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="flex items-center gap-4">
+                            <Button
+                                type="submit"
+                                disabled={!selectedFile}
+                                data-test="update-photo-button"
+                            >
+                                Simpan Foto
+                            </Button>
+                        </div>
+                    </form>
+
+                    {/* Separate Form for Profile Info */}
                     <Form
-                        {...ProfileController.update.form()}
+                        action={ProfileController.update().url}
+                        method={ProfileController.update().method}
                         options={{
                             preserveScroll: true,
-                            forceFormData: true,
                         }}
-                        className="space-y-6"
+                        className="space-y-6 border-t pt-6"
                     >
                         {({ processing, recentlySuccessful, errors }) => (
                             <>
-                                {/* Photo Upload Section */}
-                                <div className="grid gap-4">
-                                    <Label>Foto Profil</Label>
-                                    <div className="flex items-center gap-6">
-                                        <Avatar className="h-24 w-24">
-                                            <AvatarImage src={previewImage || undefined} alt={auth.user.name} />
-                                            <AvatarFallback className="text-2xl bg-neutral-200 text-black dark:bg-neutral-700 dark:text-white">
-                                                {auth.user.name.charAt(0).toUpperCase()}
-                                            </AvatarFallback>
-                                        </Avatar>
-                                        <div className="flex flex-col gap-2">
-                                            <input
-                                                type="file"
-                                                ref={fileInputRef}
-                                                name="foto_profil"
-                                                accept="image/*"
-                                                onChange={handleImageChange}
-                                                className="hidden"
-                                            />
-                                            <Button
-                                                type="button"
-                                                variant="outline"
-                                                onClick={() => fileInputRef.current?.click()}
-                                            >
-                                                <Upload className="mr-2 h-4 w-4" />
-                                                Unggah Foto
-                                            </Button>
-                                            <p className="text-xs text-muted-foreground">
-                                                JPG, PNG atau GIF (maks. 2MB)
-                                            </p>
-                                        </div>
-                                    </div>
-                                    <InputError
-                                        className="mt-2"
-                                        message={errors.foto_profil}
-                                    />
-                                </div>
-
                                 <div className="grid gap-2">
                                     <Label htmlFor="name">Nama</Label>
 
