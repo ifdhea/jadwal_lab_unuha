@@ -10,13 +10,14 @@ import { logout } from '@/routes';
 import { edit } from '@/routes/profile';
 import { type User } from '@/types';
 import { Link, router } from '@inertiajs/react';
-import { LogOut, Settings } from 'lucide-react';
+import { LayoutDashboard, LogOut, Settings } from 'lucide-react';
 
 interface UserMenuContentProps {
     user: User;
+    showDashboardLink?: boolean;
 }
 
-export function UserMenuContent({ user }: UserMenuContentProps) {
+export function UserMenuContent({ user, showDashboardLink }: UserMenuContentProps) {
     const cleanup = useMobileNavigation();
 
     const handleLogout = () => {
@@ -33,6 +34,20 @@ export function UserMenuContent({ user }: UserMenuContentProps) {
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
             <DropdownMenuGroup>
+                {showDashboardLink && (
+                    <DropdownMenuItem asChild>
+                        <Link
+                            className="block w-full"
+                            href="/dashboard"
+                            as="button"
+                            prefetch
+                            onClick={cleanup}
+                        >
+                            <LayoutDashboard className="mr-2" />
+                            Dashboard
+                        </Link>
+                    </DropdownMenuItem>
+                )}
                 <DropdownMenuItem asChild>
                     <Link
                         className="block w-full"

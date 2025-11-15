@@ -88,7 +88,7 @@ export default function PublicLayout({ children }: Props) {
                                     </Button>
                                 </DropdownMenuTrigger>
                                 <DropdownMenuContent align="end" className="w-56">
-                                    <UserMenuContent user={auth.user} />
+                                    <UserMenuContent user={auth.user} showDashboardLink={true} />
                                 </DropdownMenuContent>
                             </DropdownMenu>
                         ) : (
