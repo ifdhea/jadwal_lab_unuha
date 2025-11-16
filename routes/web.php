@@ -11,6 +11,7 @@ use App\Http\Controllers\KelasController;
 use App\Http\Controllers\KelasMataKuliahController;
 use App\Http\Controllers\LaboratoriumController;
 use App\Http\Controllers\MataKuliahController;
+use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\ProgramStudiController;
 use App\Http\Controllers\PublicController;
 use App\Http\Controllers\SemesterController;
@@ -36,6 +37,14 @@ Route::middleware(['auth', 'verified'])->group(function () {
     
     // Jadwal Embed (tanpa layout untuk iframe di dashboard)
     Route::get('/jadwal/embed', [JadwalController::class, 'embed'])->name('jadwal.embed');
+
+    // Notifications
+    Route::get('/notifications', [NotificationController::class, 'index'])->name('notifications.index');
+    Route::get('/notifications/unread', [NotificationController::class, 'getUnread'])->name('notifications.unread');
+    Route::post('/notifications/{notification}/read', [NotificationController::class, 'markAsRead'])->name('notifications.read');
+    Route::post('/notifications/read-all', [NotificationController::class, 'markAllAsRead'])->name('notifications.read-all');
+    Route::delete('/notifications/{notification}', [NotificationController::class, 'destroy'])->name('notifications.destroy');
+    Route::delete('/notifications', [NotificationController::class, 'deleteAll'])->name('notifications.destroy-all');
     
     // Tukar Jadwal - Dosen only
     Route::middleware(['peran:dosen'])->group(function () {

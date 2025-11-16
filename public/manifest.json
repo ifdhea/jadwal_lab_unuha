@@ -1,0 +1,64 @@
+{
+    "name": "Jadwal Lab UNUHA",
+    "short_name": "Jadwal Lab",
+    "description": "Sistem Penjadwalan Laboratorium Universitas Nurul Huda",
+    "start_url": "/dashboard",
+    "display": "standalone",
+    "background_color": "#ffffff",
+    "theme_color": "#1e40af",
+    "orientation": "portrait-primary",
+    "icons": [
+        {
+            "src": "/logo_unuha.png",
+            "sizes": "192x192",
+            "type": "image/png",
+            "purpose": "any maskable"
+        },
+        {
+            "src": "/logo_unuha.png",
+            "sizes": "512x512",
+            "type": "image/png",
+            "purpose": "any maskable"
+        }
+    ],
+    "categories": ["education", "productivity"],
+    "screenshots": [],
+    "shortcuts": [
+        {
+            "name": "Jadwal",
+            "short_name": "Jadwal",
+            "description": "Lihat jadwal lab",
+            "url": "/jadwal",
+            "icons": [
+                {
+                    "src": "/logo_unuha.png",
+                    "sizes": "96x96"
+                }
+            ]
+        },
+        {
+            "name": "Booking Lab",
+            "short_name": "Booking",
+            "description": "Booking laboratorium",
+            "url": "/booking-lab",
+            "icons": [
+                {
+                    "src": "/logo_unuha.png",
+                    "sizes": "96x96"
+                }
+            ]
+        },
+        {
+            "name": "Notifikasi",
+            "short_name": "Notif",
+            "description": "Lihat notifikasi",
+            "url": "/notifications",
+            "icons": [
+                {
+                    "src": "/logo_unuha.png",
+                    "sizes": "96x96"
+                }
+            ]
+        }
+    ]
+}

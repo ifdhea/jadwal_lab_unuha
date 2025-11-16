@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Dosen;
 use App\Models\SesiJadwal;
 use App\Models\TukarJadwal;
+use App\Services\NotificationService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -348,9 +349,19 @@ class TukarJadwalController extends Controller
             'tanggal_diproses' => $status === 'disetujui' ? now() : null,
         ]);
 
-        $message = $status === 'disetujui' 
-            ? 'Jadwal berhasil dipindahkan' 
+        $message = $status === 'disetujui'
+            ? 'Jadwal berhasil dipindahkan'
             : 'Permintaan tukar jadwal berhasil diajukan';
+
+        // Notifikasi
+        if ($validated['jenis'] === 'tukar' && $validated['mitra_id']) {
+            $mitra = Dosen::find($validated['mitra_id']);
+            if ($mitra && $mitra->user) {
+                NotificationService::sendTukarJadwalRequest($mitra->user, $tukarJadwal);
+            }
+        } elseif ($validated['jenis'] === 'pindah') {
+            NotificationService::sendPindahJadwal($dosen->user, $sesiPemohon);
+        }
 
         return redirect()->route('tukar-jadwal.index')->with('success', $message);
     }
@@ -512,6 +523,9 @@ class TukarJadwalController extends Controller
                     'pertemuan_ke' => $verifiedMitra->pertemuan_ke,
                 ],
             ]);
+
+            // Notifikasi ke pemohon
+            NotificationService::sendTukarJadwalApproved($tukarJadwal->pemohon->user, $tukarJadwal);
             
             return redirect()->route('tukar-jadwal.index')->with('success', 'Permintaan tukar jadwal berhasil disetujui (hanya untuk minggu ini)');
         } catch (\Exception $e) {
@@ -544,6 +558,9 @@ class TukarJadwalController extends Controller
             'alasan_penolakan' => $validated['alasan_penolakan'],
             'tanggal_diproses' => now(),
         ]);
+
+        // Notifikasi ke pemohon
+        NotificationService::sendTukarJadwalRejected($tukarJadwal->pemohon->user, $tukarJadwal);
 
         return redirect()->route('tukar-jadwal.index')->with('success', 'Permintaan tukar jadwal ditolak');
     }

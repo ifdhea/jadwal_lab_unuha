@@ -56,6 +56,11 @@ class User extends Authenticatable
     {
         return $this->hasOne(Dosen::class);
     }
+
+    public function notifications()
+    {
+        return $this->hasMany(Notification::class);
+    }
     
     public function isSuperAdmin()
     {

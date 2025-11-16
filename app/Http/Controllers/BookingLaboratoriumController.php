@@ -7,6 +7,8 @@ use App\Models\Dosen;
 use App\Models\Laboratorium;
 use App\Models\SesiJadwal;
 use App\Models\SlotWaktu;
+use App\Models\User;
+use App\Services\NotificationService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -521,7 +523,7 @@ class BookingLaboratoriumController extends Controller
             $jadwal->delete();
         }
 
-        BookingLaboratorium::create([
+        $booking = BookingLaboratorium::create([
             'dosen_id' => $dosen->id,
             'kelas_mata_kuliah_id' => $validated['kelas_mata_kuliah_id'],
             'laboratorium_id' => $validated['laboratorium_id'],
@@ -534,6 +536,12 @@ class BookingLaboratoriumController extends Controller
             'status' => 'menunggu',
             'tanggal_diajukan' => now(),
         ]);
+
+        // Notifikasi ke admin
+        $admins = User::whereIn('peran', ['super_admin', 'admin'])->get();
+        foreach ($admins as $admin) {
+            NotificationService::sendBookingRequest($admin, $booking);
+        }
 
         return redirect()->route('booking-lab.index')->with('success', 'Booking laboratorium berhasil diajukan');
     }
@@ -561,6 +569,9 @@ class BookingLaboratoriumController extends Controller
             'tanggal_diproses' => now(),
         ]);
 
+        // Notifikasi ke dosen
+        NotificationService::sendBookingApproved($bookingLab->dosen->user, $bookingLab);
+
         return redirect()->route('admin.booking-lab.index')->with('success', 'Booking laboratorium disetujui');
     }
 
@@ -586,6 +597,11 @@ class BookingLaboratoriumController extends Controller
             'diproses_oleh' => $user->id,
             'tanggal_diproses' => now(),
         ]);
+
+        // Notifikasi ke dosen
+        NotificationService::sendBookingRejected($bookingLab->dosen->user, $bookingLab);
+
+        return redirect()->route('admin.booking-lab.index')->with('success', 'Booking laboratorium ditolak');
 
         return redirect()->route('admin.booking-lab.index')->with('success', 'Booking laboratorium ditolak');
     }
