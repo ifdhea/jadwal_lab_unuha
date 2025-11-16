@@ -143,7 +143,7 @@ export default function Jadwal({
                 item.lab.toLowerCase().includes(searchQuery.toLowerCase());
 
             const matchKampus = filterKampus === 'all' || item.kampus === filterKampus;
-            
+
             const matchStatus = filterStatus === 'all' || item.status === filterStatus;
 
             return matchSearch && matchKampus && matchStatus;
@@ -326,294 +326,589 @@ export default function Jadwal({
                                                 <CardTitle>Jadwal Kampus {kampus.nama}</CardTitle>
                                             </CardHeader>
                                             <CardContent>
-                                                <div className="overflow-x-auto">
-                                                    <table className="w-full table-fixed border-collapse text-sm">
-                                                        <thead>
-                                                            <tr className="bg-muted/50">
-                                                                <th className="sticky left-0 z-10 w-32 border bg-muted/50 p-2 font-semibold">
-                                                                    Jam
-                                                                </th>
-                                                                {hari.map((h) => {
-                                                                    const isTodayCell = isToday(h.tanggal);
-                                                                    return (
-                                                                        <th
-                                                                            key={h.id}
-                                                                            className={`border p-2 font-semibold ${
-                                                                                isTodayCell
-                                                                                    ? 'bg-primary/10 ring-2 ring-primary ring-inset'
-                                                                                    : ''
-                                                                            }`}
-                                                                        >
-                                                                            <div className="flex flex-col gap-1">
-                                                                                <span
-                                                                                    className={
-                                                                                        isTodayCell
-                                                                                            ? 'text-primary font-bold'
-                                                                                            : ''
-                                                                                    }
-                                                                                >
-                                                                                    {h.nama}
-                                                                                </span>
-                                                                                {h.tanggal && (
-                                                                                    <span
-                                                                                        className={`text-xs ${
-                                                                                            isTodayCell
-                                                                                                ? 'text-primary font-semibold'
-                                                                                                : 'text-muted-foreground'
-                                                                                        }`}
-                                                                                    >
-                                                                                        {new Date(
-                                                                                            h.tanggal
-                                                                                        ).toLocaleDateString('id-ID', {
-                                                                                            day: '2-digit',
-                                                                                            month: 'short',
-                                                                                        })}
-                                                                                        {isTodayCell && ' (Hari Ini)'}
-                                                                                    </span>
-                                                                                )}
-                                                                            </div>
-                                                                        </th>
-                                                                    );
-                                                                })}
-                                                            </tr>
-                                                        </thead>
-                                                        <tbody>
-                                                            {(() => {
-                                                                const renderedCells: Record<number, Set<number>> = {};
-                                                                hari.forEach((h) => {
-                                                                    renderedCells[h.id] = new Set<number>();
-                                                                });
-
-                                                                return slots.map((slot, slotIdx) => {
-                                                                    const isBreakTime =
-                                                                        slot.waktu_mulai === '11:45:00' &&
-                                                                        slot.waktu_selesai === '13:15:00';
-
-                                                                    return (
-                                                                        <tr
-                                                                            key={slot.id}
-                                                                            className={isBreakTime ? 'h-16' : 'h-24'}
-                                                                        >
-                                                                            <td
-                                                                                className={`sticky left-0 border p-2 text-center font-mono text-xs font-semibold ${
-                                                                                    isBreakTime
-                                                                                        ? 'bg-muted/50 h-16'
-                                                                                        : 'bg-background h-24'
-                                                                                }`}
-                                                                            >
-                                                                                {slot.waktu_mulai.slice(0, 5)} -{' '}
-                                                                                {slot.waktu_selesai.slice(0, 5)}
-                                                                            </td>
+                                                {/* Mobile and Desktop Table Container */}
+                                                <div className="block md:hidden">
+                                                    {/* Mobile View - Fixed time column, scrollable days */}
+                                                    <div className="relative">
+                                                        <div className="overflow-x-auto">
+                                                            <div className="min-w-max">
+                                                                <table className="border-collapse text-sm">
+                                                                    <thead>
+                                                                        <tr className="bg-muted/50">
+                                                                            <th className="sticky left-0 z-20 w-24 border-r-2 border-r-gray-300 bg-muted p-1 font-semibold shadow-md">
+                                                                                Jam
+                                                                            </th>
                                                                             {hari.map((h) => {
-                                                                                if (renderedCells[h.id].has(slot.id)) {
-                                                                                    return null;
-                                                                                }
-
-                                                                                const cellsData =
-                                                                                    jadwalKampus[selectedMinggu]?.[h.id]?.[
-                                                                                        slot.id
-                                                                                    ] || [];
-
-                                                                                let maxRowSpan = 1;
-                                                                                if (cellsData.length > 0) {
-                                                                                    const firstCell = cellsData[0];
-                                                                                    const startIdx = slots.findIndex(
-                                                                                        (s) =>
-                                                                                            s.waktu_mulai <=
-                                                                                                firstCell.waktu_mulai &&
-                                                                                            s.waktu_selesai >
-                                                                                                firstCell.waktu_mulai
-                                                                                    );
-                                                                                    const endIdx = slots.findIndex(
-                                                                                        (s) =>
-                                                                                            s.waktu_mulai <
-                                                                                                firstCell.waktu_selesai &&
-                                                                                            s.waktu_selesai >=
-                                                                                                firstCell.waktu_selesai
-                                                                                    );
-                                                                                    if (startIdx !== -1 && endIdx !== -1) {
-                                                                                        maxRowSpan = endIdx - startIdx + 1;
-                                                                                    } else {
-                                                                                        maxRowSpan = firstCell.durasi_slot || 1;
-                                                                                    }
-
-                                                                                    for (let i = 0; i < maxRowSpan; i++) {
-                                                                                        const spanSlotIdx = slotIdx + i;
-                                                                                        if (spanSlotIdx < slots.length) {
-                                                                                            const spanSlotId =
-                                                                                                slots[spanSlotIdx].id;
-                                                                                            renderedCells[h.id].add(spanSlotId);
-                                                                                        }
-                                                                                    }
-                                                                                }
-
+                                                                                const isTodayCell = isToday(h.tanggal);
                                                                                 return (
-                                                                                    <td
+                                                                                    <th
                                                                                         key={h.id}
-                                                                                        className="h-full border p-0 align-middle relative"
-                                                                                        rowSpan={maxRowSpan}
-                                                                                        style={{
-                                                                                            height: `${maxRowSpan * 6}rem`,
-                                                                                        }}
+                                                                                        className={`border p-2 font-semibold min-w-[140px] ${isTodayCell
+                                                                                                ? 'bg-primary/10 ring-2 ring-primary ring-inset'
+                                                                                                : ''
+                                                                                            }`}
                                                                                     >
-                                                                                        {isBreakTime && (
-                                                                                            <div className="absolute inset-0 z-10 bg-muted/90 flex items-center justify-center border-t-2 border-b-2 border-dashed border-muted-foreground/30 pointer-events-none">
-                                                                                                <div className="flex items-center gap-2 opacity-60">
-                                                                                                    <Clock className="h-3 w-3 text-muted-foreground" />
-                                                                                                    <span className="text-xs font-semibold text-muted-foreground">
-                                                                                                        ISTIRAHAT
-                                                                                                    </span>
-                                                                                                </div>
-                                                                                            </div>
-                                                                                        )}
-                                                                                        {cellsData.length > 0 ? (
-                                                                                            <div className="flex h-full flex-col divide-y">
-                                                                                                {cellsData.map((cell, idx) => {
-                                                                                                    const colorScheme = getColorScheme(
-                                                                                                        cell.dosen,
-                                                                                                        idx
-                                                                                                    );
-
-                                                                                                    return (
-                                                                                                        <div
-                                                                                                            key={idx}
-                                                                                                            className={`bg-gradient-to-br ${colorScheme.from} ${colorScheme.to} border-l-4 ${colorScheme.border} flex h-full flex-col justify-center p-2 ${colorScheme.hover} mx-0.5 my-0.5 rounded-lg shadow-sm transition-all duration-200 hover:shadow-md`}
-                                                                                                        >
-                                                                                                            <div className="mb-2 flex items-start gap-1.5">
-                                                                                                                <BookOpen
-                                                                                                                    className={`h-4 w-4 ${colorScheme.icon} mt-0.5 flex-shrink-0`}
-                                                                                                                />
-                                                                                                                <div className="min-w-0 flex-1">
-                                                                                                                    <p
-                                                                                                                        className={`font-bold ${colorScheme.text} truncate text-xs leading-tight`}
-                                                                                                                    >
-                                                                                                                        {cell.matkul}
-                                                                                                                    </p>
-                                                                                                                    <div className="mt-0.5 flex items-center gap-1">
-                                                                                                                        <Badge
-                                                                                                                            variant="muted"
-                                                                                                                            className="truncate px-1.5 py-0.5 text-xs font-medium"
-                                                                                                                        >
-                                                                                                                            {cell.kelas}
-                                                                                                                        </Badge>
-                                                                                                                    </div>
-                                                                                                                </div>
-                                                                                                            </div>
-
-                                                                                                            <div className="space-y-0.5 text-xs">
-                                                                                                                <div className="flex items-center gap-1 text-gray-700">
-                                                                                                                    <User className="h-3 w-3 flex-shrink-0" />
-                                                                                                                    <span className="flex-1 truncate font-medium">
-                                                                                                                        {cell.dosen}
-                                                                                                                    </span>
-                                                                                                                </div>
-                                                                                                                <div className="flex items-center gap-1 text-gray-700">
-                                                                                                                    <MapPin className="h-3 w-3 flex-shrink-0" />
-                                                                                                                    <span className="flex-1 truncate font-medium">
-                                                                                                                        {cell.lab}
-                                                                                                                    </span>
-                                                                                                                </div>
-                                                                                                                <div className="flex items-center gap-1 text-gray-700">
-                                                                                                                    <Clock className="h-3 w-3 flex-shrink-0" />
-                                                                                                                    <span className="flex-1 font-medium">
-                                                                                                                        {cell.waktu_mulai.slice(0, 5)} -{' '}
-                                                                                                                        {cell.waktu_selesai.slice(0, 5)}
-                                                                                                                    </span>
-                                                                                                                </div>
-                                                                                                            </div>
-
-                                                                                                            <div
-                                                                                                                className={`mt-1.5 flex items-center justify-between border-t pt-1.5 ${colorScheme.border.replace('border-', 'border-opacity-20 border-')}`}
-                                                                                                            >
-                                                                                                                <div className="flex items-center gap-1">
-                                                                                                                    <Badge
-                                                                                                                        variant="outline"
-                                                                                                                        className="px-1.5 py-0.5 text-xs font-medium"
-                                                                                                                    >
-                                                                                                                        {cell.sks} SKS
-                                                                                                                    </Badge>
-                                                                                                                    {cell.is_swapped && (
-                                                                                                                        <div title="Jadwal Ditukar">
-                                                                                                                            <ArrowLeftRight className="h-3 w-3 text-purple-600" />
-                                                                                                                        </div>
-                                                                                                                    )}
-                                                                                                                </div>
-
-                                                                                                                <div className="flex flex-wrap gap-1">
-                                                                                                                    {cell.is_active &&
-                                                                                                                        !cell.is_past && (
-                                                                                                                            <Badge
-                                                                                                                                variant="default"
-                                                                                                                                className="px-1.5 py-0.5 text-xs font-medium bg-yellow-500 text-white hover:bg-yellow-500"
-                                                                                                                            >
-                                                                                                                                Berlangsung
-                                                                                                                            </Badge>
-                                                                                                                        )}
-
-                                                                                                                    {cell.is_past &&
-                                                                                                                        !cell.is_active && (
-                                                                                                                            <Badge
-                                                                                                                                variant="secondary"
-                                                                                                                                className="px-1.5 py-0.5 text-xs font-medium"
-                                                                                                                            >
-                                                                                                                                Sudah Lewat
-                                                                                                                            </Badge>
-                                                                                                                        )}
-
-                                                                                                                    {cell.status === 'booking' &&
-                                                                                                                        !cell.is_past &&
-                                                                                                                        !cell.is_active && (
-                                                                                                                            <Badge
-                                                                                                                                variant="default"
-                                                                                                                                className="px-1.5 py-0.5 text-xs font-medium bg-orange-500 hover:bg-orange-500"
-                                                                                                                            >
-                                                                                                                                Booking
-                                                                                                                            </Badge>
-                                                                                                                        )}
-
-                                                                                                                    {cell.status === 'terjadwal' &&
-                                                                                                                        !cell.is_past &&
-                                                                                                                        !cell.is_active && (
-                                                                                                                            <Badge
-                                                                                                                                variant="default"
-                                                                                                                                className="px-1.5 py-0.5 text-xs font-medium bg-blue-500 hover:bg-blue-500"
-                                                                                                                            >
-                                                                                                                                Terjadwal
-                                                                                                                            </Badge>
-                                                                                                                        )}
-
-                                                                                                                    {cell.status === 'tidak_masuk' &&
-                                                                                                                        !cell.is_past &&
-                                                                                                                        !cell.is_active && (
-                                                                                                                            <Badge
-                                                                                                                                variant="outline"
-                                                                                                                                className="px-1.5 py-0.5 text-xs font-medium"
-                                                                                                                            >
-                                                                                                                                Tidak Masuk
-                                                                                                                            </Badge>
-                                                                                                                        )}
-                                                                                                                </div>
-                                                                                                            </div>
-                                                                                                        </div>
-                                                                                                    );
-                                                                                                })}
-                                                                                            </div>
-                                                                                        ) : (
-                                                                                            <div className="flex h-full items-center justify-center p-2">
-                                                                                                <span className="text-xs text-muted-foreground">
-                                                                                                    -
+                                                                                        <div className="flex flex-col gap-1">
+                                                                                            <span
+                                                                                                className={
+                                                                                                    isTodayCell
+                                                                                                        ? 'text-primary font-bold'
+                                                                                                        : ''
+                                                                                                }
+                                                                                            >
+                                                                                                {h.nama}
+                                                                                            </span>
+                                                                                            {h.tanggal && (
+                                                                                                <span
+                                                                                                    className={`text-xs ${isTodayCell
+                                                                                                            ? 'text-primary font-semibold'
+                                                                                                            : 'text-muted-foreground'
+                                                                                                        }`}
+                                                                                                >
+                                                                                                    {new Date(
+                                                                                                        h.tanggal
+                                                                                                    ).toLocaleDateString('id-ID', {
+                                                                                                        day: '2-digit',
+                                                                                                        month: 'short',
+                                                                                                    })}
+                                                                                                    {isTodayCell && ' (Hari Ini)'}
                                                                                                 </span>
-                                                                                            </div>
-                                                                                        )}
-                                                                                    </td>
+                                                                                            )}
+                                                                                        </div>
+                                                                                    </th>
                                                                                 );
                                                                             })}
                                                                         </tr>
-                                                                    );
-                                                                });
-                                                            })()}
-                                                        </tbody>
-                                                    </table>
+                                                                    </thead>
+                                                                    <tbody>
+                                                                        {(() => {
+                                                                            const renderedCells: Record<number, Set<number>> = {};
+                                                                            hari.forEach((h) => {
+                                                                                renderedCells[h.id] = new Set<number>();
+                                                                            });
+
+                                                                            return slots.map((slot, slotIdx) => {
+                                                                                const isBreakTime =
+                                                                                    slot.waktu_mulai === '11:45:00' &&
+                                                                                    slot.waktu_selesai === '13:15:00';
+
+                                                                                return (
+                                                                                    <tr
+                                                                                        key={slot.id}
+                                                                                        className={isBreakTime ? 'h-16' : 'h-24'}
+                                                                                    >
+                                                                                        <td
+                                                                                            className={`sticky left-0 z-10 border-r-2 border-r-gray-300 p-1 text-center font-mono text-xs font-semibold shadow-md whitespace-nowrap ${isBreakTime
+                                                                                                    ? 'bg-muted h-16'
+                                                                                                    : 'bg-background h-24'
+                                                                                                }`}
+                                                                                        >
+                                                                                            {slot.waktu_mulai.slice(0, 5)} -{' '}
+                                                                                            {slot.waktu_selesai.slice(0, 5)}
+                                                                                        </td>
+                                                                                        {hari.map((h) => {
+                                                                                            if (renderedCells[h.id].has(slot.id)) {
+                                                                                                return null;
+                                                                                            }
+
+                                                                                            const cellsData =
+                                                                                                jadwalKampus[selectedMinggu]?.[h.id]?.[
+                                                                                                slot.id
+                                                                                                ] || [];
+
+                                                                                            let maxRowSpan = 1;
+                                                                                            if (cellsData.length > 0) {
+                                                                                                const firstCell = cellsData[0];
+                                                                                                const startIdx = slots.findIndex(
+                                                                                                    (s) =>
+                                                                                                        s.waktu_mulai <=
+                                                                                                        firstCell.waktu_mulai &&
+                                                                                                        s.waktu_selesai >
+                                                                                                        firstCell.waktu_mulai
+                                                                                                );
+                                                                                                const endIdx = slots.findIndex(
+                                                                                                    (s) =>
+                                                                                                        s.waktu_mulai <
+                                                                                                        firstCell.waktu_selesai &&
+                                                                                                        s.waktu_selesai >=
+                                                                                                        firstCell.waktu_selesai
+                                                                                                );
+                                                                                                if (startIdx !== -1 && endIdx !== -1) {
+                                                                                                    maxRowSpan = endIdx - startIdx + 1;
+                                                                                                } else {
+                                                                                                    maxRowSpan = firstCell.durasi_slot || 1;
+                                                                                                }
+
+                                                                                                for (let i = 0; i < maxRowSpan; i++) {
+                                                                                                    const spanSlotIdx = slotIdx + i;
+                                                                                                    if (spanSlotIdx < slots.length) {
+                                                                                                        const spanSlotId =
+                                                                                                            slots[spanSlotIdx].id;
+                                                                                                        renderedCells[h.id].add(spanSlotId);
+                                                                                                    }
+                                                                                                }
+                                                                                            }
+
+                                                                                            return (
+                                                                                                <td
+                                                                                                    key={h.id}
+                                                                                                    className="h-full border p-0 align-middle relative"
+                                                                                                    rowSpan={maxRowSpan}
+                                                                                                    style={{
+                                                                                                        height: `${maxRowSpan * 6}rem`,
+                                                                                                    }}
+                                                                                                >
+                                                                                                    {isBreakTime && (
+                                                                                                        <div className="absolute inset-0 z-10 bg-muted/90 flex items-center justify-center border-t-2 border-b-2 border-dashed border-muted-foreground/30 pointer-events-none">
+                                                                                                            <div className="flex items-center gap-2 opacity-60">
+                                                                                                                <Clock className="h-3 w-3 text-muted-foreground" />
+                                                                                                                <span className="text-xs font-semibold text-muted-foreground">
+                                                                                                                    ISTIRAHAT
+                                                                                                                </span>
+                                                                                                            </div>
+                                                                                                        </div>
+                                                                                                    )}
+                                                                                                    {cellsData.length > 0 ? (
+                                                                                                        <div className="flex h-full flex-col divide-y">
+                                                                                                            {cellsData.map((cell, idx) => {
+                                                                                                                const colorScheme = getColorScheme(
+                                                                                                                    cell.dosen,
+                                                                                                                    idx
+                                                                                                                );
+
+                                                                                                                return (
+                                                                                                                    <div
+                                                                                                                        key={idx}
+                                                                                                                        className={`bg-gradient-to-br ${colorScheme.from} ${colorScheme.to} border-l-4 ${colorScheme.border} flex h-full flex-col justify-center p-2 ${colorScheme.hover} mx-0.5 my-0.5 rounded-lg shadow-sm transition-all duration-200 hover:shadow-md`}
+                                                                                                                    >
+                                                                                                                        <div className="mb-2 flex items-start gap-1.5">
+                                                                                                                            <BookOpen
+                                                                                                                                className={`h-4 w-4 ${colorScheme.icon} mt-0.5 flex-shrink-0`}
+                                                                                                                            />
+                                                                                                                            <div className="min-w-0 flex-1">
+                                                                                                                                <p
+                                                                                                                                    className={`font-bold ${colorScheme.text} truncate text-xs leading-tight`}
+                                                                                                                                >
+                                                                                                                                    {cell.matkul}
+                                                                                                                                </p>
+                                                                                                                                <div className="mt-0.5 flex items-center gap-1">
+                                                                                                                                    <Badge
+                                                                                                                                        variant="muted"
+                                                                                                                                        className="truncate px-1.5 py-0.5 text-xs font-medium"
+                                                                                                                                    >
+                                                                                                                                        {cell.kelas}
+                                                                                                                                    </Badge>
+                                                                                                                                </div>
+                                                                                                                            </div>
+                                                                                                                        </div>
+
+                                                                                                                        <div className="space-y-0.5 text-xs">
+                                                                                                                            <div className="flex items-center gap-1 text-gray-700">
+                                                                                                                                <User className="h-3 w-3 flex-shrink-0" />
+                                                                                                                                <span className="flex-1 truncate font-medium">
+                                                                                                                                    {cell.dosen}
+                                                                                                                                </span>
+                                                                                                                            </div>
+                                                                                                                            <div className="flex items-center gap-1 text-gray-700">
+                                                                                                                                <MapPin className="h-3 w-3 flex-shrink-0" />
+                                                                                                                                <span className="flex-1 truncate font-medium">
+                                                                                                                                    {cell.lab}
+                                                                                                                                </span>
+                                                                                                                            </div>
+                                                                                                                            <div className="flex items-center gap-1 text-gray-700">
+                                                                                                                                <Clock className="h-3 w-3 flex-shrink-0" />
+                                                                                                                                <span className="flex-1 font-medium">
+                                                                                                                                    {cell.waktu_mulai.slice(0, 5)} -{' '}
+                                                                                                                                    {cell.waktu_selesai.slice(0, 5)}
+                                                                                                                                </span>
+                                                                                                                            </div>
+                                                                                                                        </div>
+
+                                                                                                                        <div
+                                                                                                                            className={`mt-1.5 flex items-center justify-between border-t pt-1.5 ${colorScheme.border.replace('border-', 'border-opacity-20 border-')}`}
+                                                                                                                        >
+                                                                                                                            <div className="flex items-center gap-1">
+                                                                                                                                <Badge
+                                                                                                                                    variant="outline"
+                                                                                                                                    className="px-1.5 py-0.5 text-xs font-medium"
+                                                                                                                                >
+                                                                                                                                    {cell.sks} SKS
+                                                                                                                                </Badge>
+                                                                                                                                {cell.is_swapped && (
+                                                                                                                                    <div title="Jadwal Ditukar">
+                                                                                                                                        <ArrowLeftRight className="h-3 w-3 text-purple-600" />
+                                                                                                                                    </div>
+                                                                                                                                )}
+                                                                                                                            </div>
+
+                                                                                                                            <div className="flex flex-wrap gap-1">
+                                                                                                                                {cell.is_active &&
+                                                                                                                                    !cell.is_past && (
+                                                                                                                                        <Badge
+                                                                                                                                            variant="default"
+                                                                                                                                            className="px-1.5 py-0.5 text-xs font-medium bg-yellow-500 text-white hover:bg-yellow-500"
+                                                                                                                                        >
+                                                                                                                                            Berlangsung
+                                                                                                                                        </Badge>
+                                                                                                                                    )}
+
+                                                                                                                                {cell.is_past &&
+                                                                                                                                    !cell.is_active && (
+                                                                                                                                        <Badge
+                                                                                                                                            variant="secondary"
+                                                                                                                                            className="px-1.5 py-0.5 text-xs font-medium"
+                                                                                                                                        >
+                                                                                                                                            Sudah Lewat
+                                                                                                                                        </Badge>
+                                                                                                                                    )}
+
+                                                                                                                                {cell.status === 'booking' &&
+                                                                                                                                    !cell.is_past &&
+                                                                                                                                    !cell.is_active && (
+                                                                                                                                        <Badge
+                                                                                                                                            variant="default"
+                                                                                                                                            className="px-1.5 py-0.5 text-xs font-medium bg-orange-500 hover:bg-orange-500"
+                                                                                                                                        >
+                                                                                                                                            Booking
+                                                                                                                                        </Badge>
+                                                                                                                                    )}
+
+                                                                                                                                {cell.status === 'terjadwal' &&
+                                                                                                                                    !cell.is_past &&
+                                                                                                                                    !cell.is_active && (
+                                                                                                                                        <Badge
+                                                                                                                                            variant="default"
+                                                                                                                                            className="px-1.5 py-0.5 text-xs font-medium bg-blue-500 hover:bg-blue-500"
+                                                                                                                                        >
+                                                                                                                                            Terjadwal
+                                                                                                                                        </Badge>
+                                                                                                                                    )}
+
+                                                                                                                                {cell.status === 'tidak_masuk' &&
+                                                                                                                                    !cell.is_past &&
+                                                                                                                                    !cell.is_active && (
+                                                                                                                                        <Badge
+                                                                                                                                            variant="outline"
+                                                                                                                                            className="px-1.5 py-0.5 text-xs font-medium"
+                                                                                                                                        >
+                                                                                                                                            Tidak Masuk
+                                                                                                                                        </Badge>
+                                                                                                                                    )}
+                                                                                                                            </div>
+                                                                                                                        </div>
+                                                                                                                    </div>
+                                                                                                                );
+                                                                                                            })}
+                                                                                                        </div>
+                                                                                                    ) : (
+                                                                                                        <div className="flex h-full items-center justify-center p-2">
+                                                                                                            <span className="text-xs text-muted-foreground">
+                                                                                                                -
+                                                                                                            </span>
+                                                                                                        </div>
+                                                                                                    )}
+                                                                                                </td>
+                                                                                            );
+                                                                                        })}
+                                                                                    </tr>
+                                                                                );
+                                                                            });
+                                                                        })()}
+                                                                    </tbody>
+                                                                </table>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+
+                                                {/* Desktop View */}
+                                                <div className="hidden md:block">
+                                                    <div className="overflow-x-auto -mx-4 px-4 md:mx-0 md:px-0">
+                                                        <table className="border-collapse text-sm min-w-full md:w-full md:table-fixed">
+                                                            <thead>
+                                                                <tr className="bg-muted/50">
+                                                                    <th className="sticky left-0 z-20 w-24 md:w-32 border bg-muted p-2 font-semibold">
+                                                                        Jam
+                                                                    </th>
+                                                                    {hari.map((h) => {
+                                                                        const isTodayCell = isToday(h.tanggal);
+                                                                        return (
+                                                                            <th
+                                                                                key={h.id}
+                                                                                className={`border p-2 font-semibold min-w-[160px] md:min-w-0 ${isTodayCell
+                                                                                        ? 'bg-primary/10 ring-2 ring-primary ring-inset'
+                                                                                        : ''
+                                                                                    }`}
+                                                                            >
+                                                                                <div className="flex flex-col gap-1">
+                                                                                    <span
+                                                                                        className={
+                                                                                            isTodayCell
+                                                                                                ? 'text-primary font-bold'
+                                                                                                : ''
+                                                                                        }
+                                                                                    >
+                                                                                        {h.nama}
+                                                                                    </span>
+                                                                                    {h.tanggal && (
+                                                                                        <span
+                                                                                            className={`text-xs ${isTodayCell
+                                                                                                    ? 'text-primary font-semibold'
+                                                                                                    : 'text-muted-foreground'
+                                                                                                }`}
+                                                                                        >
+                                                                                            {new Date(
+                                                                                                h.tanggal
+                                                                                            ).toLocaleDateString('id-ID', {
+                                                                                                day: '2-digit',
+                                                                                                month: 'short',
+                                                                                            })}
+                                                                                            {isTodayCell && ' (Hari Ini)'}
+                                                                                        </span>
+                                                                                    )}
+                                                                                </div>
+                                                                            </th>
+                                                                        );
+                                                                    })}
+                                                                </tr>
+                                                            </thead>
+                                                            <tbody>
+                                                                {(() => {
+                                                                    const renderedCells: Record<number, Set<number>> = {};
+                                                                    hari.forEach((h) => {
+                                                                        renderedCells[h.id] = new Set<number>();
+                                                                    });
+
+                                                                    return slots.map((slot, slotIdx) => {
+                                                                        const isBreakTime =
+                                                                            slot.waktu_mulai === '11:45:00' &&
+                                                                            slot.waktu_selesai === '13:15:00';
+
+                                                                        return (
+                                                                            <tr
+                                                                                key={slot.id}
+                                                                                className={isBreakTime ? 'h-16' : 'h-24'}
+                                                                            >
+                                                                                <td
+                                                                                    className={`sticky left-0 z-10 border p-2 text-center font-mono text-xs font-semibold ${isBreakTime
+                                                                                            ? 'bg-muted h-16'
+                                                                                            : 'bg-background h-24'
+                                                                                        }`}
+                                                                                >
+                                                                                    {slot.waktu_mulai.slice(0, 5)} -{' '}
+                                                                                    {slot.waktu_selesai.slice(0, 5)}
+                                                                                </td>
+                                                                                {hari.map((h) => {
+                                                                                    if (renderedCells[h.id].has(slot.id)) {
+                                                                                        return null;
+                                                                                    }
+
+                                                                                    const cellsData =
+                                                                                        jadwalKampus[selectedMinggu]?.[h.id]?.[
+                                                                                        slot.id
+                                                                                        ] || [];
+
+                                                                                    let maxRowSpan = 1;
+                                                                                    if (cellsData.length > 0) {
+                                                                                        const firstCell = cellsData[0];
+                                                                                        const startIdx = slots.findIndex(
+                                                                                            (s) =>
+                                                                                                s.waktu_mulai <=
+                                                                                                firstCell.waktu_mulai &&
+                                                                                                s.waktu_selesai >
+                                                                                                firstCell.waktu_mulai
+                                                                                        );
+                                                                                        const endIdx = slots.findIndex(
+                                                                                            (s) =>
+                                                                                                s.waktu_mulai <
+                                                                                                firstCell.waktu_selesai &&
+                                                                                                s.waktu_selesai >=
+                                                                                                firstCell.waktu_selesai
+                                                                                        );
+                                                                                        if (startIdx !== -1 && endIdx !== -1) {
+                                                                                            maxRowSpan = endIdx - startIdx + 1;
+                                                                                        } else {
+                                                                                            maxRowSpan = firstCell.durasi_slot || 1;
+                                                                                        }
+
+                                                                                        for (let i = 0; i < maxRowSpan; i++) {
+                                                                                            const spanSlotIdx = slotIdx + i;
+                                                                                            if (spanSlotIdx < slots.length) {
+                                                                                                const spanSlotId =
+                                                                                                    slots[spanSlotIdx].id;
+                                                                                                renderedCells[h.id].add(spanSlotId);
+                                                                                            }
+                                                                                        }
+                                                                                    }
+
+                                                                                    return (
+                                                                                        <td
+                                                                                            key={h.id}
+                                                                                            className="h-full border p-0 align-middle relative"
+                                                                                            rowSpan={maxRowSpan}
+                                                                                            style={{
+                                                                                                height: `${maxRowSpan * 6}rem`,
+                                                                                            }}
+                                                                                        >
+                                                                                            {isBreakTime && (
+                                                                                                <div className="absolute inset-0 z-10 bg-muted/90 flex items-center justify-center border-t-2 border-b-2 border-dashed border-muted-foreground/30 pointer-events-none">
+                                                                                                    <div className="flex items-center gap-2 opacity-60">
+                                                                                                        <Clock className="h-3 w-3 text-muted-foreground" />
+                                                                                                        <span className="text-xs font-semibold text-muted-foreground">
+                                                                                                            ISTIRAHAT
+                                                                                                        </span>
+                                                                                                    </div>
+                                                                                                </div>
+                                                                                            )}
+                                                                                            {cellsData.length > 0 ? (
+                                                                                                <div className="flex h-full flex-col divide-y">
+                                                                                                    {cellsData.map((cell, idx) => {
+                                                                                                        const colorScheme = getColorScheme(
+                                                                                                            cell.dosen,
+                                                                                                            idx
+                                                                                                        );
+
+                                                                                                        return (
+                                                                                                            <div
+                                                                                                                key={idx}
+                                                                                                                className={`bg-gradient-to-br ${colorScheme.from} ${colorScheme.to} border-l-4 ${colorScheme.border} flex h-full flex-col justify-center p-2 ${colorScheme.hover} mx-0.5 my-0.5 rounded-lg shadow-sm transition-all duration-200 hover:shadow-md`}
+                                                                                                            >
+                                                                                                                <div className="mb-2 flex items-start gap-1.5">
+                                                                                                                    <BookOpen
+                                                                                                                        className={`h-4 w-4 ${colorScheme.icon} mt-0.5 flex-shrink-0`}
+                                                                                                                    />
+                                                                                                                    <div className="min-w-0 flex-1">
+                                                                                                                        <p
+                                                                                                                            className={`font-bold ${colorScheme.text} truncate text-xs leading-tight`}
+                                                                                                                        >
+                                                                                                                            {cell.matkul}
+                                                                                                                        </p>
+                                                                                                                        <div className="mt-0.5 flex items-center gap-1">
+                                                                                                                            <Badge
+                                                                                                                                variant="muted"
+                                                                                                                                className="truncate px-1.5 py-0.5 text-xs font-medium"
+                                                                                                                            >
+                                                                                                                                {cell.kelas}
+                                                                                                                            </Badge>
+                                                                                                                        </div>
+                                                                                                                    </div>
+                                                                                                                </div>
+
+                                                                                                                <div className="space-y-0.5 text-xs">
+                                                                                                                    <div className="flex items-center gap-1 text-gray-700">
+                                                                                                                        <User className="h-3 w-3 flex-shrink-0" />
+                                                                                                                        <span className="flex-1 truncate font-medium">
+                                                                                                                            {cell.dosen}
+                                                                                                                        </span>
+                                                                                                                    </div>
+                                                                                                                    <div className="flex items-center gap-1 text-gray-700">
+                                                                                                                        <MapPin className="h-3 w-3 flex-shrink-0" />
+                                                                                                                        <span className="flex-1 truncate font-medium">
+                                                                                                                            {cell.lab}
+                                                                                                                        </span>
+                                                                                                                    </div>
+                                                                                                                    <div className="flex items-center gap-1 text-gray-700">
+                                                                                                                        <Clock className="h-3 w-3 flex-shrink-0" />
+                                                                                                                        <span className="flex-1 font-medium">
+                                                                                                                            {cell.waktu_mulai.slice(0, 5)} -{' '}
+                                                                                                                            {cell.waktu_selesai.slice(0, 5)}
+                                                                                                                        </span>
+                                                                                                                    </div>
+                                                                                                                </div>
+
+                                                                                                                <div
+                                                                                                                    className={`mt-1.5 flex items-center justify-between border-t pt-1.5 ${colorScheme.border.replace('border-', 'border-opacity-20 border-')}`}
+                                                                                                                >
+                                                                                                                    <div className="flex items-center gap-1">
+                                                                                                                        <Badge
+                                                                                                                            variant="outline"
+                                                                                                                            className="px-1.5 py-0.5 text-xs font-medium"
+                                                                                                                        >
+                                                                                                                            {cell.sks} SKS
+                                                                                                                        </Badge>
+                                                                                                                        {cell.is_swapped && (
+                                                                                                                            <div title="Jadwal Ditukar">
+                                                                                                                                <ArrowLeftRight className="h-3 w-3 text-purple-600" />
+                                                                                                                            </div>
+                                                                                                                        )}
+                                                                                                                    </div>
+
+                                                                                                                    <div className="flex flex-wrap gap-1">
+                                                                                                                        {cell.is_active &&
+                                                                                                                            !cell.is_past && (
+                                                                                                                                <Badge
+                                                                                                                                    variant="default"
+                                                                                                                                    className="px-1.5 py-0.5 text-xs font-medium bg-yellow-500 text-white hover:bg-yellow-500"
+                                                                                                                                >
+                                                                                                                                    Berlangsung
+                                                                                                                                </Badge>
+                                                                                                                            )}
+
+                                                                                                                        {cell.is_past &&
+                                                                                                                            !cell.is_active && (
+                                                                                                                                <Badge
+                                                                                                                                    variant="secondary"
+                                                                                                                                    className="px-1.5 py-0.5 text-xs font-medium"
+                                                                                                                                >
+                                                                                                                                    Sudah Lewat
+                                                                                                                                </Badge>
+                                                                                                                            )}
+
+                                                                                                                        {cell.status === 'booking' &&
+                                                                                                                            !cell.is_past &&
+                                                                                                                            !cell.is_active && (
+                                                                                                                                <Badge
+                                                                                                                                    variant="default"
+                                                                                                                                    className="px-1.5 py-0.5 text-xs font-medium bg-orange-500 hover:bg-orange-500"
+                                                                                                                                >
+                                                                                                                                    Booking
+                                                                                                                                </Badge>
+                                                                                                                            )}
+
+                                                                                                                        {cell.status === 'terjadwal' &&
+                                                                                                                            !cell.is_past &&
+                                                                                                                            !cell.is_active && (
+                                                                                                                                <Badge
+                                                                                                                                    variant="default"
+                                                                                                                                    className="px-1.5 py-0.5 text-xs font-medium bg-blue-500 hover:bg-blue-500"
+                                                                                                                                >
+                                                                                                                                    Terjadwal
+                                                                                                                                </Badge>
+                                                                                                                            )}
+
+                                                                                                                        {cell.status === 'tidak_masuk' &&
+                                                                                                                            !cell.is_past &&
+                                                                                                                            !cell.is_active && (
+                                                                                                                                <Badge
+                                                                                                                                    variant="outline"
+                                                                                                                                    className="px-1.5 py-0.5 text-xs font-medium"
+                                                                                                                                >
+                                                                                                                                    Tidak Masuk
+                                                                                                                                </Badge>
+                                                                                                                            )}
+                                                                                                                    </div>
+                                                                                                                </div>
+                                                                                                            </div>
+                                                                                                        );
+                                                                                                    })}
+                                                                                                </div>
+                                                                                            ) : (
+                                                                                                <div className="flex h-full items-center justify-center p-2">
+                                                                                                    <span className="text-xs text-muted-foreground">
+                                                                                                        -
+                                                                                                    </span>
+                                                                                                </div>
+                                                                                            )}
+                                                                                        </td>
+                                                                                    );
+                                                                                })}
+                                                                            </tr>
+                                                                        );
+                                                                    });
+                                                                })()}
+                                                            </tbody>
+                                                        </table>
+                                                    </div>
                                                 </div>
                                             </CardContent>
                                         </Card>
