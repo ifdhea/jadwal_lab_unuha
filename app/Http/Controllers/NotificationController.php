@@ -44,7 +44,7 @@ class NotificationController extends Controller
 
         $notification->markAsRead();
 
-        return response()->json(['success' => true]);
+        return back()->with('success', 'Notifikasi ditandai sebagai telah dibaca.');
     }
 
     public function markAllAsRead(Request $request)
@@ -57,7 +57,7 @@ class NotificationController extends Controller
                 'read_at' => now(),
             ]);
 
-        return response()->json(['success' => true]);
+        return back()->with('success', 'Semua notifikasi ditandai sebagai telah dibaca.');
     }
 
     public function destroy(Notification $notification)
