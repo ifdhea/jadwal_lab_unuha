@@ -1,3 +1,4 @@
+import { ActivityFeedButton } from '@/components/activity-feed-button';
 import { Breadcrumbs } from '@/components/breadcrumbs';
 import { NotificationBell } from '@/components/notification-bell';
 import { Button } from '@/components/ui/button';
@@ -24,6 +25,7 @@ export function AppSidebarHeader({
                 <Breadcrumbs breadcrumbs={breadcrumbs} />
             </div>
             <div className="ml-auto flex items-center gap-2">
+                <ActivityFeedButton variant="icon" />
                 <NotificationBell />
                 <Button
                     variant="ghost"

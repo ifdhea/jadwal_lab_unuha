@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Dosen;
 use App\Models\SesiJadwal;
 use App\Models\TukarJadwal;
+use App\Services\ActivityLogService;
 use App\Services\NotificationService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
@@ -524,8 +525,25 @@ class TukarJadwalController extends Controller
                 ],
             ]);
 
+            // Reload relasi untuk notifikasi dan logging
+            $tukarJadwal->load([
+                'pemohon.user',
+                'mitra.user',
+                'sesiJadwalPemohon.jadwalMaster.kelasMatKul.mataKuliah',
+                'sesiJadwalPemohon.jadwalMaster.laboratorium',
+                'sesiJadwalMitra.jadwalMaster.kelasMatKul.mataKuliah',
+                'sesiJadwalMitra.jadwalMaster.laboratorium',
+            ]);
+
             // Notifikasi ke pemohon
             NotificationService::sendTukarJadwalApproved($tukarJadwal->pemohon->user, $tukarJadwal);
+
+            // Log aktivitas
+            if ($tukarJadwal->jenis === 'tukar') {
+                ActivityLogService::logTukarJadwal($tukarJadwal);
+            } else {
+                ActivityLogService::logPindahJadwal($tukarJadwal);
+            }
             
             return redirect()->route('tukar-jadwal.index')->with('success', 'Permintaan tukar jadwal berhasil disetujui (hanya untuk minggu ini)');
         } catch (\Exception $e) {

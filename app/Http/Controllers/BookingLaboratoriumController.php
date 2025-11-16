@@ -8,6 +8,7 @@ use App\Models\Laboratorium;
 use App\Models\SesiJadwal;
 use App\Models\SlotWaktu;
 use App\Models\User;
+use App\Services\ActivityLogService;
 use App\Services\NotificationService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
@@ -569,8 +570,21 @@ class BookingLaboratoriumController extends Controller
             'tanggal_diproses' => now(),
         ]);
 
+        // Load relasi yang diperlukan
+        $bookingLab->load([
+            'dosen',
+            'laboratorium',
+            'slotWaktuMulai',
+            'slotWaktuSelesai'
+        ]);
+
         // Notifikasi ke dosen
-        NotificationService::sendBookingApproved($bookingLab->dosen->user, $bookingLab);
+        if ($bookingLab->dosen && $bookingLab->dosen->user) {
+            NotificationService::sendBookingApproved($bookingLab->dosen->user, $bookingLab);
+        }
+
+        // Log aktivitas
+        ActivityLogService::logBookingLabDisetujui($bookingLab);
 
         return redirect()->route('admin.booking-lab.index')->with('success', 'Booking laboratorium disetujui');
     }

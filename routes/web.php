@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\ActivityLogController;
 use App\Http\Controllers\BookingLaboratoriumController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DosenController;
@@ -29,6 +30,10 @@ Route::get('/', [PublicController::class, 'beranda'])->name('home');
 Route::get('/beranda', [PublicController::class, 'beranda'])->name('beranda');
 Route::get('/jadwal-lab', [PublicController::class, 'jadwal'])->name('jadwal-lab');
 Route::get('/tentang', [PublicController::class, 'tentang'])->name('tentang');
+
+// Public Activity Log API
+Route::get('/api/activity-logs/recent', [ActivityLogController::class, 'getRecent'])->name('api.activity-logs.recent');
+Route::get('/api/activity-logs/today', [ActivityLogController::class, 'getToday'])->name('api.activity-logs.today');
 
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('dashboard', [DashboardController::class, 'index'])->name('dashboard');

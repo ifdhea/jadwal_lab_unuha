@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\SesiJadwal;
+use App\Services\ActivityLogService;
 use App\Services\JadwalStatusService;
 use Illuminate\Http\Request;
 use Carbon\Carbon;
@@ -50,6 +51,21 @@ class SesiJadwalController extends Controller
             'status' => $request->status,
             'catatan' => $request->catatan,
         ]);
+
+        // Log aktivitas jika tidak masuk
+        if ($request->status === 'tidak_masuk') {
+            // Load relasi yang diperlukan
+            $sesiJadwal->load([
+                'jadwalMaster.kelasMatKul.mataKuliah',
+                'jadwalMaster.kelasMatKul.kelas',
+                'jadwalMaster.laboratorium',
+                'jadwalMaster.slotWaktuMulai',
+                'jadwalMaster.slotWaktuSelesai'
+            ]);
+            
+            $dosen->load('user');
+            ActivityLogService::logTidakMasuk($sesiJadwal, $dosen);
+        }
 
         $statusText = $request->status === 'tidak_masuk' ? 'Tidak Masuk' : ucfirst($request->status);
 

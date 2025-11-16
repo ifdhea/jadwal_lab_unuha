@@ -1,5 +1,6 @@
 import PublicLayout from '@/layouts/public-layout';
 import { Head, router } from '@inertiajs/react';
+import { ActivityFeedButton } from '@/components/activity-feed-button';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -244,22 +245,25 @@ export default function Jadwal({
                             Lihat jadwal penggunaan laboratorium
                         </p>
                     </div>
-                    <div className="w-full sm:w-72">
-                        <Select
-                            value={selectedSemesterId ? String(selectedSemesterId) : ''}
-                            onValueChange={handleSemesterChange}
-                        >
-                            <SelectTrigger>
-                                <SelectValue placeholder="Pilih Semester" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                {semesters.map((s) => (
-                                    <SelectItem key={s.id} value={String(s.id)}>
-                                        {s.nama}
-                                    </SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
+                    <div className="flex items-center gap-2">
+                        <ActivityFeedButton variant="button" days={7} />
+                        <div className="w-full sm:w-72">
+                            <Select
+                                value={selectedSemesterId ? String(selectedSemesterId) : ''}
+                                onValueChange={handleSemesterChange}
+                            >
+                                <SelectTrigger>
+                                    <SelectValue placeholder="Pilih Semester" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {semesters.map((s) => (
+                                        <SelectItem key={s.id} value={String(s.id)}>
+                                            {s.nama}
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        </div>
                     </div>
                 </div>
 
