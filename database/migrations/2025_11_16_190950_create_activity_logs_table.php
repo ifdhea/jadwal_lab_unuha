@@ -14,16 +14,16 @@ return new class extends Migration
         Schema::create('activity_logs', function (Blueprint $table) {
             $table->id();
             $table->foreignId('user_id')->nullable()->constrained()->onDelete('set null');
-            $table->string('actor_name'); // Nama user yang melakukan aksi
-            $table->string('actor_role'); // Role user (dosen, admin)
-            $table->string('action'); // tukar_jadwal, pindah_jadwal, tidak_masuk, booking_lab, dll
-            $table->string('title'); // Judul aktivitas
-            $table->text('description'); // Deskripsi lengkap
-            $table->json('data')->nullable(); // Data tambahan (jadwal detail, dll)
-            $table->string('icon')->nullable(); // Icon emoji untuk UI
-            $table->string('color')->default('blue'); // Warna badge (blue, green, orange, red)
-            $table->boolean('is_public')->default(true); // Apakah ditampilkan ke publik
-            $table->timestamp('activity_date'); // Tanggal aktivitas terjadi
+            $table->string('actor_name');
+            $table->string('actor_role'); 
+            $table->string('action'); 
+            $table->string('title'); 
+            $table->text('description'); 
+            $table->json('data')->nullable(); 
+            $table->string('icon')->nullable();
+            $table->string('color')->default('blue'); 
+            $table->boolean('is_public')->default(true); 
+            $table->timestamp('activity_date'); 
             $table->timestamps();
 
             $table->index(['is_public', 'activity_date']);

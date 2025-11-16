@@ -52,7 +52,8 @@ export function NotificationBell() {
     const markAsRead = async (id: number) => {
         try {
             await axios.post(`/notifications/${id}/read`);
-            fetchNotifications();
+            // Refresh notifications setelah mark as read
+            await fetchNotifications();
         } catch (error) {
             console.error('Failed to mark notification as read:', error);
         }
@@ -61,14 +62,17 @@ export function NotificationBell() {
     const markAllAsRead = async () => {
         try {
             await axios.post('/notifications/read-all');
-            fetchNotifications();
+            // Refresh notifications setelah mark all as read
+            await fetchNotifications();
         } catch (error) {
             console.error('Failed to mark all notifications as read:', error);
         }
     };
 
-    const handleNotificationClick = (notification: Notification) => {
-        markAsRead(notification.id);
+    const handleNotificationClick = async (notification: Notification) => {
+        if (!notification.is_read) {
+            await markAsRead(notification.id);
+        }
         
         // Navigate to the link if available
         if (notification.data?.link) {
@@ -134,7 +138,10 @@ export function NotificationBell() {
                         <Button
                             variant="ghost"
                             size="sm"
-                            onClick={markAllAsRead}
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                markAllAsRead();
+                            }}
                             className="h-auto p-1 text-xs"
                         >
                             <CheckCheck className="mr-1 h-3 w-3" />

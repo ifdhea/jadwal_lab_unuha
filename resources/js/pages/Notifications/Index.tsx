@@ -72,12 +72,20 @@ export default function NotificationsIndex({
             {
                 preserveScroll: true,
                 preserveState: true,
+                only: ['notifications', 'unreadCount'],
             }
         );
     };
 
     const markAllAsRead = () => {
-        router.post('/notifications/read-all', {}, { preserveScroll: true });
+        router.post(
+            '/notifications/read-all',
+            {},
+            {
+                preserveScroll: true,
+                only: ['notifications', 'unreadCount'],
+            }
+        );
     };
 
     const deleteNotification = (id: number) => {

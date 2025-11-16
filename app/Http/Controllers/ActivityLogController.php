@@ -14,8 +14,8 @@ class ActivityLogController extends Controller
         $activities = ActivityLog::query()
             ->public()
             ->recent($days)
-            ->orderBy('activity_date', 'desc')
             ->orderBy('created_at', 'desc')
+            ->orderBy('id', 'desc')
             ->limit(50)
             ->get();
 
@@ -31,6 +31,7 @@ class ActivityLogController extends Controller
             ->public()
             ->today()
             ->orderBy('created_at', 'desc')
+            ->orderBy('id', 'desc')
             ->get();
 
         return response()->json([

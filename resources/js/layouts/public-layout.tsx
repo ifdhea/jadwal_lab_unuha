@@ -248,7 +248,7 @@ export default function PublicLayout({ children }: Props) {
 
                         {/* Quick Links */}
                         <div>
-                            <h3 className="mb-4 text-sm font-semibold">Tautan Cepat</h3>
+                            <h3 className="mb-4 text-sm font-semibold">Halaman</h3>
                             <ul className="space-y-2.5">
                                 {navigation.map((item) => (
                                     <li key={item.name}>
