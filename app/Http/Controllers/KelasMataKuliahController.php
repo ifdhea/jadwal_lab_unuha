@@ -12,10 +12,41 @@ use Inertia\Inertia;
 
 class KelasMataKuliahController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
+        $query = KelasMatKul::with(['kelas.programStudi', 'mataKuliah', 'semester']);
+
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->whereHas('kelas', function($q) use ($search) {
+                $q->where('nama', 'like', "%{$search}%")
+                  ->orWhere('kode', 'like', "%{$search}%");
+            })->orWhereHas('mataKuliah', function($q) use ($search) {
+                $q->where('nama', 'like', "%{$search}%")
+                  ->orWhere('kode', 'like', "%{$search}%");
+            });
+        }
+
+        if ($request->filled('kelas_id')) {
+            $query->where('kelas_id', $request->kelas_id);
+        }
+
+        if ($request->filled('mata_kuliah_id')) {
+            $query->where('mata_kuliah_id', $request->mata_kuliah_id);
+        }
+
+        if ($request->filled('semester_id')) {
+            $query->where('semester_id', $request->semester_id);
+        }
+
+        $kelasMataKuliah = $query->get();
+
         return Inertia::render('KelasMataKuliah/Index', [
-            'kelasMataKuliah' => KelasMatKul::with(['kelas.programStudi', 'mataKuliah', 'semester'])->get(),
+            'kelasMataKuliah' => $kelasMataKuliah,
+            'kelas' => Kelas::where('is_aktif', true)->orderBy('nama')->get(),
+            'mataKuliah' => MataKuliah::where('is_aktif', true)->orderBy('nama')->get(),
+            'semester' => Semester::where('is_aktif', true)->orderBy('nama', 'desc')->get(),
+            'filters' => $request->only(['search', 'kelas_id', 'mata_kuliah_id', 'semester_id']),
             'breadcrumbs' => [
                 ['title' => 'Dashboard', 'href' => '/dashboard'],
                 ['title' => 'Kelas & Mata Kuliah', 'href' => '/kelas-matkul'],

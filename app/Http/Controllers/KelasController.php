@@ -11,10 +11,46 @@ use Inertia\Inertia;
 
 class KelasController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
+        $query = Kelas::with(['programStudi', 'kampus', 'tahunAjaran']);
+
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->where(function($q) use ($search) {
+                $q->where('nama', 'like', "%{$search}%")
+                  ->orWhere('kode', 'like', "%{$search}%");
+            });
+        }
+
+        if ($request->filled('program_studi_id')) {
+            $query->where('program_studi_id', $request->program_studi_id);
+        }
+
+        if ($request->filled('kampus_id')) {
+            $query->where('kampus_id', $request->kampus_id);
+        }
+
+        if ($request->filled('tahun_ajaran_id')) {
+            $query->where('tahun_ajaran_id', $request->tahun_ajaran_id);
+        }
+
+        if ($request->filled('tingkat_semester')) {
+            $query->where('tingkat_semester', $request->tingkat_semester);
+        }
+
+        if ($request->filled('is_aktif')) {
+            $query->where('is_aktif', $request->is_aktif === 'true');
+        }
+
+        $kelas = $query->orderBy('nama')->get();
+
         return Inertia::render('Kelas/Index', [
-            'kelas' => Kelas::with(['programStudi', 'kampus', 'tahunAjaran'])->orderBy('nama')->get(),
+            'kelas' => $kelas,
+            'programStudi' => ProgramStudi::where('is_aktif', true)->orderBy('nama')->get(),
+            'kampus' => Kampus::where('is_aktif', true)->orderBy('nama')->get(),
+            'tahunAjaran' => TahunAjaran::orderBy('nama', 'desc')->get(),
+            'filters' => $request->only(['search', 'program_studi_id', 'kampus_id', 'tahun_ajaran_id', 'tingkat_semester', 'is_aktif']),
             'breadcrumbs' => [
                 ['title' => 'Dashboard', 'href' => '/dashboard'],
                 ['title' => 'Kelas', 'href' => '/kelas'],

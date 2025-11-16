@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Head, Link, router, useForm, usePage } from '@inertiajs/react';
 import AppLayout from '@/layouts/app-layout';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import {
     Table,
     TableBody,
@@ -26,8 +27,9 @@ import {
     SelectValue,
 } from '@/components/ui/select';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
-import { Plus, Pencil, Trash2, CheckCircle2, CalendarCog, AlertTriangle, XCircle } from 'lucide-react';
+import { Plus, Pencil, Trash2, CheckCircle2, CalendarCog, AlertTriangle, X, Search, Filter } from 'lucide-react';
 import {
     AlertDialog,
     AlertDialogAction,
@@ -39,8 +41,15 @@ import {
     AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 
-// Definisikan tipe data yang diterima dari controller
 interface Semester {
+    id: number;
+    nama: string;
+}
+interface Dosen {
+    id: number;
+    user: { name: string };
+}
+interface Laboratorium {
     id: number;
     nama: string;
 }
@@ -57,6 +66,7 @@ interface JadwalMaster {
     slot_waktu_mulai: { waktu_mulai: string };
     slot_waktu_selesai: { waktu_selesai: string };
     durasi_slot: number;
+    status_konflik?: boolean;
     catatan: string | null;
 }
 interface Konflik {
@@ -65,22 +75,50 @@ interface Konflik {
     penyebab: string;
 }
 
-const hariMap: { [key: number]: string } = {
-    1: 'Senin', 2: 'Selasa', 3: 'Rabu', 4: 'Kamis', 5: 'Jumat', 6: 'Sabtu', 7: 'Minggu',
-};
+interface Filters {
+    search?: string;
+    semester_id?: string;
+    dosen_id?: string;
+    laboratorium_id?: string;
+    hari?: string;
+    status_konflik?: string;
+}
 
 interface Props {
     jadwalMaster: JadwalMaster[];
     semester: Semester[];
+    dosen: Dosen[];
+    laboratorium: Laboratorium[];
+    filters: Filters;
     breadcrumbs: Array<{ title: string; href: string }>;
 }
 
-export default function Index({ jadwalMaster, semester, breadcrumbs }: Props) {
+export default function Index({ jadwalMaster, semester, dosen, laboratorium, filters, breadcrumbs }: Props) {
     const [deleteId, setDeleteId] = useState<number | null>(null);
     const [showGenerateModal, setShowGenerateModal] = useState(false);
     const { data, setData, post, processing } = useForm({ semester_id: '' });
     const { flash } = usePage<{ flash: { success?: string; warning?: string; konflik?: Konflik[] } }>().props;
     const [showToast, setShowToast] = useState(false);
+    const [showFilters, setShowFilters] = useState(false);
+    const [localFilters, setLocalFilters] = useState<Filters>(filters || {});
+
+    const handleFilterChange = (key: keyof Filters, value: string) => {
+        setLocalFilters(prev => ({ ...prev, [key]: value }));
+    };
+
+    const applyFilters = () => {
+        router.get('/jadwal-master', localFilters, { preserveState: true });
+    };
+
+    const resetFilters = () => {
+        setLocalFilters({});
+        router.get('/jadwal-master', {}, { preserveState: true });
+    };
+
+    const handleSearch = (e: React.FormEvent) => {
+        e.preventDefault();
+        applyFilters();
+    };
 
     useEffect(() => {
         if (flash.success || flash.warning) {
@@ -92,6 +130,11 @@ export default function Index({ jadwalMaster, semester, breadcrumbs }: Props) {
             return () => clearTimeout(timer);
         }
     }, [flash]);
+
+    useEffect(() => {
+        const hasActiveFilters = Object.values(filters || {}).some(v => v !== undefined && v !== '');
+        setShowFilters(hasActiveFilters);
+    }, [filters]);
 
     const handleDelete = () => {
         if (deleteId) {
@@ -162,6 +205,151 @@ export default function Index({ jadwalMaster, semester, breadcrumbs }: Props) {
                                 </Button>
                             </Link>
                         </div>
+                    </div>
+
+                    <div className="flex flex-col gap-3">
+                        <div className="flex flex-col sm:flex-row gap-2">
+                            <form onSubmit={handleSearch} className="flex-1">
+                                <div className="relative">
+                                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                                    <Input
+                                        placeholder="Cari kelas, mata kuliah, dosen, atau laboratorium..."
+                                        value={localFilters.search || ''}
+                                        onChange={(e) => {
+                                            handleFilterChange('search', e.target.value);
+                                            if (e.target.value === '') applyFilters();
+                                        }}
+                                        onKeyDown={(e) => e.key === 'Enter' && applyFilters()}
+                                        className="pl-9 h-10"
+                                    />
+                                </div>
+                            </form>
+                            <div className="flex gap-2">
+                                <Button
+                                    variant={showFilters ? "default" : "outline"}
+                                    onClick={() => setShowFilters(!showFilters)}
+                                    className="gap-2 h-10 whitespace-nowrap"
+                                    size="sm"
+                                >
+                                    <Filter className="h-4 w-4" />
+                                    <span className="hidden sm:inline">Filter</span>
+                                    {Object.values(localFilters).filter(v => v).length > 0 && (
+                                        <Badge variant="secondary" className="ml-1 px-1.5 min-w-5 h-5">
+                                            {Object.values(localFilters).filter(v => v).length}
+                                        </Badge>
+                                    )}
+                                </Button>
+                                {Object.values(localFilters).some(v => v) && (
+                                    <Button variant="ghost" size="sm" onClick={resetFilters} className="h-10 gap-1">
+                                        <X className="h-4 w-4" />
+                                        <span className="hidden sm:inline">Reset</span>
+                                    </Button>
+                                )}
+                            </div>
+                        </div>
+
+                        {showFilters && (
+                            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 p-3 border rounded-lg bg-gradient-to-br from-muted/50 to-muted/30 backdrop-blur-sm">
+                                <Select
+                                    value={localFilters.semester_id || 'all'}
+                                    onValueChange={(value) => {
+                                        handleFilterChange('semester_id', value === 'all' ? '' : value);
+                                        setTimeout(applyFilters, 100);
+                                    }}
+                                >
+                                    <SelectTrigger className="h-9 text-sm">
+                                        <SelectValue placeholder="Semester" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="all">Semua Semester</SelectItem>
+                                        {semester.map(s => (
+                                            <SelectItem key={s.id} value={String(s.id)}>
+                                                {s.nama}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+
+                                <Select
+                                    value={localFilters.dosen_id || 'all'}
+                                    onValueChange={(value) => {
+                                        handleFilterChange('dosen_id', value === 'all' ? '' : value);
+                                        setTimeout(applyFilters, 100);
+                                    }}
+                                >
+                                    <SelectTrigger className="h-9 text-sm">
+                                        <SelectValue placeholder="Dosen" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="all">Semua Dosen</SelectItem>
+                                        {dosen.map(d => (
+                                            <SelectItem key={d.id} value={String(d.id)}>
+                                                {d.user.name}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+
+                                <Select
+                                    value={localFilters.laboratorium_id || 'all'}
+                                    onValueChange={(value) => {
+                                        handleFilterChange('laboratorium_id', value === 'all' ? '' : value);
+                                        setTimeout(applyFilters, 100);
+                                    }}
+                                >
+                                    <SelectTrigger className="h-9 text-sm">
+                                        <SelectValue placeholder="Laboratorium" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="all">Semua Lab</SelectItem>
+                                        {laboratorium.map(lab => (
+                                            <SelectItem key={lab.id} value={String(lab.id)}>
+                                                {lab.nama}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+
+                                <Select
+                                    value={localFilters.hari || 'all'}
+                                    onValueChange={(value) => {
+                                        handleFilterChange('hari', value === 'all' ? '' : value);
+                                        setTimeout(applyFilters, 100);
+                                    }}
+                                >
+                                    <SelectTrigger className="h-9 text-sm">
+                                        <SelectValue placeholder="Hari" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="all">Semua Hari</SelectItem>
+                                        <SelectItem value="Senin">Senin</SelectItem>
+                                        <SelectItem value="Selasa">Selasa</SelectItem>
+                                        <SelectItem value="Rabu">Rabu</SelectItem>
+                                        <SelectItem value="Kamis">Kamis</SelectItem>
+                                        <SelectItem value="Jumat">Jumat</SelectItem>
+                                        <SelectItem value="Sabtu">Sabtu</SelectItem>
+                                        <SelectItem value="Minggu">Minggu</SelectItem>
+                                    </SelectContent>
+                                </Select>
+
+                                <Select
+                                    value={localFilters.status_konflik || 'all'}
+                                    onValueChange={(value) => {
+                                        handleFilterChange('status_konflik', value === 'all' ? '' : value);
+                                        setTimeout(applyFilters, 100);
+                                    }}
+                                >
+                                    <SelectTrigger className="h-9 text-sm">
+                                        <SelectValue placeholder="Konflik" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="all">Semua</SelectItem>
+                                        <SelectItem value="true">Ada Konflik</SelectItem>
+                                        <SelectItem value="false">Tidak Ada</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                        )}
                     </div>
 
                     <div className="rounded-md border">

@@ -10,10 +10,44 @@ use Inertia\Inertia;
 
 class MataKuliahController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
+        $query = MataKuliah::with('programStudi');
+
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->where(function($q) use ($search) {
+                $q->where('nama', 'like', "%{$search}%")
+                  ->orWhere('kode', 'like', "%{$search}%");
+            });
+        }
+
+        if ($request->filled('program_studi_id')) {
+            $query->where('program_studi_id', $request->program_studi_id);
+        }
+
+        if ($request->filled('tingkat_semester')) {
+            $query->where('tingkat_semester', $request->tingkat_semester);
+        }
+
+        if ($request->filled('tipe_semester')) {
+            $query->where('tipe_semester', $request->tipe_semester);
+        }
+
+        if ($request->filled('butuh_lab')) {
+            $query->where('butuh_lab', $request->butuh_lab === 'true');
+        }
+
+        if ($request->filled('is_aktif')) {
+            $query->where('is_aktif', $request->is_aktif === 'true');
+        }
+
+        $mataKuliah = $query->orderBy('nama')->get();
+
         return Inertia::render('MataKuliah/Index', [
-            'mataKuliah' => MataKuliah::with('programStudi')->orderBy('nama')->get(),
+            'mataKuliah' => $mataKuliah,
+            'programStudi' => ProgramStudi::where('is_aktif', true)->orderBy('nama')->get(),
+            'filters' => $request->only(['search', 'program_studi_id', 'tingkat_semester', 'tipe_semester', 'butuh_lab', 'is_aktif']),
             'breadcrumbs' => [
                 ['title' => 'Dashboard', 'href' => '/dashboard'],
                 ['title' => 'Mata Kuliah', 'href' => '/mata-kuliah'],

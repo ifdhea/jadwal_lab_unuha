@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Head, Link, router, usePage } from '@inertiajs/react';
 import AppLayout from '@/layouts/app-layout';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import {
     Table,
     TableBody,
@@ -10,8 +11,15 @@ import {
     TableHeader,
     TableRow,
 } from '@/components/ui/table';
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Pencil, Trash2, CheckCircle2, Check, X } from 'lucide-react';
+import { Plus, Pencil, Trash2, CheckCircle2, Check, X, Search, Filter, XCircle } from 'lucide-react';
 import {
     AlertDialog,
     AlertDialogAction,
@@ -40,15 +48,28 @@ interface MataKuliah {
     program_studi: ProgramStudi;
 }
 
+interface Filters {
+    search?: string;
+    program_studi_id?: string;
+    tingkat_semester?: string;
+    tipe_semester?: string;
+    butuh_lab?: string;
+    is_aktif?: string;
+}
+
 interface Props {
     mataKuliah: MataKuliah[];
+    programStudi: ProgramStudi[];
+    filters: Filters;
     breadcrumbs: Array<{ title: string; href: string }>;
 }
 
-export default function Index({ mataKuliah, breadcrumbs }: Props) {
+export default function Index({ mataKuliah, programStudi, filters, breadcrumbs }: Props) {
     const [deleteId, setDeleteId] = useState<number | null>(null);
     const { flash } = usePage<{ flash: { success?: string; error?: string } }>().props;
     const [showToast, setShowToast] = useState(false);
+    const [showFilters, setShowFilters] = useState(false);
+    const [localFilters, setLocalFilters] = useState<Filters>(filters || {});
 
     useEffect(() => {
         if (flash.success || flash.error) {
@@ -57,12 +78,35 @@ export default function Index({ mataKuliah, breadcrumbs }: Props) {
         }
     }, [flash]);
 
+    useEffect(() => {
+        const hasActiveFilters = Object.values(filters || {}).some(v => v !== undefined && v !== '');
+        setShowFilters(hasActiveFilters);
+    }, [filters]);
+
     const handleDelete = () => {
         if (deleteId) {
             router.delete(`/mata-kuliah/${deleteId}`, {
                 onSuccess: () => setDeleteId(null),
             });
         }
+    };
+
+    const handleFilterChange = (key: keyof Filters, value: string) => {
+        setLocalFilters(prev => ({ ...prev, [key]: value }));
+    };
+
+    const applyFilters = () => {
+        router.get('/mata-kuliah', localFilters, { preserveState: true });
+    };
+
+    const resetFilters = () => {
+        setLocalFilters({});
+        router.get('/mata-kuliah', {}, { preserveState: true });
+    };
+
+    const handleSearch = (e: React.FormEvent) => {
+        e.preventDefault();
+        applyFilters();
     };
 
     return (
@@ -99,6 +143,144 @@ export default function Index({ mataKuliah, breadcrumbs }: Props) {
                                 Tambah Mata Kuliah
                             </Button>
                         </Link>
+                    </div>
+
+                    <div className="flex flex-col gap-3">
+                        <div className="flex flex-col sm:flex-row gap-2">
+                            <form onSubmit={handleSearch} className="flex-1">
+                                <div className="relative">
+                                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                                    <Input
+                                        placeholder="Cari kode atau nama mata kuliah..."
+                                        value={localFilters.search || ''}
+                                        onChange={(e) => {
+                                            handleFilterChange('search', e.target.value);
+                                            if (e.target.value === '') applyFilters();
+                                        }}
+                                        onKeyDown={(e) => e.key === 'Enter' && applyFilters()}
+                                        className="pl-9 h-10"
+                                    />
+                                </div>
+                            </form>
+                            <div className="flex gap-2">
+                                <Button
+                                    variant={showFilters ? "default" : "outline"}
+                                    onClick={() => setShowFilters(!showFilters)}
+                                    className="gap-2 h-10 whitespace-nowrap"
+                                    size="sm"
+                                >
+                                    <Filter className="h-4 w-4" />
+                                    <span className="hidden sm:inline">Filter</span>
+                                    {Object.values(localFilters).filter(v => v).length > 0 && (
+                                        <Badge variant="secondary" className="ml-1 px-1.5 min-w-5 h-5">
+                                            {Object.values(localFilters).filter(v => v).length}
+                                        </Badge>
+                                    )}
+                                </Button>
+                                {Object.values(localFilters).some(v => v) && (
+                                    <Button variant="ghost" size="sm" onClick={resetFilters} className="h-10 gap-1">
+                                        <X className="h-4 w-4" />
+                                        <span className="hidden sm:inline">Reset</span>
+                                    </Button>
+                                )}
+                            </div>
+                        </div>
+
+                        {showFilters && (
+                            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 p-3 border rounded-lg bg-gradient-to-br from-muted/50 to-muted/30 backdrop-blur-sm">
+                                <Select
+                                    value={localFilters.program_studi_id || 'all'}
+                                    onValueChange={(value) => {
+                                        handleFilterChange('program_studi_id', value === 'all' ? '' : value);
+                                        setTimeout(applyFilters, 100);
+                                    }}
+                                >
+                                    <SelectTrigger className="h-9 text-sm">
+                                        <SelectValue placeholder="Prodi" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="all">Semua Prodi</SelectItem>
+                                        {programStudi.map(prodi => (
+                                            <SelectItem key={prodi.id} value={String(prodi.id)}>
+                                                {prodi.nama}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+
+                                <Select
+                                    value={localFilters.tingkat_semester || 'all'}
+                                    onValueChange={(value) => {
+                                        handleFilterChange('tingkat_semester', value === 'all' ? '' : value);
+                                        setTimeout(applyFilters, 100);
+                                    }}
+                                >
+                                    <SelectTrigger className="h-9 text-sm">
+                                        <SelectValue placeholder="Semester" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="all">Semua</SelectItem>
+                                        {[1, 2, 3, 4, 5, 6, 7, 8].map(sem => (
+                                            <SelectItem key={sem} value={String(sem)}>
+                                                Semester {sem}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+
+                                <Select
+                                    value={localFilters.tipe_semester || 'all'}
+                                    onValueChange={(value) => {
+                                        handleFilterChange('tipe_semester', value === 'all' ? '' : value);
+                                        setTimeout(applyFilters, 100);
+                                    }}
+                                >
+                                    <SelectTrigger className="h-9 text-sm">
+                                        <SelectValue placeholder="Tipe" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="all">Semua Tipe</SelectItem>
+                                        <SelectItem value="ganjil">Ganjil</SelectItem>
+                                        <SelectItem value="genap">Genap</SelectItem>
+                                        <SelectItem value="both">Keduanya</SelectItem>
+                                    </SelectContent>
+                                </Select>
+
+                                <Select
+                                    value={localFilters.butuh_lab || 'all'}
+                                    onValueChange={(value) => {
+                                        handleFilterChange('butuh_lab', value === 'all' ? '' : value);
+                                        setTimeout(applyFilters, 100);
+                                    }}
+                                >
+                                    <SelectTrigger className="h-9 text-sm">
+                                        <SelectValue placeholder="Lab" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="all">Semua</SelectItem>
+                                        <SelectItem value="true">Butuh Lab</SelectItem>
+                                        <SelectItem value="false">Tidak Butuh</SelectItem>
+                                    </SelectContent>
+                                </Select>
+
+                                <Select
+                                    value={localFilters.is_aktif || 'all'}
+                                    onValueChange={(value) => {
+                                        handleFilterChange('is_aktif', value === 'all' ? '' : value);
+                                        setTimeout(applyFilters, 100);
+                                    }}
+                                >
+                                    <SelectTrigger className="h-9 text-sm">
+                                        <SelectValue placeholder="Status" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="all">Semua</SelectItem>
+                                        <SelectItem value="true">Aktif</SelectItem>
+                                        <SelectItem value="false">Tidak Aktif</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                        )}
                     </div>
 
                     <div className="rounded-md border">

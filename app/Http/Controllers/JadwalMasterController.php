@@ -13,9 +13,9 @@ use Inertia\Inertia;
 
 class JadwalMasterController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        $jadwalMaster = JadwalMaster::with([
+        $query = JadwalMaster::with([
             'kelasMatKul.semester',
             'kelasMatKul.kelas',
             'kelasMatKul.mataKuliah',
@@ -23,7 +23,46 @@ class JadwalMasterController extends Controller
             'laboratorium',
             'slotWaktuMulai',
             'slotWaktuSelesai'
-        ])->get()->map(function ($jadwal) {
+        ]);
+
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->whereHas('kelasMatKul.kelas', function($q) use ($search) {
+                $q->where('nama', 'like', "%{$search}%")
+                  ->orWhere('kode', 'like', "%{$search}%");
+            })->orWhereHas('kelasMatKul.mataKuliah', function($q) use ($search) {
+                $q->where('nama', 'like', "%{$search}%")
+                  ->orWhere('kode', 'like', "%{$search}%");
+            })->orWhereHas('dosen.user', function($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%");
+            })->orWhereHas('laboratorium', function($q) use ($search) {
+                $q->where('nama', 'like', "%{$search}%");
+            });
+        }
+
+        if ($request->filled('semester_id')) {
+            $query->whereHas('kelasMatKul', function($q) use ($request) {
+                $q->where('semester_id', $request->semester_id);
+            });
+        }
+
+        if ($request->filled('dosen_id')) {
+            $query->where('dosen_id', $request->dosen_id);
+        }
+
+        if ($request->filled('laboratorium_id')) {
+            $query->where('laboratorium_id', $request->laboratorium_id);
+        }
+
+        if ($request->filled('hari')) {
+            $query->where('hari', $request->hari);
+        }
+
+        if ($request->filled('status_konflik')) {
+            $query->where('status_konflik', $request->status_konflik === 'true');
+        }
+
+        $jadwalMaster = $query->get()->map(function ($jadwal) {
             return [
                 'id' => $jadwal->id,
                 'semester' => $jadwal->kelasMatKul->semester,
@@ -45,6 +84,9 @@ class JadwalMasterController extends Controller
         return Inertia::render('JadwalMaster/Index', [
             'jadwalMaster' => $jadwalMaster,
             'semester' => Semester::where('is_aktif', true)->get(),
+            'dosen' => Dosen::with('user')->get(),
+            'laboratorium' => Laboratorium::where('is_aktif', true)->get(),
+            'filters' => $request->only(['search', 'semester_id', 'dosen_id', 'laboratorium_id', 'hari', 'status_konflik']),
             'breadcrumbs' => [
                 ['title' => 'Dashboard', 'href' => '/dashboard'],
                 ['title' => 'Jadwal Master', 'href' => '/jadwal-master'],
