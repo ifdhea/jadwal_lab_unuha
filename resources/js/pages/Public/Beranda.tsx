@@ -110,9 +110,14 @@ export default function Beranda({ activeSemester, totalKampus }: Props) {
                             <div className="relative">
                                 <div className="relative overflow-hidden">
                                     <img
-                                        src="/hero_image.svg"
+                                        src="/hero_imagelight.svg"
                                         alt="Hero Image"
-                                        className="w-full h-auto"
+                                        className="w-full h-auto dark:hidden"
+                                    />
+                                    <img
+                                        src="/hero_imagedark.svg"
+                                        alt="Hero Image"
+                                        className="w-full h-auto hidden dark:block"
                                     />
                                 </div>
                             </div>
@@ -306,11 +311,11 @@ export default function Beranda({ activeSemester, totalKampus }: Props) {
             </section>
 
             {/* CTA Section */}
-            <section className="relative py-20 sm:py-28">
+            <section className="relative py-20 sm:py-28 bg-background">
                 <div className="container relative mx-auto px-6 lg:px-8">
-                    <div className="relative overflow-hidden rounded-3xl border border-primary/20 bg-gradient-to-br from-primary/10 via-primary/5 to-background p-8 sm:p-12 lg:p-16 shadow-2xl shadow-primary/10">
-                        <div className="absolute top-0 right-0 h-64 w-64 rounded-full bg-[#9AEF5E]/25 blur-3xl" />
-                        <div className="absolute bottom-0 left-0 h-64 w-64 rounded-full bg-[#27563C]/25 blur-3xl" />
+                    <div className="relative overflow-hidden rounded-3xl border border-primary/20 bg-gradient-to-br from-primary/10 via-primary/5 to-background p-8 sm:p-12 lg:p-16 shadow-2xl shadow-primary/10 isolate">
+                        <div className="absolute top-0 right-0 h-64 w-64 rounded-full bg-[#9AEF5E]/25 blur-3xl -z-10" />
+                        <div className="absolute bottom-0 left-0 h-64 w-64 rounded-full bg-[#27563C]/25 blur-3xl -z-10" />
 
                         <div className="relative mx-auto max-w-3xl text-center">
                             <div className="mb-6 inline-flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/10 ring-4 ring-primary/5">

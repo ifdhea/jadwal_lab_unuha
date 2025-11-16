@@ -171,12 +171,23 @@
         @apply text-foreground;
     }
     
-    /* SVG adaptive colors for hero_image.svg */
+    /* SVG adaptive colors for hero_image.svg - lantai */
     .floor-fill {
-        fill: #f0f0f0;
+        fill: #e0fced;
     }
     
     .dark .floor-fill {
+        fill: #27563c;
+    }
+    
+    /* SVG shadow colors - bayangan */
+    #freepik--Shadows--inject-74 path,
+    #freepik--Shadows--inject-74 ellipse {
+        fill: #cbd5e1;
+    }
+    
+    .dark #freepik--Shadows--inject-74 path,
+    .dark #freepik--Shadows--inject-74 ellipse {
         fill: #1e293b;
     }
 }

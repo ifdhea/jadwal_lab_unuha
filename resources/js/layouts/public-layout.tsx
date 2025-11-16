@@ -9,7 +9,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { UserInfo } from '@/components/user-info';
 import { UserMenuContent } from '@/components/user-menu-content';
-import AppearanceToggleDropdown from '@/components/appearance-dropdown';
+import AppearanceToggleSimple from '@/components/appearance-toggle-simple';
 
 interface Props {
     children: React.ReactNode;
@@ -103,7 +103,7 @@ export default function PublicLayout({ children }: Props) {
                         </nav>
 
                         {/* Dark Mode Toggle */}
-                        <AppearanceToggleDropdown />
+                        <AppearanceToggleSimple />
 
                         {/* User Menu or Login */}
                         {auth?.user ? (
