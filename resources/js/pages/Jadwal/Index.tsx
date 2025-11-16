@@ -92,7 +92,7 @@ interface Props {
     hari: Hari[];
     slots: Slot[];
     jadwalData: JadwalData;
-    tableData: JadwalCell[];
+    tableData?: JadwalCell[];
     isEmbed?: boolean;
     breadcrumbs: Array<{ title: string; href: string }>;
 }
@@ -155,6 +155,8 @@ export default function Index({
 
     // Filter table data
     const filteredTableData = useMemo(() => {
+        if (!tableData || !Array.isArray(tableData)) return [];
+        
         return tableData.filter((item) => {
             const matchSearch =
                 searchQuery === '' ||

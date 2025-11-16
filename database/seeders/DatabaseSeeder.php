@@ -18,7 +18,7 @@ class DatabaseSeeder extends Seeder
             ['email' => 'admin@unuha.ac.id'],
             [
                 'name' => 'Super Admin',
-                'password' => Hash::make('password'),
+                'password' => Hash::make('admin@lab2025'),
                 'peran' => 'super_admin',
                 'email_verified_at' => now(),
             ]

@@ -317,6 +317,7 @@ export default function Beranda({ activeSemester, totalKampus }: Props) {
                         <div className="absolute top-0 right-0 h-64 w-64 rounded-full bg-[#9AEF5E]/25 blur-3xl -z-10" />
                         <div className="absolute bottom-0 left-0 h-64 w-64 rounded-full bg-[#27563C]/25 blur-3xl -z-10" />
 
+
                         <div className="relative mx-auto max-w-3xl text-center">
                             <div className="mb-6 inline-flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/10 ring-4 ring-primary/5">
                                 <Calendar className="h-7 w-7 text-primary" />

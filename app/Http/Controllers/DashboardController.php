@@ -244,8 +244,9 @@ class DashboardController extends Controller
                 $lab = $sesi->overrideLaboratorium ?? $master->laboratorium;
                 
                 // Cek apakah jadwal sudah lewat atau sedang berlangsung
-                $tanggalWaktuMulai = Carbon::parse($sesi->tanggal . ' ' . $slotMulai->waktu_mulai);
-                $tanggalWaktuSelesai = Carbon::parse($sesi->tanggal . ' ' . $slotSelesai->waktu_selesai);
+                $tanggalOnly = Carbon::parse($sesi->tanggal)->format('Y-m-d');
+                $tanggalWaktuMulai = Carbon::parse($tanggalOnly . ' ' . $slotMulai->waktu_mulai);
+                $tanggalWaktuSelesai = Carbon::parse($tanggalOnly . ' ' . $slotSelesai->waktu_selesai);
                 $isPast = $now->greaterThan($tanggalWaktuSelesai);
                 $isActive = $now->between($tanggalWaktuMulai, $tanggalWaktuSelesai);
                 
@@ -263,7 +264,7 @@ class DashboardController extends Controller
                 
                 $jadwalHariIni->push([
                     'id' => $sesi->id,
-                    'tanggal' => $sesi->tanggal,
+                    'tanggal' => $tanggalOnly,
                     'hari' => $master->hari,
                     'mata_kuliah' => $master->kelasMatKul->mataKuliah->nama,
                     'kelas' => $master->kelasMatKul->kelas->nama,
