@@ -131,10 +131,7 @@ class JadwalController extends Controller
                 'jadwalMaster.kelasMatKul.kelas',
                 'jadwalMaster.kelasMatKul.mataKuliah',
                 'jadwalMaster.slotWaktuMulai',
-                'jadwalMaster.slotWaktuSelesai',
-                'overrideSlotWaktuMulai',
-                'overrideSlotWaktuSelesai',
-                'overrideLaboratorium.kampus'
+                'jadwalMaster.slotWaktuSelesai'
             ])
             ->whereNotIn('status', ['dibatalkan']) // Filter jadwal yang dibatalkan
             ->get();
