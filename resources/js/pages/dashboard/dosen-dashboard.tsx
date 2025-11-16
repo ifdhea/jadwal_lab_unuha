@@ -116,27 +116,29 @@ export default function DosenDashboard({
     }
 
     return (
-        <div className="flex h-full flex-1 flex-col gap-6 p-6">
+        <div className="flex h-full flex-1 flex-col gap-6 p-6 bg-gradient-to-br from-background to-muted/20">
             {/* Header Info */}
-            <div className="flex flex-col gap-2">
-                <h1 className="text-3xl font-bold tracking-tight">Dashboard Dosen</h1>
-                <div className="flex flex-col gap-1 text-sm text-muted-foreground">
-                    <div className="flex items-center gap-2">
-                        <User className="h-4 w-4" />
+            <div className="flex flex-col gap-3">
+                <h1 className="text-4xl font-bold tracking-tight bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
+                    Dashboard Dosen
+                </h1>
+                <div className="flex flex-col gap-2 text-sm text-muted-foreground">
+                    <div className="flex items-center gap-2 px-3 py-1.5 bg-primary/10 rounded-full w-fit">
+                        <User className="h-4 w-4 text-primary" />
                         <span>
-                            <strong>{dosen.nama}</strong> ({dosen.nidn})
+                            <strong className="text-foreground">{dosen.nama}</strong> ({dosen.nidn})
                         </span>
                     </div>
                     {dosen.program_studi && (
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 px-3 py-1.5 bg-secondary/50 rounded-full w-fit">
                             <School className="h-4 w-4" />
-                            <span>Program Studi: {dosen.program_studi}</span>
+                            <span>Program Studi: <strong className="text-foreground">{dosen.program_studi}</strong></span>
                         </div>
                     )}
                     {semesterAktif && (
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 px-3 py-1.5 bg-accent rounded-full w-fit">
                             <Calendar className="h-4 w-4" />
-                            <span>Semester: {semesterAktif.nama}</span>
+                            <span>Semester: <strong className="text-foreground">{semesterAktif.nama}</strong></span>
                         </div>
                     )}
                 </div>
@@ -144,47 +146,55 @@ export default function DosenDashboard({
 
             {/* Statistik */}
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-                <Card>
+                <Card className="border-l-4 border-l-blue-500 hover:shadow-lg transition-shadow">
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                         <CardTitle className="text-sm font-medium">Mata Kuliah</CardTitle>
-                        <BookOpen className="h-4 w-4 text-muted-foreground" />
+                        <div className="p-2 bg-blue-100 dark:bg-blue-900 rounded-lg">
+                            <BookOpen className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                        </div>
                     </CardHeader>
                     <CardContent>
-                        <div className="text-2xl font-bold">{stats.total_mata_kuliah}</div>
-                        <p className="text-xs text-muted-foreground">mata kuliah diampu</p>
+                        <div className="text-3xl font-bold">{stats.total_mata_kuliah}</div>
+                        <p className="text-xs text-muted-foreground mt-1">mata kuliah diampu</p>
                     </CardContent>
                 </Card>
 
-                <Card>
+                <Card className="border-l-4 border-l-purple-500 hover:shadow-lg transition-shadow">
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                         <CardTitle className="text-sm font-medium">Kelas</CardTitle>
-                        <School className="h-4 w-4 text-muted-foreground" />
+                        <div className="p-2 bg-purple-100 dark:bg-purple-900 rounded-lg">
+                            <School className="h-5 w-5 text-purple-600 dark:text-purple-400" />
+                        </div>
                     </CardHeader>
                     <CardContent>
-                        <div className="text-2xl font-bold">{stats.total_kelas}</div>
-                        <p className="text-xs text-muted-foreground">kelas diajar</p>
+                        <div className="text-3xl font-bold">{stats.total_kelas}</div>
+                        <p className="text-xs text-muted-foreground mt-1">kelas diajar</p>
                     </CardContent>
                 </Card>
 
-                <Card>
+                <Card className="border-l-4 border-l-orange-500 hover:shadow-lg transition-shadow">
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                         <CardTitle className="text-sm font-medium">Total Pertemuan</CardTitle>
-                        <Calendar className="h-4 w-4 text-muted-foreground" />
+                        <div className="p-2 bg-orange-100 dark:bg-orange-900 rounded-lg">
+                            <Calendar className="h-5 w-5 text-orange-600 dark:text-orange-400" />
+                        </div>
                     </CardHeader>
                     <CardContent>
-                        <div className="text-2xl font-bold">{stats.total_pertemuan}</div>
-                        <p className="text-xs text-muted-foreground">pertemuan semester ini</p>
+                        <div className="text-3xl font-bold">{stats.total_pertemuan}</div>
+                        <p className="text-xs text-muted-foreground mt-1">termasuk booking lab</p>
                     </CardContent>
                 </Card>
 
-                <Card>
+                <Card className="border-l-4 border-l-green-500 hover:shadow-lg transition-shadow">
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                         <CardTitle className="text-sm font-medium">Pertemuan Selesai</CardTitle>
-                        <CheckCircle2 className="h-4 w-4 text-green-600" />
+                        <div className="p-2 bg-green-100 dark:bg-green-900 rounded-lg">
+                            <CheckCircle2 className="h-5 w-5 text-green-600 dark:text-green-400" />
+                        </div>
                     </CardHeader>
                     <CardContent>
-                        <div className="text-2xl font-bold">{stats.pertemuan_selesai}</div>
-                        <p className="text-xs text-muted-foreground">
+                        <div className="text-3xl font-bold">{stats.pertemuan_selesai}</div>
+                        <p className="text-xs text-muted-foreground mt-1">
                             {stats.total_pertemuan > 0
                                 ? `${Math.round((stats.pertemuan_selesai / stats.total_pertemuan) * 100)}% selesai`
                                 : '0% selesai'}

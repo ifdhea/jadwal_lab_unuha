@@ -50,6 +50,18 @@ class DashboardController extends Controller
 
         // Statistik Jadwal
         if ($semesterAktif) {
+            // Hitung total sesi terjadwal dari jadwal master
+            $totalSesiJadwal = SesiJadwal::whereHas('jadwalMaster.kelasMatKul', function ($query) use ($semesterAktif) {
+                $query->where('semester_id', $semesterAktif->id);
+            })->count();
+            
+            // Hitung total booking yang disetujui di semester ini
+            $totalBooking = \App\Models\BookingLaboratorium::where('status', 'disetujui')
+                ->whereHas('kelasMatKul', function ($query) use ($semesterAktif) {
+                    $query->where('semester_id', $semesterAktif->id);
+                })
+                ->count();
+            
             $jadwalStats = [
                 'total_jadwal_master' => JadwalMaster::whereHas('kelasMatKul', function ($query) use ($semesterAktif) {
                     $query->where('semester_id', $semesterAktif->id);
@@ -57,9 +69,7 @@ class DashboardController extends Controller
                 'jadwal_konflik' => JadwalMaster::whereHas('kelasMatKul', function ($query) use ($semesterAktif) {
                     $query->where('semester_id', $semesterAktif->id);
                 })->where('status_konflik', 'konflik')->count(),
-                'total_sesi_terjadwal' => SesiJadwal::whereHas('jadwalMaster.kelasMatKul', function ($query) use ($semesterAktif) {
-                    $query->where('semester_id', $semesterAktif->id);
-                })->count(),
+                'total_sesi_terjadwal' => $totalSesiJadwal + $totalBooking,
             ];
         } else {
             $jadwalStats = [
@@ -86,40 +96,7 @@ class DashboardController extends Controller
             }
         }
 
-        // Jadwal Hari Ini
-        $jadwalHariIni = [];
-        if ($semesterAktif) {
-            $today = Carbon::today();
-            $hariIni = $this->getHariIndonesia($today->dayOfWeek);
-            
-            $jadwalHariIni = SesiJadwal::whereDate('tanggal', $today)
-                ->with([
-                    'jadwalMaster.laboratorium.kampus',
-                    'jadwalMaster.dosen.user',
-                    'jadwalMaster.kelasMatKul.kelas',
-                    'jadwalMaster.kelasMatKul.mataKuliah',
-                    'jadwalMaster.slotWaktuMulai',
-                    'jadwalMaster.slotWaktuSelesai'
-                ])
-                ->get()
-                ->map(function ($sesi) {
-                    $master = $sesi->jadwalMaster;
-                    return [
-                        'id' => $sesi->id,
-                        'mata_kuliah' => $master->kelasMatKul->mataKuliah->nama,
-                        'kelas' => $master->kelasMatKul->kelas->nama,
-                        'dosen' => $master->dosen->user->name,
-                        'laboratorium' => $master->laboratorium->nama,
-                        'kampus' => $master->laboratorium->kampus->nama,
-                        'waktu_mulai' => $master->slotWaktuMulai->waktu_mulai,
-                        'waktu_selesai' => $master->slotWaktuSelesai->waktu_selesai,
-                        'status' => $sesi->status,
-                        'pertemuan_ke' => $sesi->pertemuan_ke,
-                    ];
-                })
-                ->sortBy('waktu_mulai')
-                ->values();
-        }
+
 
         return Inertia::render('dashboard', [
             'userRole' => 'super_admin',
@@ -136,7 +113,6 @@ class DashboardController extends Controller
             'stats' => $stats,
             'jadwalStats' => $jadwalStats,
             'labUsage' => $labUsage,
-            'jadwalHariIni' => $jadwalHariIni,
         ]);
     }
 
@@ -185,19 +161,42 @@ class DashboardController extends Controller
                 ->distinct('kelas_mata_kuliah.kelas_id')
                 ->count('kelas_mata_kuliah.kelas_id');
 
-            $stats['total_pertemuan'] = SesiJadwal::whereIn('jadwal_master_id', $jadwalMasterIds)->count();
+            // Hitung total pertemuan dari sesi jadwal
+            $totalSesiJadwal = SesiJadwal::whereIn('jadwal_master_id', $jadwalMasterIds)->count();
             
-            // PERBAIKAN: Hitung pertemuan selesai berdasarkan jadwal yang sudah lewat
+            // Hitung total booking yang disetujui
+            $totalBooking = \App\Models\BookingLaboratorium::where('dosen_id', $dosen->id)
+                ->where('status', 'disetujui')
+                ->whereHas('kelasMatKul', function ($query) use ($semesterAktif) {
+                    $query->where('semester_id', $semesterAktif->id);
+                })
+                ->count();
+            
+            $stats['total_pertemuan'] = $totalSesiJadwal + $totalBooking;
+            
+            // Hitung pertemuan selesai dari sesi jadwal
             $now = Carbon::now();
-            $stats['pertemuan_selesai'] = SesiJadwal::whereIn('jadwal_master_id', $jadwalMasterIds)
+            $sesiSelesai = SesiJadwal::whereIn('jadwal_master_id', $jadwalMasterIds)
                 ->where(function($query) use ($now) {
-                    // Status selesai ATAU jadwal sudah lewat
                     $query->where('status', 'selesai')
                           ->orWhere(function($q) use ($now) {
                               $q->whereDate('tanggal', '<', $now->toDateString());
                           });
                 })
                 ->count();
+            
+            // Hitung booking yang sudah lewat (tanggal + waktu selesai < now)
+            $bookingSelesai = \App\Models\BookingLaboratorium::where('dosen_id', $dosen->id)
+                ->where('status', 'disetujui')
+                ->whereHas('kelasMatKul', function ($query) use ($semesterAktif) {
+                    $query->where('semester_id', $semesterAktif->id);
+                })
+                ->where(function($query) use ($now) {
+                    $query->whereDate('tanggal', '<', $now->toDateString());
+                })
+                ->count();
+            
+            $stats['pertemuan_selesai'] = $sesiSelesai + $bookingSelesai;
 
             // Jadwal Hari Ini - Menampilkan SEMUA jadwal (generate, booking, tukar, pindah)
             $today = Carbon::today();
