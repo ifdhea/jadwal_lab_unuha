@@ -96,9 +96,22 @@ class JadwalMasterController extends Controller
 
     private function getFormData()
     {
+        $kelasMatkul = KelasMatkul::with(['kelas', 'mataKuliah'])->get()->map(function ($item) {
+            return [
+                'id' => $item->id,
+                'kelas' => $item->kelas,
+                'mata_kuliah' => [
+                    'id' => $item->mataKuliah->id,
+                    'nama' => $item->mataKuliah->nama,
+                    'kode' => $item->mataKuliah->kode,
+                    'sks' => $item->mataKuliah->sks,
+                ],
+            ];
+        });
+
         return [
             'semester' => Semester::where('is_aktif', true)->get(),
-            'kelasMatkul' => KelasMatkul::with(['kelas', 'mataKuliah'])->get(),
+            'kelasMatkul' => $kelasMatkul,
             'dosen' => Dosen::with('user')->get(),
             'laboratorium' => Laboratorium::where('is_aktif', true)->get(),
             'slotWaktu' => SlotWaktu::where('is_aktif', true)->orderBy('urutan')->get(),

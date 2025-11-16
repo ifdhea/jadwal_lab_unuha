@@ -15,7 +15,7 @@ import { Textarea } from '@/components/ui/textarea';
 
 // Definisikan tipe data untuk props
 interface Semester { id: number; nama: string; }
-interface KelasMatkul { id: number; kelas: { nama: string }; mata_kuliah: { nama: string }; }
+interface KelasMatkul { id: number; kelas: { nama: string }; mata_kuliah: { id: number; nama: string; kode: string; sks: number; }; }
 interface Dosen { id: number; user: { name: string }; }
 interface Laboratorium { id: number; nama: string; }
 interface SlotWaktu { id: number; label: string; }
@@ -84,7 +84,7 @@ export default function Create({ semester, kelasMatkul, dosen, laboratorium, slo
                                     <SelectContent>
                                         {kelasMatkul.map((item) => (
                                             <SelectItem key={item.id} value={String(item.id)}>
-                                                {item.kelas.nama} - {item.mata_kuliah.nama}
+                                                {item.kelas.nama} - {item.mata_kuliah.nama} ({item.mata_kuliah.sks} SKS)
                                             </SelectItem>
                                         ))}
                                     </SelectContent>

@@ -304,7 +304,7 @@ export default function Index({ kelas, programStudi, kampus, tahunAjaran, filter
                                     <TableHead>Nama Kelas</TableHead>
                                     <TableHead>Prodi</TableHead>
                                     <TableHead>Kampus</TableHead>
-                                    <TableHead>Tahun Angkatan</TableHead>
+                                    <TableHead>Tahun Ajaran</TableHead>
                                     <TableHead>Status</TableHead>
                                     <TableHead className="text-right">Aksi</TableHead>
                                 </TableRow>

@@ -104,13 +104,13 @@ export default function Create({ programStudi, kampus, tahunAjaran, breadcrumbs 
 
                             {/* Tahun Ajaran */}
                             <div className="flex flex-col gap-1.5">
-                                <Label htmlFor="tahun_ajaran_id">Tahun Angkatan</Label>
+                                <Label htmlFor="tahun_ajaran_id">Tahun Ajaran</Label>
                                 <Select
                                     onValueChange={(value) => setData('tahun_ajaran_id', value)}
                                     required
                                 >
                                     <SelectTrigger id="tahun_ajaran_id">
-                                        <SelectValue placeholder="Pilih Tahun Angkatan" />
+                                        <SelectValue placeholder="Pilih Tahun Ajaran" />
                                     </SelectTrigger>
                                     <SelectContent>
                                         {tahunAjaran.map((th) => (
