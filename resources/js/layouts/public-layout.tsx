@@ -1,5 +1,5 @@
 import { Link, usePage } from '@inertiajs/react';
-import { ChevronsUpDown } from 'lucide-react';
+import { ChevronsUpDown, Home, Calendar, Info, LogIn, LayoutDashboard, Settings, LogOut } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import {
@@ -43,9 +43,9 @@ export default function PublicLayout({ children }: Props) {
     }, []);
 
     const navigation = [
-        { name: 'Beranda', href: '/beranda' },
-        { name: 'Jadwal Lab', href: '/jadwal-lab' },
-        { name: 'Tentang', href: '/tentang' },
+        { name: 'Beranda', href: '/beranda', icon: Home },
+        { name: 'Jadwal Lab', href: '/jadwal-lab', icon: Calendar },
+        { name: 'Tentang', href: '/tentang', icon: Info },
     ];
 
     const isActive = (href: string) => {
@@ -91,13 +91,13 @@ export default function PublicLayout({ children }: Props) {
                                     href={item.href}
                                     className={`relative px-4 py-2 text-sm font-medium transition-all duration-200 rounded-md ${
                                         isActive(item.href)
-                                            ? '!text-primary'
-                                            : 'text-foreground/70 hover:!text-primary hover:!bg-primary/5'
+                                            ? 'text-primary'
+                                            : 'text-foreground/70 hover:bg-gray-100 dark:hover:bg-primary/10 hover:text-foreground dark:hover:text-primary'
                                     }`}
                                 >
                                     {item.name}
                                     {isActive(item.href) && (
-                                        <span className="absolute bottom-0 left-1/2 h-0.5 w-8 -translate-x-1/2 !bg-primary rounded-full" />
+                                        <span className="absolute bottom-0 left-1/2 h-0.5 w-8 -translate-x-1/2 bg-primary rounded-full" />
                                     )}
                                 </Link>
                             ))}
@@ -113,7 +113,7 @@ export default function PublicLayout({ children }: Props) {
                                     <DropdownMenuTrigger asChild>
                                         <Button
                                             variant="ghost"
-                                            className="h-9 gap-2 px-2 data-[state=open]:bg-accent"
+                                            className="h-9 gap-2 px-2 hover:bg-gray-100 dark:hover:bg-primary/10 data-[state=open]:bg-gray-100 dark:data-[state=open]:bg-primary/10"
                                         >
                                             <UserInfo user={auth.user} />
                                             <ChevronsUpDown className="ml-auto h-4 w-4 opacity-50" />
@@ -151,20 +151,24 @@ export default function PublicLayout({ children }: Props) {
                     <div className="border-t md:hidden bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80">
                         <nav className="container mx-auto space-y-1 px-6 py-4 lg:px-8">
                             {/* Navigation Links */}
-                            {navigation.map((item) => (
-                                <Link
-                                    key={item.name}
-                                    href={item.href}
-                                    className={`flex items-center rounded-lg px-3 py-2 text-sm font-medium transition-all duration-200 ${
-                                        isActive(item.href)
-                                            ? '!bg-primary/10 !text-primary shadow-sm'
-                                            : 'text-foreground/70 hover:!bg-primary/5 hover:!text-primary'
-                                    }`}
-                                    onClick={() => setMobileMenuOpen(false)}
-                                >
-                                    {item.name}
-                                </Link>
-                            ))}
+                            {navigation.map((item) => {
+                                const Icon = item.icon;
+                                return (
+                                    <Link
+                                        key={item.name}
+                                        href={item.href}
+                                        className={`flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-all duration-200 ${
+                                            isActive(item.href)
+                                                ? 'text-primary font-semibold'
+                                                : 'text-foreground/70 hover:bg-gray-100 dark:hover:bg-primary/10 hover:text-foreground dark:hover:text-primary'
+                                        }`}
+                                        onClick={() => setMobileMenuOpen(false)}
+                                    >
+                                        <Icon className="h-4 w-4" />
+                                        {item.name}
+                                    </Link>
+                                );
+                            })}
                             
                             {/* User Menu or Login Button */}
                             {auth?.user ? (
@@ -177,16 +181,18 @@ export default function PublicLayout({ children }: Props) {
                                     </div>
                                     <Link
                                         href="/dashboard"
-                                        className="flex items-center rounded-lg px-3 py-2 text-sm font-medium text-foreground/70 hover:!bg-primary/5 hover:!text-primary transition-all duration-200"
+                                        className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-foreground/70 hover:bg-gray-100 dark:hover:bg-primary/10 hover:text-foreground dark:hover:text-primary transition-all duration-200"
                                         onClick={() => setMobileMenuOpen(false)}
                                     >
+                                        <LayoutDashboard className="h-4 w-4" />
                                         Dashboard
                                     </Link>
                                     <Link
                                         href="/profile/edit"
-                                        className="flex items-center rounded-lg px-3 py-2 text-sm font-medium text-foreground/70 hover:!bg-primary/5 hover:!text-primary transition-all duration-200"
+                                        className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-foreground/70 hover:bg-gray-100 dark:hover:bg-primary/10 hover:text-foreground dark:hover:text-primary transition-all duration-200"
                                         onClick={() => setMobileMenuOpen(false)}
                                     >
+                                        <Settings className="h-4 w-4" />
                                         Settings
                                     </Link>
                                     <div className="border-t my-3" />
@@ -194,17 +200,21 @@ export default function PublicLayout({ children }: Props) {
                                         href="/logout"
                                         method="post"
                                         as="button"
-                                        className="flex w-full items-center rounded-lg px-3 py-2 text-sm font-medium text-destructive hover:!bg-destructive/10 transition-all duration-200"
+                                        className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-destructive hover:bg-destructive/10 transition-all duration-200"
                                         onClick={() => setMobileMenuOpen(false)}
                                     >
+                                        <LogOut className="h-4 w-4" />
                                         Log out
                                     </Link>
                                 </>
                             ) : (
                                 <>
                                     <div className="border-t my-3" />
-                                    <Button asChild size="sm" className="w-full">
-                                        <Link href="/login" onClick={() => setMobileMenuOpen(false)}>Masuk</Link>
+                                    <Button asChild size="sm" className="w-full gap-2">
+                                        <Link href="/login" onClick={() => setMobileMenuOpen(false)}>
+                                            <LogIn className="h-4 w-4" />
+                                            Masuk
+                                        </Link>
                                     </Button>
                                 </>
                             )}

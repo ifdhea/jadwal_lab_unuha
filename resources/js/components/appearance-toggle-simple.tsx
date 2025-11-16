@@ -10,14 +10,14 @@ export default function AppearanceToggleSimple({
     const { appearance, updateAppearance } = useAppearance();
 
     const toggleTheme = () => {
-        const currentTheme = appearance === 'system' 
+        const currentTheme = appearance === 'system'
             ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')
             : appearance;
-        
+
         updateAppearance(currentTheme === 'dark' ? 'light' : 'dark');
     };
 
-    const isDark = appearance === 'dark' || 
+    const isDark = appearance === 'dark' ||
         (appearance === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
 
     return (
@@ -25,8 +25,7 @@ export default function AppearanceToggleSimple({
             <Button
                 variant="ghost"
                 size="icon"
-                className="h-9 w-9 rounded-md"
-                onClick={toggleTheme}
+                className="h-9 w-9 rounded-md text-foreground hover:bg-transparent dark:hover:bg-transparent hover:text-[rgb(154,239,93)] dark:hover:text-primary transition-colors" onClick={toggleTheme}
             >
                 {isDark ? (
                     <Sun className="h-5 w-5" />
