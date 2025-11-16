@@ -227,7 +227,7 @@ export default function Jadwal({
         <PublicLayout>
             <Head title="Jadwal Lab - Universitas Nurul Huda" />
 
-            <div className="container mx-auto space-y-6 px-4 py-8">
+            <div className="container mx-auto space-y-6 px-6 py-8 pt-24 lg:px-8">
                 {/* Header */}
                 <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                     <div>

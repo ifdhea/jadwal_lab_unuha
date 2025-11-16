@@ -1,6 +1,6 @@
 import { Link, usePage } from '@inertiajs/react';
 import { Menu, ChevronsUpDown } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import {
     DropdownMenu,
@@ -16,8 +16,19 @@ interface Props {
 }
 
 export default function PublicLayout({ children }: Props) {
-    const { auth, url } = usePage().props as any;
+    const page = usePage();
+    const auth = page.props.auth as any;
+    const url = page.url;
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+    const [scrolled, setScrolled] = useState(false);
+
+    useEffect(() => {
+        const handleScroll = () => {
+            setScrolled(window.scrollY > 20);
+        };
+        window.addEventListener('scroll', handleScroll);
+        return () => window.removeEventListener('scroll', handleScroll);
+    }, []);
 
     const navigation = [
         { name: 'Beranda', href: '/beranda' },
@@ -27,51 +38,70 @@ export default function PublicLayout({ children }: Props) {
 
     const isActive = (href: string) => {
         if (!url) return false;
-        return url === href || url.startsWith(href);
+        if (url === href) return true;
+        if (url.startsWith(href + '/')) return true;
+        return false;
     };
 
     return (
-        <div className="min-h-screen bg-background">
+        <div className="min-h-screen relative bg-background">
+            {/* Global mesh gradient background - Sparse blobs only */}
+            <div className="fixed inset-0 z-0 pointer-events-none">
+                {/* Top left blob */}
+                <div className="absolute -top-[300px] -left-[300px] w-[600px] h-[600px]" style={{ background: 'rgba(39, 86, 60, 0.15)', filter: 'blur(150px)', borderRadius: '50%' }} />
+                {/* Top right blob */}
+                <div className="absolute -top-[200px] -right-[200px] w-[500px] h-[500px]" style={{ background: 'rgba(154, 239, 94, 0.12)', filter: 'blur(120px)', borderRadius: '50%' }} />
+                {/* Bottom left blob */}
+                <div className="absolute -bottom-[250px] -left-[250px] w-[550px] h-[550px]" style={{ background: 'rgba(154, 239, 94, 0.1)', filter: 'blur(130px)', borderRadius: '50%' }} />
+                {/* Bottom right blob */}
+                <div className="absolute -bottom-[200px] -right-[300px] w-[600px] h-[600px]" style={{ background: 'rgba(39, 86, 60, 0.12)', filter: 'blur(140px)', borderRadius: '50%' }} />
+            </div>
             {/* Header */}
-            <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-                <div className="container mx-auto flex h-16 items-center justify-between px-4">
+            <header 
+                className={`fixed top-0 z-50 w-full transition-all duration-300 ${
+                    scrolled 
+                        ? 'border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80 shadow-sm' 
+                        : 'bg-transparent'
+                }`}
+            >
+                <div className="container mx-auto flex h-16 items-center justify-between px-6 lg:px-8">
                     {/* Logo */}
-                    <Link href="/beranda" className="flex items-center space-x-3">
+                    <Link href="/beranda" className="flex items-center gap-2.5">
                         <img
                             src="/logo_unuha.png"
                             alt="Logo UNUHA"
-                            className="h-12 w-12 object-contain"
+                            className="h-9 w-9 object-contain"
                         />
                         <div className="hidden sm:block">
-                            <h1 className="text-lg font-bold leading-tight">Jadwal Lab</h1>
-                            <p className="text-xs text-muted-foreground leading-tight">
+                            <h1 className="text-base font-bold leading-tight">Jadwal Lab</h1>
+                            <p className="text-[10px] text-muted-foreground leading-tight">
                                 Universitas Nurul Huda
                             </p>
                         </div>
                     </Link>
 
-                    {/* Desktop Navigation */}
-                    <nav className="hidden md:flex items-center space-x-1">
-                        {navigation.map((item) => (
-                            <Link
-                                key={item.name}
-                                href={item.href}
-                                className={`relative px-4 py-2 text-sm font-medium transition-colors rounded-md ${
-                                    isActive(item.href)
-                                        ? 'text-primary bg-primary/10'
-                                        : 'text-muted-foreground hover:text-primary hover:bg-muted'
-                                }`}
-                            >
-                                {item.name}
-                                {isActive(item.href) && (
-                                    <span className="absolute bottom-0 left-1/2 h-0.5 w-8 -translate-x-1/2 bg-primary rounded-full" />
-                                )}
-                            </Link>
-                        ))}
-                    </nav>
-
                     {/* Right Side */}
-                    <div className="flex items-center space-x-2">
+                    <div className="flex items-center gap-4">
+                        {/* Desktop Navigation */}
+                        <nav className="hidden md:flex items-center gap-1">
+                            {navigation.map((item) => (
+                                <Link
+                                    key={item.name}
+                                    href={item.href}
+                                    className={`relative px-4 py-2 text-sm font-medium transition-all duration-200 rounded-md ${
+                                        isActive(item.href)
+                                            ? '!text-primary'
+                                            : 'text-foreground/70 hover:!text-primary hover:!bg-primary/5'
+                                    }`}
+                                >
+                                    {item.name}
+                                    {isActive(item.href) && (
+                                        <span className="absolute bottom-0 left-1/2 h-0.5 w-8 -translate-x-1/2 !bg-primary rounded-full" />
+                                    )}
+                                </Link>
+                            ))}
+                        </nav>
+
                         {/* Dark Mode Toggle */}
                         <AppearanceToggleDropdown />
 
@@ -112,15 +142,15 @@ export default function PublicLayout({ children }: Props) {
                 {/* Mobile Navigation */}
                 {mobileMenuOpen && (
                     <div className="border-t md:hidden">
-                        <nav className="container mx-auto space-y-1 px-4 py-4">
+                        <nav className="container mx-auto space-y-1 px-6 py-4 lg:px-8">
                             {navigation.map((item) => (
                                 <Link
                                     key={item.name}
                                     href={item.href}
-                                    className={`flex items-center rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
+                                    className={`flex items-center rounded-lg px-3 py-2 text-sm font-medium transition-all duration-200 ${
                                         isActive(item.href)
-                                            ? 'bg-primary/10 text-primary'
-                                            : 'text-muted-foreground hover:bg-muted hover:text-primary'
+                                            ? '!bg-primary/10 !text-primary shadow-sm'
+                                            : 'text-foreground/70 hover:!bg-primary/5 hover:!text-primary'
                                     }`}
                                     onClick={() => setMobileMenuOpen(false)}
                                 >
@@ -136,28 +166,37 @@ export default function PublicLayout({ children }: Props) {
             <main className="flex-1">{children}</main>
 
             {/* Footer */}
-            <footer className="border-t bg-muted/50">
-                <div className="container mx-auto px-4 py-8">
-                    <div className="grid grid-cols-1 gap-8 md:grid-cols-3">
+            <footer className="relative border-t bg-gradient-to-b from-background to-muted/30">
+                <div className="container mx-auto px-6 py-12 lg:px-8">
+                    <div className="grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-4">
                         {/* About */}
-                        <div>
-                            <h3 className="mb-4 text-lg font-semibold">Jadwal Lab</h3>
-                            <p className="text-sm text-muted-foreground">
-                                Sistem Informasi Jadwal Laboratorium Universitas Nurul
-                                Huda. Memudahkan mahasiswa dan dosen dalam melihat
-                                jadwal penggunaan laboratorium.
+                        <div className="lg:col-span-2">
+                            <div className="mb-4 flex items-center gap-2">
+                                <img
+                                    src="/logo_unuha.png"
+                                    alt="Logo UNUHA"
+                                    className="h-8 w-8 object-contain"
+                                />
+                                <div>
+                                    <h3 className="font-bold">Jadwal Lab</h3>
+                                    <p className="text-xs text-muted-foreground">Universitas Nurul Huda</p>
+                                </div>
+                            </div>
+                            <p className="text-sm text-muted-foreground max-w-md">
+                                Sistem Informasi Jadwal Laboratorium yang memudahkan mahasiswa, dosen, 
+                                dan staf dalam mengelola dan melihat jadwal penggunaan laboratorium secara real-time.
                             </p>
                         </div>
 
                         {/* Quick Links */}
                         <div>
-                            <h3 className="mb-4 text-lg font-semibold">Tautan Cepat</h3>
-                            <ul className="space-y-2 text-sm">
+                            <h3 className="mb-4 text-sm font-semibold">Tautan Cepat</h3>
+                            <ul className="space-y-2.5">
                                 {navigation.map((item) => (
                                     <li key={item.name}>
                                         <Link
                                             href={item.href}
-                                            className="text-muted-foreground hover:text-primary"
+                                            className="text-sm text-muted-foreground hover:text-primary transition-colors"
                                         >
                                             {item.name}
                                         </Link>
@@ -168,19 +207,18 @@ export default function PublicLayout({ children }: Props) {
 
                         {/* Contact */}
                         <div>
-                            <h3 className="mb-4 text-lg font-semibold">Kontak</h3>
+                            <h3 className="mb-4 text-sm font-semibold">Kontak</h3>
                             <ul className="space-y-2 text-sm text-muted-foreground">
                                 <li>Universitas Nurul Huda</li>
                                 <li>OKU Timur, Sumatera Selatan</li>
-                                <li>Email: info@unuha.ac.id</li>
+                                <li>info@unuha.ac.id</li>
                             </ul>
                         </div>
                     </div>
 
-                    <div className="mt-8 border-t pt-8 text-center text-sm text-muted-foreground">
-                        <p>
-                            &copy; {new Date().getFullYear()} Universitas Nurul Huda.
-                            All rights reserved.
+                    <div className="mt-10 border-t pt-6">
+                        <p className="text-center text-xs text-muted-foreground">
+                            &copy; {new Date().getFullYear()} UNUHA IT CENTER. All rights reserved.
                         </p>
                     </div>
                 </div>
