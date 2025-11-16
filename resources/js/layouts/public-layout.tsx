@@ -1,5 +1,5 @@
 import { Link, usePage } from '@inertiajs/react';
-import { Menu, ChevronsUpDown } from 'lucide-react';
+import { ChevronsUpDown } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import {
@@ -10,6 +10,9 @@ import {
 import { UserInfo } from '@/components/user-info';
 import { UserMenuContent } from '@/components/user-menu-content';
 import AppearanceToggleSimple from '@/components/appearance-toggle-simple';
+import { Spin as Hamburger } from 'hamburger-react';
+import AOS from 'aos';
+import 'aos/dist/aos.css';
 
 interface Props {
     children: React.ReactNode;
@@ -27,6 +30,15 @@ export default function PublicLayout({ children }: Props) {
             setScrolled(window.scrollY > 20);
         };
         window.addEventListener('scroll', handleScroll);
+        
+        // Initialize AOS
+        AOS.init({
+            duration: 800,
+            easing: 'ease-in-out',
+            once: true,
+            mirror: false,
+        });
+        
         return () => window.removeEventListener('scroll', handleScroll);
     }, []);
 
@@ -45,23 +57,12 @@ export default function PublicLayout({ children }: Props) {
 
     return (
         <div className="min-h-screen relative bg-background">
-            {/* Global mesh gradient background - Sparse blobs only */}
-            <div className="fixed inset-0 z-0 pointer-events-none">
-                {/* Top left blob */}
-                <div className="absolute -top-[300px] -left-[300px] w-[600px] h-[600px]" style={{ background: 'rgba(39, 86, 60, 0.15)', filter: 'blur(150px)', borderRadius: '50%' }} />
-                {/* Top right blob */}
-                <div className="absolute -top-[200px] -right-[200px] w-[500px] h-[500px]" style={{ background: 'rgba(154, 239, 94, 0.12)', filter: 'blur(120px)', borderRadius: '50%' }} />
-                {/* Bottom left blob */}
-                <div className="absolute -bottom-[250px] -left-[250px] w-[550px] h-[550px]" style={{ background: 'rgba(154, 239, 94, 0.1)', filter: 'blur(130px)', borderRadius: '50%' }} />
-                {/* Bottom right blob */}
-                <div className="absolute -bottom-[200px] -right-[300px] w-[600px] h-[600px]" style={{ background: 'rgba(39, 86, 60, 0.12)', filter: 'blur(140px)', borderRadius: '50%' }} />
-            </div>
             {/* Header */}
             <header 
                 className={`fixed top-0 z-50 w-full transition-all duration-300 ${
                     scrolled 
                         ? 'border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80 shadow-sm' 
-                        : 'bg-transparent'
+                        : 'md:bg-transparent bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80 md:backdrop-blur-none border-b md:border-b-0'
                 }`}
             >
                 <div className="container mx-auto flex h-16 items-center justify-between px-6 lg:px-8">
@@ -102,47 +103,54 @@ export default function PublicLayout({ children }: Props) {
                             ))}
                         </nav>
 
-                        {/* Dark Mode Toggle */}
+                        {/* Dark Mode Toggle - Keep visible on all screens */}
                         <AppearanceToggleSimple />
 
-                        {/* User Menu or Login */}
-                        {auth?.user ? (
-                            <DropdownMenu>
-                                <DropdownMenuTrigger asChild>
-                                    <Button
-                                        variant="ghost"
-                                        className="h-9 gap-2 px-2 data-[state=open]:bg-accent"
-                                    >
-                                        <UserInfo user={auth.user} />
-                                        <ChevronsUpDown className="ml-auto h-4 w-4 opacity-50" />
-                                    </Button>
-                                </DropdownMenuTrigger>
-                                <DropdownMenuContent align="end" className="w-56">
-                                    <UserMenuContent user={auth.user} showDashboardLink={true} />
-                                </DropdownMenuContent>
-                            </DropdownMenu>
-                        ) : (
-                            <Button asChild size="sm">
-                                <Link href="/login">Masuk</Link>
-                            </Button>
-                        )}
+                        {/* User Menu or Login - Desktop Only */}
+                        <div className="hidden md:block">
+                            {auth?.user ? (
+                                <DropdownMenu>
+                                    <DropdownMenuTrigger asChild>
+                                        <Button
+                                            variant="ghost"
+                                            className="h-9 gap-2 px-2 data-[state=open]:bg-accent"
+                                        >
+                                            <UserInfo user={auth.user} />
+                                            <ChevronsUpDown className="ml-auto h-4 w-4 opacity-50" />
+                                        </Button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent align="end" className="w-56">
+                                        <UserMenuContent user={auth.user} showDashboardLink={true} />
+                                    </DropdownMenuContent>
+                                </DropdownMenu>
+                            ) : (
+                                <Button asChild size="sm">
+                                    <Link href="/login">Masuk</Link>
+                                </Button>
+                            )}
+                        </div>
 
                         {/* Mobile Menu Button */}
-                        <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-9 w-9 md:hidden"
-                            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-                        >
-                            <Menu className="h-5 w-5" />
-                        </Button>
+                        <div className="md:hidden">
+                            <Hamburger
+                                toggled={mobileMenuOpen}
+                                toggle={setMobileMenuOpen}
+                                size={24}
+                                direction="left"
+                                duration={0.4}
+                                distance="md"
+                                rounded
+                                label="Menu"
+                            />
+                        </div>
                     </div>
                 </div>
 
                 {/* Mobile Navigation */}
                 {mobileMenuOpen && (
-                    <div className="border-t md:hidden">
+                    <div className="border-t md:hidden bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80">
                         <nav className="container mx-auto space-y-1 px-6 py-4 lg:px-8">
+                            {/* Navigation Links */}
                             {navigation.map((item) => (
                                 <Link
                                     key={item.name}
@@ -157,6 +165,49 @@ export default function PublicLayout({ children }: Props) {
                                     {item.name}
                                 </Link>
                             ))}
+                            
+                            {/* User Menu or Login Button */}
+                            {auth?.user ? (
+                                <>
+                                    <div className="border-t my-3" />
+                                    <div className="px-3 py-2 mb-2">
+                                        <div className="flex items-center gap-2">
+                                            <UserInfo user={auth.user} showEmail={true} />
+                                        </div>
+                                    </div>
+                                    <Link
+                                        href="/dashboard"
+                                        className="flex items-center rounded-lg px-3 py-2 text-sm font-medium text-foreground/70 hover:!bg-primary/5 hover:!text-primary transition-all duration-200"
+                                        onClick={() => setMobileMenuOpen(false)}
+                                    >
+                                        Dashboard
+                                    </Link>
+                                    <Link
+                                        href="/profile/edit"
+                                        className="flex items-center rounded-lg px-3 py-2 text-sm font-medium text-foreground/70 hover:!bg-primary/5 hover:!text-primary transition-all duration-200"
+                                        onClick={() => setMobileMenuOpen(false)}
+                                    >
+                                        Settings
+                                    </Link>
+                                    <div className="border-t my-3" />
+                                    <Link
+                                        href="/logout"
+                                        method="post"
+                                        as="button"
+                                        className="flex w-full items-center rounded-lg px-3 py-2 text-sm font-medium text-destructive hover:!bg-destructive/10 transition-all duration-200"
+                                        onClick={() => setMobileMenuOpen(false)}
+                                    >
+                                        Log out
+                                    </Link>
+                                </>
+                            ) : (
+                                <>
+                                    <div className="border-t my-3" />
+                                    <Button asChild size="sm" className="w-full">
+                                        <Link href="/login" onClick={() => setMobileMenuOpen(false)}>Masuk</Link>
+                                    </Button>
+                                </>
+                            )}
                         </nav>
                     </div>
                 )}
@@ -166,7 +217,7 @@ export default function PublicLayout({ children }: Props) {
             <main className="flex-1">{children}</main>
 
             {/* Footer */}
-            <footer className="relative border-t bg-gradient-to-b from-background to-muted/30">
+            <footer className="relative border-t bg-background">
                 <div className="container mx-auto px-6 py-12 lg:px-8">
                     <div className="grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-4">
                         {/* About */}

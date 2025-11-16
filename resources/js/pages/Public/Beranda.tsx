@@ -48,8 +48,8 @@ export default function Beranda({ activeSemester, totalKampus }: Props) {
                     <div className="mx-auto max-w-6xl">
                         <div className="grid gap-12 lg:grid-cols-2 lg:gap-16 items-center">
                             {/* Left Content */}
-                            <div className="space-y-8">
-                                <div className="inline-flex items-center gap-2 rounded-full border bg-background/80 backdrop-blur-sm px-4 py-2 text-sm shadow-sm">
+                            <div className="space-y-8" data-aos="fade-right">
+                                <div className="inline-flex items-center gap-2 rounded-full border bg-background/80 backdrop-blur-sm px-4 py-2 text-sm shadow-sm" data-aos="fade-down" data-aos-delay="100">
                                     <Calendar className="h-4 w-4 text-primary" />
                                     <span className="font-medium">
                                         {activeSemester
@@ -58,7 +58,7 @@ export default function Beranda({ activeSemester, totalKampus }: Props) {
                                     </span>
                                 </div>
 
-                                <div className="space-y-4">
+                                <div className="space-y-4" data-aos="fade-up" data-aos-delay="200">
                                     <h1 className="text-4xl font-bold tracking-tight sm:text-5xl xl:text-6xl">
                                         Jadwal Laboratorium
                                     </h1>
@@ -71,7 +71,7 @@ export default function Beranda({ activeSemester, totalKampus }: Props) {
                                     </p>
                                 </div>
 
-                                <div className="flex flex-wrap gap-3">
+                                <div className="flex flex-wrap gap-3" data-aos="fade-up" data-aos-delay="300">
                                     <Button asChild size="lg" className="gap-2 shadow-lg shadow-primary/25">
                                         <Link href="/jadwal-lab">
                                             Lihat Jadwal
@@ -84,7 +84,7 @@ export default function Beranda({ activeSemester, totalKampus }: Props) {
                                 </div>
 
                                 {/* Stats */}
-                                <div className="flex flex-wrap gap-6 pt-4">
+                                <div className="flex flex-wrap gap-6 pt-4" data-aos="fade-up" data-aos-delay="200">
                                     <div className="flex items-center gap-2">
                                         <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
                                             <MapPin className="h-5 w-5 text-primary" />
@@ -107,7 +107,7 @@ export default function Beranda({ activeSemester, totalKampus }: Props) {
                             </div>
 
                             {/* Right Content - Image */}
-                            <div className="relative">
+                            <div className="relative" data-aos="fade-left" data-aos-delay="200">
                                 <div className="relative overflow-hidden">
                                     <img
                                         src="/hero_imagelight.svg"
@@ -129,7 +129,7 @@ export default function Beranda({ activeSemester, totalKampus }: Props) {
             {/* Features Section - Clean White Background */}
             <section className="relative py-20 sm:py-28 bg-background">
                 <div className="container relative mx-auto px-6 lg:px-8">
-                    <div className="mx-auto mb-16 max-w-2xl text-center">
+                    <div className="mx-auto mb-16 max-w-2xl text-center" data-aos="fade-up">
                         <h2 className="mb-4 text-3xl font-bold tracking-tight sm:text-4xl">
                             Fitur Unggulan
                         </h2>
@@ -139,7 +139,7 @@ export default function Beranda({ activeSemester, totalKampus }: Props) {
                     </div>
 
                     <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-                        <Card className="group hover:shadow-lg transition-all duration-300 hover:border-primary/50">
+                        <Card className="group hover:shadow-lg transition-all duration-300 hover:border-primary/50" data-aos="fade-up" data-aos-delay="100">
                             <CardHeader>
                                 <div className="mb-3 inline-flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10 text-primary group-hover:bg-primary group-hover:text-primary-foreground transition-colors">
                                     <Calendar className="h-6 w-6" />
@@ -167,7 +167,7 @@ export default function Beranda({ activeSemester, totalKampus }: Props) {
                             </CardContent>
                         </Card>
 
-                        <Card className="group hover:shadow-lg transition-all duration-300 hover:border-primary/50">
+                        <Card className="group hover:shadow-lg transition-all duration-300 hover:border-primary/50" data-aos="fade-up" data-aos-delay="200">
                             <CardHeader>
                                 <div className="mb-3 inline-flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10 text-primary group-hover:bg-primary group-hover:text-primary-foreground transition-colors">
                                     <MapPin className="h-6 w-6" />
@@ -195,7 +195,7 @@ export default function Beranda({ activeSemester, totalKampus }: Props) {
                             </CardContent>
                         </Card>
 
-                        <Card className="group hover:shadow-lg transition-all duration-300 hover:border-primary/50">
+                        <Card className="group hover:shadow-lg transition-all duration-300 hover:border-primary/50" data-aos="fade-up" data-aos-delay="300">
                             <CardHeader>
                                 <div className="mb-3 inline-flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10 text-primary group-hover:bg-primary group-hover:text-primary-foreground transition-colors">
                                     <BookOpen className="h-6 w-6" />
@@ -223,7 +223,7 @@ export default function Beranda({ activeSemester, totalKampus }: Props) {
                             </CardContent>
                         </Card>
 
-                        <Card className="group hover:shadow-lg transition-all duration-300 hover:border-primary/50">
+                        <Card className="group hover:shadow-lg transition-all duration-300 hover:border-primary/50" data-aos="fade-up" data-aos-delay="100">
                             <CardHeader>
                                 <div className="mb-3 inline-flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10 text-primary group-hover:bg-primary group-hover:text-primary-foreground transition-colors">
                                     <Clock className="h-6 w-6" />
@@ -251,7 +251,7 @@ export default function Beranda({ activeSemester, totalKampus }: Props) {
                             </CardContent>
                         </Card>
 
-                        <Card className="group hover:shadow-lg transition-all duration-300 hover:border-primary/50">
+                        <Card className="group hover:shadow-lg transition-all duration-300 hover:border-primary/50" data-aos="fade-up" data-aos-delay="200">
                             <CardHeader>
                                 <div className="mb-3 inline-flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10 text-primary group-hover:bg-primary group-hover:text-primary-foreground transition-colors">
                                     <Users className="h-6 w-6" />
@@ -279,7 +279,7 @@ export default function Beranda({ activeSemester, totalKampus }: Props) {
                             </CardContent>
                         </Card>
 
-                        <Card className="group hover:shadow-lg transition-all duration-300 hover:border-primary/50">
+                        <Card className="group hover:shadow-lg transition-all duration-300 hover:border-primary/50" data-aos="fade-up" data-aos-delay="300">
                             <CardHeader>
                                 <div className="mb-3 inline-flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10 text-primary group-hover:bg-primary group-hover:text-primary-foreground transition-colors">
                                     <Zap className="h-6 w-6" />
@@ -312,7 +312,7 @@ export default function Beranda({ activeSemester, totalKampus }: Props) {
 
             {/* CTA Section */}
             <section className="relative py-20 sm:py-28 bg-background">
-                <div className="container relative mx-auto px-6 lg:px-8">
+                <div className="container relative mx-auto px-6 lg:px-8" data-aos="zoom-in">
                     <div className="relative overflow-hidden rounded-3xl border border-primary/20 bg-gradient-to-br from-primary/10 via-primary/5 to-background p-8 sm:p-12 lg:p-16 shadow-2xl shadow-primary/10 isolate">
                         <div className="absolute top-0 right-0 h-64 w-64 rounded-full bg-[#9AEF5E]/25 blur-3xl -z-10" />
                         <div className="absolute bottom-0 left-0 h-64 w-64 rounded-full bg-[#27563C]/25 blur-3xl -z-10" />
@@ -341,3 +341,5 @@ export default function Beranda({ activeSemester, totalKampus }: Props) {
         </PublicLayout>
     );
 }
+
+

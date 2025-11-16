@@ -103,6 +103,7 @@ interface Booking {
     keperluan: string;
     keterangan: string | null;
     status: string;
+    is_past?: boolean;
 }
 
 interface Props {
@@ -264,13 +265,22 @@ export default function Calendar({
     };
 
     const getStatusBadge = (status: string) => {
-        const variants: Record<string, { variant: any; label: string }> = {
-            menunggu: { variant: 'default', label: 'Menunggu' },
-            disetujui: { variant: 'outline', label: 'Disetujui' },
-            ditolak: { variant: 'destructive', label: 'Ditolak' },
+        const variants: Record<string, { variant: any; label: string; icon?: any }> = {
+            menunggu: { variant: 'default', label: 'Menunggu', icon: Clock },
+            disetujui: { variant: 'success', label: 'Disetujui', icon: CheckCircle2 },
+            ditolak: { variant: 'destructive', label: 'Ditolak', icon: XCircle },
+            dibatalkan: { variant: 'secondary', label: 'Dibatalkan', icon: XCircle },
+            selesai: { variant: 'outline', label: 'Selesai', icon: CheckCircle2 },
         };
         const config = variants[status] || variants.menunggu;
-        return <Badge variant={config.variant}>{config.label}</Badge>;
+        const Icon = config.icon;
+        
+        return (
+            <Badge variant={config.variant} className="flex items-center gap-1">
+                {Icon && <Icon className="h-3 w-3" />}
+                {config.label}
+            </Badge>
+        );
     };
 
     const currentMinggu = mingguList.find((m) => m.nomor === Number(selectedMinggu));
@@ -777,7 +787,7 @@ export default function Calendar({
                                                                                                                     </p>
                                                                                                                     <div className="mt-0.5 flex items-center gap-1">
                                                                                                                         <Badge
-                                                                                                                            variant="secondary"
+                                                                                                                            variant="muted"
                                                                                                                             // --- PERUBAHAN DI SINI ---
                                                                                                                             // max-w-[130px] dihapus agar bisa fleksibel
                                                                                                                             className="truncate px-1.5 py-0.5 text-xs font-medium"
@@ -853,6 +863,13 @@ export default function Calendar({
                                                                                                                     {cell.is_past && (
                                                                                                                         <Badge variant="secondary" className="px-1.5 py-0.5 text-xs font-medium">
                                                                                                                             Sudah Lewat
+                                                                                                                        </Badge>
+                                                                                                                    )}
+                                                                                                                    
+                                                                                                                    {/* Badge Pending - Menunggu persetujuan */}
+                                                                                                                    {cell.status === 'pending' && !cell.is_past && !cell.is_active && (
+                                                                                                                        <Badge variant="default" className="px-1.5 py-0.5 text-xs font-medium">
+                                                                                                                            Pending
                                                                                                                         </Badge>
                                                                                                                     )}
                                                                                                                     

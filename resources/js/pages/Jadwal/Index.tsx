@@ -695,7 +695,7 @@ export default function Index({
                                                                                                                     </p>
                                                                                                                     <div className="mt-0.5 flex items-center gap-1">
                                                                                                                         <Badge
-                                                                                                                            variant="secondary"
+                                                                                                                            variant="muted"
                                                                                                                             // --- PERUBAHAN DI SINI ---
                                                                                                                             // max-w-[130px] dihapus agar bisa fleksibel
                                                                                                                             className="truncate px-1.5 py-0.5 text-xs font-medium"
@@ -919,7 +919,7 @@ export default function Index({
                                                             {item.matkul}
                                                         </TableCell>
                                                         <TableCell>
-                                                            <Badge variant="secondary">{item.kelas}</Badge>
+                                                            <Badge variant="muted">{item.kelas}</Badge>
                                                         </TableCell>
                                                         <TableCell>{item.dosen}</TableCell>
                                                         <TableCell>{item.lab}</TableCell>

@@ -710,7 +710,7 @@ export default function Calendar({
                                                                                                                         {cell.matkul}
                                                                                                                     </p>
                                                                                                                     <div className="mt-0.5 flex items-center gap-1">
-                                                                                                                        <Badge variant="secondary" className="truncate px-1.5 py-0.5 text-xs font-medium">
+                                                                                                                        <Badge variant="muted" className="truncate px-1.5 py-0.5 text-xs font-medium">
                                                                                                                             {cell.kelas}
                                                                                                                         </Badge>
                                                                                                                     </div>

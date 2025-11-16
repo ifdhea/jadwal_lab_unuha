@@ -48,9 +48,18 @@ class BookingLaboratoriumController extends Controller
             ->paginate(10)
             ->withQueryString();
 
+        $now = Carbon::now()->setTimezone('Asia/Jakarta');
+
         return Inertia::render('BookingLaboratorium/Index', [
             'bookings' => [
-                'data' => $bookings->map(function ($item) {
+                'data' => $bookings->map(function ($item) use ($now) {
+                    // Calculate is_past
+                    $isPast = false;
+                    if ($item->tanggal && $item->slotWaktuSelesai) {
+                        $bookingEnd = Carbon::parse($item->tanggal)->setTimezone('Asia/Jakarta')->setTimeFromTimeString($item->slotWaktuSelesai->waktu_selesai);
+                        $isPast = $now->greaterThan($bookingEnd);
+                    }
+
                     return [
                         'id' => $item->id,
                         'dosen' => $item->dosen ? [
@@ -79,6 +88,7 @@ class BookingLaboratoriumController extends Controller
                         'diproses_oleh' => $item->diprosesOleh ? $item->diprosesOleh->name : null,
                         'tanggal_diajukan' => $item->tanggal_diajukan ?? $item->created_at,
                         'tanggal_diproses' => $item->tanggal_diproses,
+                        'is_past' => $isPast,
                     ];
                 })->values()->all(),
                 'links' => $bookings->linkCollection()->toArray(),
@@ -117,9 +127,18 @@ class BookingLaboratoriumController extends Controller
             ->paginate(10)
             ->withQueryString();
 
+        $now = Carbon::now()->setTimezone('Asia/Jakarta');
+
         return Inertia::render('Admin/BookingLab/Index', [
             'bookings' => [
-                'data' => $bookings->map(function ($item) {
+                'data' => $bookings->map(function ($item) use ($now) {
+                    // Calculate is_past
+                    $isPast = false;
+                    if ($item->tanggal && $item->slotWaktuSelesai) {
+                        $bookingEnd = Carbon::parse($item->tanggal)->setTimezone('Asia/Jakarta')->setTimeFromTimeString($item->slotWaktuSelesai->waktu_selesai);
+                        $isPast = $now->greaterThan($bookingEnd);
+                    }
+
                     return [
                         'id' => $item->id,
                         'dosen' => $item->dosen ? [
@@ -148,6 +167,7 @@ class BookingLaboratoriumController extends Controller
                         'diproses_oleh' => $item->diprosesOleh ? $item->diprosesOleh->name : null,
                         'tanggal_diajukan' => $item->tanggal_diajukan ?? $item->created_at,
                         'tanggal_diproses' => $item->tanggal_diproses,
+                        'is_past' => $isPast,
                     ];
                 })->values()->all(),
                 'links' => $bookings->linkCollection()->toArray(),
@@ -846,12 +866,21 @@ class BookingLaboratoriumController extends Controller
         $myBookings = [];
         
         if ($dosen) {
+            $now = Carbon::now()->setTimezone('Asia/Jakarta');
+            
             $myBookings = BookingLaboratorium::where('dosen_id', $dosen->id)
                 ->with(['laboratorium.kampus', 'slotWaktuMulai', 'slotWaktuSelesai', 'kelasMatKul.mataKuliah', 'kelasMatKul.kelas'])
                 ->whereIn('status', ['menunggu', 'disetujui', 'ditolak'])
                 ->orderBy('tanggal', 'desc')
                 ->get()
-                ->map(function ($booking) {
+                ->map(function ($booking) use ($now) {
+                    // Calculate is_past
+                    $isPast = false;
+                    if ($booking->tanggal && $booking->slotWaktuSelesai) {
+                        $bookingEnd = Carbon::parse($booking->tanggal)->setTimezone('Asia/Jakarta')->setTimeFromTimeString($booking->slotWaktuSelesai->waktu_selesai);
+                        $isPast = $now->greaterThan($bookingEnd);
+                    }
+
                     return [
                         'id' => $booking->id,
                         'mata_kuliah' => $booking->kelasMatKul ? [
@@ -871,6 +900,7 @@ class BookingLaboratoriumController extends Controller
                         'keperluan' => $booking->keperluan,
                         'keterangan' => $booking->keterangan,
                         'status' => $booking->status,
+                        'is_past' => $isPast,
                     ];
                 });
         }

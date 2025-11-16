@@ -50,6 +50,7 @@ interface Booking {
     diproses_oleh: string | null;
     tanggal_diajukan: string;
     tanggal_diproses: string | null;
+    is_past?: boolean;
 }
 
 interface PageProps {

@@ -227,9 +227,9 @@ export default function Jadwal({
         <PublicLayout>
             <Head title="Jadwal Lab - Universitas Nurul Huda" />
 
-            <div className="container mx-auto space-y-6 px-6 py-8 pt-24 lg:px-8">
+            <div className="container mx-auto space-y-6 px-6 py-8 pt-20 md:pt-24 lg:px-8">
                 {/* Header */}
-                <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between" data-aos="fade-down">
                     <div>
                         <h1 className="text-3xl font-bold">Jadwal Laboratorium</h1>
                         <p className="text-muted-foreground">
@@ -256,7 +256,7 @@ export default function Jadwal({
                 </div>
 
                 {/* Week Navigation */}
-                <div className="flex items-center justify-center gap-4">
+                <div className="flex items-center justify-center gap-4" data-aos="fade-up" data-aos-delay="100">
                     <Button
                         variant="outline"
                         size="sm"
@@ -293,7 +293,7 @@ export default function Jadwal({
 
                 {/* Main Tabs */}
                 <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'calendar' | 'table')}>
-                    <TabsList className="grid w-full grid-cols-2">
+                    <TabsList className="grid w-full grid-cols-2" data-aos="fade-up" data-aos-delay="200">
                         <TabsTrigger value="calendar">Kalender</TabsTrigger>
                         <TabsTrigger value="table">Tabel</TabsTrigger>
                     </TabsList>
@@ -306,6 +306,8 @@ export default function Jadwal({
                                 style={{
                                     gridTemplateColumns: `repeat(${kampusList.length}, 1fr)`,
                                 }}
+                                data-aos="fade-up"
+                                data-aos-delay="300"
                             >
                                 {kampusList.map((kampus) => (
                                     <TabsTrigger key={kampus.id} value={kampus.kode}>
@@ -319,7 +321,7 @@ export default function Jadwal({
 
                                 return (
                                     <TabsContent key={kampus.id} value={kampus.kode} className="space-y-4">
-                                        <Card>
+                                        <Card data-aos="fade-up" data-aos-delay="400">
                                             <CardHeader>
                                                 <CardTitle>Jadwal Kampus {kampus.nama}</CardTitle>
                                             </CardHeader>
@@ -489,7 +491,7 @@ export default function Jadwal({
                                                                                                                     </p>
                                                                                                                     <div className="mt-0.5 flex items-center gap-1">
                                                                                                                         <Badge
-                                                                                                                            variant="secondary"
+                                                                                                                            variant="muted"
                                                                                                                             className="truncate px-1.5 py-0.5 text-xs font-medium"
                                                                                                                         >
                                                                                                                             {cell.kelas}
@@ -703,7 +705,7 @@ export default function Jadwal({
                                                             {item.matkul}
                                                         </TableCell>
                                                         <TableCell>
-                                                            <Badge variant="secondary">{item.kelas}</Badge>
+                                                            <Badge variant="muted">{item.kelas}</Badge>
                                                         </TableCell>
                                                         <TableCell>{item.dosen}</TableCell>
                                                         <TableCell>{item.lab}</TableCell>
