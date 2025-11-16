@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Dosen;
 use App\Models\SesiJadwal;
+use App\Models\SlotWaktu;
 use App\Models\TukarJadwal;
 use App\Services\ActivityLogService;
 use App\Services\NotificationService;
@@ -216,19 +217,69 @@ class TukarJadwalController extends Controller
             $mingguTujuan = $request->minggu_tujuan;
             $jadwalPemohon = $sesiPemohon->jadwalMaster;
             
-            // Cek bentrok di tanggal tujuan
+            // Hitung SKS untuk menentukan durasi slot yang dibutuhkan
+            $sks = $jadwalPemohon->kelasMatKul->mataKuliah->sks;
+            $durasiSlot = $sks; // 1 SKS = 1 slot (50 menit)
+            
+            // Tentukan slot mulai tujuan (bisa dari request atau dari jadwal asli)
+            $slotMulaiId = $request->has('slot_tujuan_mulai_id') 
+                ? $request->slot_tujuan_mulai_id 
+                : $jadwalPemohon->slot_waktu_mulai_id;
+            
+            $slotMulai = SlotWaktu::find($slotMulaiId);
+            
+            if (!$slotMulai) {
+                return redirect()->back()->with('error', 'Slot waktu mulai tidak valid');
+            }
+            
+            // Hitung slot selesai dengan skip slot istirahat
+            $slotSelesai = $this->calculateSlotSelesai($slotMulai, $durasiSlot);
+            
+            if (!$slotSelesai) {
+                return redirect()->back()->with('error', 'Tidak dapat menghitung slot selesai. Durasi melebihi slot yang tersedia.');
+            }
+            
+            // Gunakan laboratorium tujuan jika ada, jika tidak pakai yang asli
+            $labTujuanId = $request->has('lab_tujuan_id')
+                ? $request->lab_tujuan_id
+                : $jadwalPemohon->laboratorium_id;
+            
+            // Cek bentrok di tanggal tujuan dengan slot yang sudah dihitung (skip break)
             $bentrok = SesiJadwal::whereDate('tanggal', $tanggalTujuan)
-                ->whereHas('jadwalMaster', function ($q) use ($jadwalPemohon) {
-                    $q->where('laboratorium_id', $jadwalPemohon->laboratorium_id)
-                        ->where(function ($sq) use ($jadwalPemohon) {
-                            $sq->where(function ($s) use ($jadwalPemohon) {
-                                $s->whereRaw('slot_waktu_mulai_id BETWEEN ? AND ?', [$jadwalPemohon->slot_waktu_mulai_id, $jadwalPemohon->slot_waktu_selesai_id])
-                                  ->orWhereRaw('slot_waktu_selesai_id BETWEEN ? AND ?', [$jadwalPemohon->slot_waktu_mulai_id, $jadwalPemohon->slot_waktu_selesai_id]);
-                            })->orWhere(function ($s) use ($jadwalPemohon) {
-                                $s->where('slot_waktu_mulai_id', '<=', $jadwalPemohon->slot_waktu_mulai_id)
-                                  ->where('slot_waktu_selesai_id', '>=', $jadwalPemohon->slot_waktu_selesai_id);
+                ->where('id', '!=', $sesiPemohon->id) // Exclude sesi yang sedang dipindah
+                ->where(function ($q) use ($labTujuanId, $slotMulai, $slotSelesai) {
+                    // Cek di jadwal master (non-override)
+                    $q->whereHas('jadwalMaster', function ($jm) use ($labTujuanId, $slotMulai, $slotSelesai) {
+                        $jm->where('laboratorium_id', $labTujuanId)
+                            ->where(function ($sq) use ($slotMulai, $slotSelesai) {
+                                // Cek overlap: slot baru overlap dengan slot yang ada
+                                $sq->where(function ($s) use ($slotMulai, $slotSelesai) {
+                                    $s->whereRaw('slot_waktu_mulai_id BETWEEN ? AND ?', [$slotMulai->id, $slotSelesai->id])
+                                      ->orWhereRaw('slot_waktu_selesai_id BETWEEN ? AND ?', [$slotMulai->id, $slotSelesai->id]);
+                                })->orWhere(function ($s) use ($slotMulai, $slotSelesai) {
+                                    $s->where('slot_waktu_mulai_id', '<=', $slotMulai->id)
+                                      ->where('slot_waktu_selesai_id', '>=', $slotSelesai->id);
+                                });
+                            });
+                    })
+                    // ATAU cek di override
+                    ->orWhere(function ($override) use ($labTujuanId, $slotMulai, $slotSelesai) {
+                        $override->where(function ($labCheck) use ($labTujuanId) {
+                            $labCheck->where('override_laboratorium_id', $labTujuanId)
+                                ->orWhereHas('jadwalMaster', function ($jm) use ($labTujuanId) {
+                                    $jm->where('laboratorium_id', $labTujuanId);
+                                });
+                        })
+                        ->where(function ($slotCheck) use ($slotMulai, $slotSelesai) {
+                            $slotCheck->where(function ($s) use ($slotMulai, $slotSelesai) {
+                                $s->whereRaw('override_slot_waktu_mulai_id BETWEEN ? AND ?', [$slotMulai->id, $slotSelesai->id])
+                                  ->orWhereRaw('override_slot_waktu_selesai_id BETWEEN ? AND ?', [$slotMulai->id, $slotSelesai->id]);
+                            })->orWhere(function ($s) use ($slotMulai, $slotSelesai) {
+                                $s->where('override_slot_waktu_mulai_id', '<=', $slotMulai->id)
+                                  ->where('override_slot_waktu_selesai_id', '>=', $slotSelesai->id);
                             });
                         });
+                    });
                 })
                 ->where('status', 'terjadwal')
                 ->exists();
@@ -268,10 +319,10 @@ class TukarJadwalController extends Controller
                     'updated_at' => now(),
                 ];
                 
-                // Tambah override jika slot/lab tujuan berbeda
+                // Tambah override slot (gunakan slot yang sudah dihitung dengan skip break)
                 if ($request->has('slot_tujuan_mulai_id')) {
-                    $updateData['override_slot_waktu_mulai_id'] = $request->slot_tujuan_mulai_id;
-                    $updateData['override_slot_waktu_selesai_id'] = $request->slot_tujuan_selesai_id;
+                    $updateData['override_slot_waktu_mulai_id'] = $slotMulai->id;
+                    $updateData['override_slot_waktu_selesai_id'] = $slotSelesai->id;
                 }
                 
                 if ($request->has('lab_tujuan_id')) {
@@ -415,17 +466,26 @@ class TukarJadwalController extends Controller
                 $pemohonDurasi = $masterPemohon->kelasMatKul->mataKuliah->sks;
                 $mitraDurasi = $masterMitra->kelasMatKul->mataKuliah->sks;
                 
-                // Pemohon pakai slot mulai mitra, tapi durasi tetap sendiri
-                $pemohonSlotSelesai = $masterMitra->slot_waktu_mulai_id + $pemohonDurasi - 1;
+                // Hitung slot selesai dengan SKIP SLOT ISTIRAHAT
+                $pemohonSlotMulai = SlotWaktu::find($masterMitra->slot_waktu_mulai_id);
+                $pemohonSlotSelesaiObj = $this->calculateSlotSelesai($pemohonSlotMulai, $pemohonDurasi);
                 
-                // Mitra pakai slot mulai pemohon, tapi durasi tetap sendiri  
-                $mitraSlotSelesai = $masterPemohon->slot_waktu_mulai_id + $mitraDurasi - 1;
+                if (!$pemohonSlotSelesaiObj) {
+                    throw new \Exception('Tidak dapat menghitung slot selesai untuk pemohon');
+                }
+                
+                $mitraSlotMulai = SlotWaktu::find($masterPemohon->slot_waktu_mulai_id);
+                $mitraSlotSelesaiObj = $this->calculateSlotSelesai($mitraSlotMulai, $mitraDurasi);
+                
+                if (!$mitraSlotSelesaiObj) {
+                    throw new \Exception('Tidak dapat menghitung slot selesai untuk mitra');
+                }
                 
                 $updated1 = DB::table('sesi_jadwal')
                     ->where('id', $sesiPemohon->id)
                     ->update([
                         'override_slot_waktu_mulai_id' => $masterMitra->slot_waktu_mulai_id,
-                        'override_slot_waktu_selesai_id' => $pemohonSlotSelesai,
+                        'override_slot_waktu_selesai_id' => $pemohonSlotSelesaiObj->id,
                         'override_laboratorium_id' => $masterMitra->laboratorium_id,
                         'updated_at' => now(),
                     ]);
@@ -434,14 +494,14 @@ class TukarJadwalController extends Controller
                     ->where('id', $sesiMitra->id)
                     ->update([
                         'override_slot_waktu_mulai_id' => $masterPemohon->slot_waktu_mulai_id,
-                        'override_slot_waktu_selesai_id' => $mitraSlotSelesai,
+                        'override_slot_waktu_selesai_id' => $mitraSlotSelesaiObj->id,
                         'override_laboratorium_id' => $masterPemohon->laboratorium_id,
                         'updated_at' => now(),
                     ]);
                 
                 \Log::info('Tukar Jadwal - Same Day Swap', [
-                    'pemohon_override_slot' => $masterMitra->slot_waktu_mulai_id . '-' . $pemohonSlotSelesai . ' (durasi: ' . $pemohonDurasi . ')',
-                    'mitra_override_slot' => $masterPemohon->slot_waktu_mulai_id . '-' . $mitraSlotSelesai . ' (durasi: ' . $mitraDurasi . ')',
+                    'pemohon_override_slot' => $masterMitra->slot_waktu_mulai_id . '-' . $pemohonSlotSelesaiObj->id . ' (durasi: ' . $pemohonDurasi . ')',
+                    'mitra_override_slot' => $masterPemohon->slot_waktu_mulai_id . '-' . $mitraSlotSelesaiObj->id . ' (durasi: ' . $mitraDurasi . ')',
                 ]);
             } else {
                 // DIFFERENT DAY SWAP: Tukar tanggal DAN jam mulai
@@ -453,11 +513,20 @@ class TukarJadwalController extends Controller
                 $pemohonDurasi = $masterPemohon->kelasMatKul->mataKuliah->sks;
                 $mitraDurasi = $masterMitra->kelasMatKul->mataKuliah->sks;
                 
-                // Pemohon ke hari mitra, pakai jam mulai mitra, tapi durasi sendiri
-                $pemohonSlotSelesai = $masterMitra->slot_waktu_mulai_id + $pemohonDurasi - 1;
+                // Hitung slot selesai dengan SKIP SLOT ISTIRAHAT
+                $pemohonSlotMulai = SlotWaktu::find($masterMitra->slot_waktu_mulai_id);
+                $pemohonSlotSelesaiObj = $this->calculateSlotSelesai($pemohonSlotMulai, $pemohonDurasi);
                 
-                // Mitra ke hari pemohon, pakai jam mulai pemohon, tapi durasi sendiri
-                $mitraSlotSelesai = $masterPemohon->slot_waktu_mulai_id + $mitraDurasi - 1;
+                if (!$pemohonSlotSelesaiObj) {
+                    throw new \Exception('Tidak dapat menghitung slot selesai untuk pemohon');
+                }
+                
+                $mitraSlotMulai = SlotWaktu::find($masterPemohon->slot_waktu_mulai_id);
+                $mitraSlotSelesaiObj = $this->calculateSlotSelesai($mitraSlotMulai, $mitraDurasi);
+                
+                if (!$mitraSlotSelesaiObj) {
+                    throw new \Exception('Tidak dapat menghitung slot selesai untuk mitra');
+                }
                 
                 $tempTanggalPemohon = $sesiPemohon->tanggal;
                 $tempPertemuanPemohon = $sesiPemohon->pertemuan_ke;
@@ -468,7 +537,7 @@ class TukarJadwalController extends Controller
                         'tanggal' => $sesiMitra->tanggal,
                         'pertemuan_ke' => $sesiMitra->pertemuan_ke,
                         'override_slot_waktu_mulai_id' => $masterMitra->slot_waktu_mulai_id,
-                        'override_slot_waktu_selesai_id' => $pemohonSlotSelesai,
+                        'override_slot_waktu_selesai_id' => $pemohonSlotSelesaiObj->id,
                         'override_laboratorium_id' => $masterMitra->laboratorium_id,
                         'updated_at' => now(),
                     ]);
@@ -479,16 +548,16 @@ class TukarJadwalController extends Controller
                         'tanggal' => $tempTanggalPemohon,
                         'pertemuan_ke' => $tempPertemuanPemohon,
                         'override_slot_waktu_mulai_id' => $masterPemohon->slot_waktu_mulai_id,
-                        'override_slot_waktu_selesai_id' => $mitraSlotSelesai,
+                        'override_slot_waktu_selesai_id' => $mitraSlotSelesaiObj->id,
                         'override_laboratorium_id' => $masterPemohon->laboratorium_id,
                         'updated_at' => now(),
                     ]);
                 
                 \Log::info('Tukar Jadwal - Different Day Swap', [
                     'pemohon_new_date' => $sesiMitra->tanggal->format('Y-m-d'),
-                    'pemohon_new_slot' => $masterMitra->slot_waktu_mulai_id . '-' . $pemohonSlotSelesai . ' (durasi: ' . $pemohonDurasi . ')',
+                    'pemohon_new_slot' => $masterMitra->slot_waktu_mulai_id . '-' . $pemohonSlotSelesaiObj->id . ' (durasi: ' . $pemohonDurasi . ')',
                     'mitra_new_date' => $tempTanggalPemohon->format('Y-m-d'),
-                    'mitra_new_slot' => $masterPemohon->slot_waktu_mulai_id . '-' . $mitraSlotSelesai . ' (durasi: ' . $mitraDurasi . ')',
+                    'mitra_new_slot' => $masterPemohon->slot_waktu_mulai_id . '-' . $mitraSlotSelesaiObj->id . ' (durasi: ' . $mitraDurasi . ')',
                     'note' => 'Tukar hari dan jam mulai, durasi tetap masing-masing',
                 ]);
             }
@@ -776,6 +845,8 @@ class TukarJadwalController extends Controller
                     'durasi_slot' => $durasiSlot, // Gunakan durasi yang dihitung dari slot aktual
                     'waktu_mulai' => $slotMulai->waktu_mulai,
                     'waktu_selesai' => $slotSelesai->waktu_selesai,
+                    'slot_mulai_id' => $slotMulai->id, // ID slot mulai untuk calculate rowSpan
+                    'slot_selesai_id' => $slotSelesai->id, // ID slot selesai untuk calculate rowSpan
                     'status' => $sesi->status,
                     'tanggal' => $sesi->tanggal->format('Y-m-d'),
                     'is_my_schedule' => $isMySchedule,
@@ -839,6 +910,8 @@ class TukarJadwalController extends Controller
                     'durasi_slot' => $booking->durasi_slot,
                     'waktu_mulai' => $booking->slotWaktuMulai->waktu_mulai,
                     'waktu_selesai' => $slotWaktuSelesai ? $slotWaktuSelesai->waktu_selesai : $booking->slotWaktuMulai->waktu_selesai,
+                    'slot_mulai_id' => $booking->slot_waktu_mulai_id, // ID slot mulai untuk calculate rowSpan
+                    'slot_selesai_id' => $slotWaktuSelesai ? $slotWaktuSelesai->id : $booking->slot_waktu_mulai_id, // ID slot selesai untuk calculate rowSpan
                     'status' => 'booking',
                     'tanggal' => $tanggalBooking->format('Y-m-d'),
                     'is_my_schedule' => $isMySchedule,
@@ -983,5 +1056,38 @@ class TukarJadwalController extends Controller
                 ['title' => 'Kalender', 'href' => '/tukar-jadwal/calendar'],
             ],
         ]);
+    }
+
+    /**
+     * Hitung slot selesai dengan skip slot istirahat (is_aktif = false)
+     * Sama seperti di BookingLaboratoriumController
+     */
+    private function calculateSlotSelesai(SlotWaktu $slotMulai, int $durasiSlot): ?SlotWaktu
+    {
+        $currentUrutan = $slotMulai->urutan;
+        $slotTerpakai = 0;
+        $slotSelesai = null;
+        
+        while ($slotTerpakai < $durasiSlot) {
+            $slot = SlotWaktu::where('urutan', $currentUrutan)->first();
+            
+            if (!$slot) {
+                // Melebihi slot yang ada di database
+                return null;
+            }
+            
+            // Hanya hitung slot yang aktif (skip slot istirahat)
+            if ($slot->is_aktif) {
+                $slotTerpakai++;
+                if ($slotTerpakai === $durasiSlot) {
+                    $slotSelesai = $slot;
+                    break;
+                }
+            }
+            
+            $currentUrutan++;
+        }
+
+        return $slotSelesai;
     }
 }

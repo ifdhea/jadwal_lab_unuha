@@ -113,8 +113,8 @@ export default function NotificationsIndex({
     return (
         <AppLayout
             breadcrumbs={[
-                { label: 'Dashboard', href: '/dashboard' },
-                { label: 'Notifikasi' },
+                { title: 'Dashboard', href: '/dashboard' },
+                { title: 'Notifikasi', href: '/notifications' },
             ]}
         >
             <div className="container mx-auto space-y-6 p-6">

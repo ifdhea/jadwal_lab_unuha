@@ -76,6 +76,8 @@ interface JadwalCell {
     durasi_slot: number;
     waktu_mulai: string;
     waktu_selesai: string;
+    slot_mulai_id?: number; // ID slot waktu mulai
+    slot_selesai_id?: number; // ID slot waktu selesai
     status: string;
     is_my_schedule: boolean;
     tanggal: string;
@@ -647,11 +649,26 @@ export default function Calendar({
                                                                                                                             const cellsData =
                                                                                                                                 jadwalKampus[selectedMinggu]?.[h.id]?.[slot.id] || [];
                                                                                     
-                                                                                                                            // Hitung rowspan dinamis berdasarkan durasi_slot
-                                                                                                                            // Langsung pakai durasi_slot dari backend (sudah include override)
+                                                                                                                            // Hitung rowspan berdasarkan slot VISIBLE (slots yang tidak di-hide)
+                                                                                                                            // Bukan langsung pakai durasi_slot karena bisa ada gap (slot istirahat)
                                                                                                                             let maxRowSpan = 1;
                                                                                                                             if (cellsData.length > 0) {
-                                                                                                                                maxRowSpan = Math.max(...cellsData.map((cell) => cell.durasi_slot || 1));
+                                                                                                                                // Untuk setiap jadwal di cell ini, hitung rowspan yang sebenarnya
+                                                                                                                                const rowSpans = cellsData.map((cell) => {
+                                                                                                                                    if (cell.slot_mulai_id && cell.slot_selesai_id) {
+                                                                                                                                        // Hitung berapa banyak slot visible dari mulai ke selesai
+                                                                                                                                        const mulaiIdx = slots.findIndex(s => s.id === cell.slot_mulai_id);
+                                                                                                                                        const selesaiIdx = slots.findIndex(s => s.id === cell.slot_selesai_id);
+                                                                                                                                        
+                                                                                                                                        if (mulaiIdx !== -1 && selesaiIdx !== -1) {
+                                                                                                                                            return selesaiIdx - mulaiIdx + 1; // +1 karena inclusive
+                                                                                                                                        }
+                                                                                                                                    }
+                                                                                                                                    // Fallback ke durasi_slot jika tidak ada info slot_id
+                                                                                                                                    return cell.durasi_slot || 1;
+                                                                                                                                });
+                                                                                                                                
+                                                                                                                                maxRowSpan = Math.max(...rowSpans);
 
                                                                                                                                 // Mark cells yang akan di-span
                                                                                                                                 for (let i = 0; i < maxRowSpan; i++) {
@@ -946,11 +963,26 @@ export default function Calendar({
                                                                                                                     const cellsData =
                                                                                                                         jadwalKampus[selectedMinggu]?.[h.id]?.[slot.id] || [];
                                                                                     
-                                                                                                                    // Hitung rowspan dinamis berdasarkan durasi_slot
-                                                                                                                    // Langsung pakai durasi_slot dari backend (sudah include override)
+                                                                                                                    // Hitung rowspan berdasarkan slot VISIBLE (slots yang tidak di-hide)
+                                                                                                                    // Bukan langsung pakai durasi_slot karena bisa ada gap (slot istirahat)
                                                                                                                     let maxRowSpan = 1;
                                                                                                                     if (cellsData.length > 0) {
-                                                                                                                        maxRowSpan = Math.max(...cellsData.map((cell) => cell.durasi_slot || 1));
+                                                                                                                        // Untuk setiap jadwal di cell ini, hitung rowspan yang sebenarnya
+                                                                                                                        const rowSpans = cellsData.map((cell) => {
+                                                                                                                            if (cell.slot_mulai_id && cell.slot_selesai_id) {
+                                                                                                                                // Hitung berapa banyak slot visible dari mulai ke selesai
+                                                                                                                                const mulaiIdx = slots.findIndex(s => s.id === cell.slot_mulai_id);
+                                                                                                                                const selesaiIdx = slots.findIndex(s => s.id === cell.slot_selesai_id);
+                                                                                                                                
+                                                                                                                                if (mulaiIdx !== -1 && selesaiIdx !== -1) {
+                                                                                                                                    return selesaiIdx - mulaiIdx + 1; // +1 karena inclusive
+                                                                                                                                }
+                                                                                                                            }
+                                                                                                                            // Fallback ke durasi_slot jika tidak ada info slot_id
+                                                                                                                            return cell.durasi_slot || 1;
+                                                                                                                        });
+                                                                                                                        
+                                                                                                                        maxRowSpan = Math.max(...rowSpans);
 
                                                                                                                         // Mark cells yang akan di-span
                                                                                                                         for (let i = 0; i < maxRowSpan; i++) {
