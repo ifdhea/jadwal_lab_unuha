@@ -153,68 +153,76 @@ export default function Jadwal({
     const getColorScheme = (dosen: string, index: number) => {
         const colors = [
             {
-                from: 'from-blue-50',
-                to: 'to-blue-100',
-                border: 'border-blue-500',
-                icon: 'text-blue-600',
-                text: 'text-blue-900',
-                hover: 'hover:from-blue-100 hover:to-blue-200',
+                from: 'from-blue-50 dark:from-blue-900/30',
+                to: 'to-blue-100 dark:to-blue-800/30',
+                border: 'border-blue-500 dark:border-blue-400',
+                icon: 'text-blue-600 dark:text-blue-400',
+                text: 'text-blue-900 dark:text-blue-100',
+                hover: 'hover:from-blue-100 hover:to-blue-200 dark:hover:from-blue-800/40 dark:hover:to-blue-700/40',
+                detailText: 'text-gray-700 dark:text-gray-300',
             },
             {
-                from: 'from-green-50',
-                to: 'to-green-100',
-                border: 'border-green-500',
-                icon: 'text-green-600',
-                text: 'text-green-900',
-                hover: 'hover:from-green-100 hover:to-green-200',
+                from: 'from-green-50 dark:from-green-900/30',
+                to: 'to-green-100 dark:to-green-800/30',
+                border: 'border-green-500 dark:border-green-400',
+                icon: 'text-green-600 dark:text-green-400',
+                text: 'text-green-900 dark:text-green-100',
+                hover: 'hover:from-green-100 hover:to-green-200 dark:hover:from-green-800/40 dark:hover:to-green-700/40',
+                detailText: 'text-gray-700 dark:text-gray-300',
             },
             {
-                from: 'from-purple-50',
-                to: 'to-purple-100',
-                border: 'border-purple-500',
-                icon: 'text-purple-600',
-                text: 'text-purple-900',
-                hover: 'hover:from-purple-100 hover:to-purple-200',
+                from: 'from-purple-50 dark:from-purple-900/30',
+                to: 'to-purple-100 dark:to-purple-800/30',
+                border: 'border-purple-500 dark:border-purple-400',
+                icon: 'text-purple-600 dark:text-purple-400',
+                text: 'text-purple-900 dark:text-purple-100',
+                hover: 'hover:from-purple-100 hover:to-purple-200 dark:hover:from-purple-800/40 dark:hover:to-purple-700/40',
+                detailText: 'text-gray-700 dark:text-gray-300',
             },
             {
-                from: 'from-orange-50',
-                to: 'to-orange-100',
-                border: 'border-orange-500',
-                icon: 'text-orange-600',
-                text: 'text-orange-900',
-                hover: 'hover:from-orange-100 hover:to-orange-200',
+                from: 'from-orange-50 dark:from-orange-900/30',
+                to: 'to-orange-100 dark:to-orange-800/30',
+                border: 'border-orange-500 dark:border-orange-400',
+                icon: 'text-orange-600 dark:text-orange-400',
+                text: 'text-orange-900 dark:text-orange-100',
+                hover: 'hover:from-orange-100 hover:to-orange-200 dark:hover:from-orange-800/40 dark:hover:to-orange-700/40',
+                detailText: 'text-gray-700 dark:text-gray-300',
             },
             {
-                from: 'from-pink-50',
-                to: 'to-pink-100',
-                border: 'border-pink-500',
-                icon: 'text-pink-600',
-                text: 'text-pink-900',
-                hover: 'hover:from-pink-100 hover:to-pink-200',
+                from: 'from-pink-50 dark:from-pink-900/30',
+                to: 'to-pink-100 dark:to-pink-800/30',
+                border: 'border-pink-500 dark:border-pink-400',
+                icon: 'text-pink-600 dark:text-pink-400',
+                text: 'text-pink-900 dark:text-pink-100',
+                hover: 'hover:from-pink-100 hover:to-pink-200 dark:hover:from-pink-800/40 dark:hover:to-pink-700/40',
+                detailText: 'text-gray-700 dark:text-gray-300',
             },
             {
-                from: 'from-teal-50',
-                to: 'to-teal-100',
-                border: 'border-teal-500',
-                icon: 'text-teal-600',
-                text: 'text-teal-900',
-                hover: 'hover:from-teal-100 hover:to-teal-200',
+                from: 'from-teal-50 dark:from-teal-900/30',
+                to: 'to-teal-100 dark:to-teal-800/30',
+                border: 'border-teal-500 dark:border-teal-400',
+                icon: 'text-teal-600 dark:text-teal-400',
+                text: 'text-teal-900 dark:text-teal-100',
+                hover: 'hover:from-teal-100 hover:to-teal-200 dark:hover:from-teal-800/40 dark:hover:to-teal-700/40',
+                detailText: 'text-gray-700 dark:text-gray-300',
             },
             {
-                from: 'from-indigo-50',
-                to: 'to-indigo-100',
-                border: 'border-indigo-500',
-                icon: 'text-indigo-600',
-                text: 'text-indigo-900',
-                hover: 'hover:from-indigo-100 hover:to-indigo-200',
+                from: 'from-indigo-50 dark:from-indigo-900/30',
+                to: 'to-indigo-100 dark:to-indigo-800/30',
+                border: 'border-indigo-500 dark:border-indigo-400',
+                icon: 'text-indigo-600 dark:text-indigo-400',
+                text: 'text-indigo-900 dark:text-indigo-100',
+                hover: 'hover:from-indigo-100 hover:to-indigo-200 dark:hover:from-indigo-800/40 dark:hover:to-indigo-700/40',
+                detailText: 'text-gray-700 dark:text-gray-300',
             },
             {
-                from: 'from-amber-50',
-                to: 'to-amber-100',
-                border: 'border-amber-500',
-                icon: 'text-amber-600',
-                text: 'text-amber-900',
-                hover: 'hover:from-amber-100 hover:to-amber-200',
+                from: 'from-amber-50 dark:from-amber-900/30',
+                to: 'to-amber-100 dark:to-amber-800/30',
+                border: 'border-amber-500 dark:border-amber-400',
+                icon: 'text-amber-600 dark:text-amber-400',
+                text: 'text-amber-900 dark:text-amber-100',
+                hover: 'hover:from-amber-100 hover:to-amber-200 dark:hover:from-amber-800/40 dark:hover:to-amber-700/40',
+                detailText: 'text-gray-700 dark:text-gray-300',
             },
         ];
 
@@ -503,19 +511,19 @@ export default function Jadwal({
                                                                                                                         </div>
 
                                                                                                                         <div className="space-y-0.5 text-xs">
-                                                                                                                            <div className="flex items-center gap-1 text-gray-700">
+                                                                                                                            <div className={`flex items-center gap-1 ${colorScheme.detailText}`}>
                                                                                                                                 <User className="h-3 w-3 flex-shrink-0" />
                                                                                                                                 <span className="flex-1 truncate font-medium">
                                                                                                                                     {cell.dosen}
                                                                                                                                 </span>
                                                                                                                             </div>
-                                                                                                                            <div className="flex items-center gap-1 text-gray-700">
+                                                                                                                            <div className={`flex items-center gap-1 ${colorScheme.detailText}`}>
                                                                                                                                 <MapPin className="h-3 w-3 flex-shrink-0" />
                                                                                                                                 <span className="flex-1 truncate font-medium">
                                                                                                                                     {cell.lab}
                                                                                                                                 </span>
                                                                                                                             </div>
-                                                                                                                            <div className="flex items-center gap-1 text-gray-700">
+                                                                                                                            <div className={`flex items-center gap-1 ${colorScheme.detailText}`}>
                                                                                                                                 <Clock className="h-3 w-3 flex-shrink-0" />
                                                                                                                                 <span className="flex-1 font-medium">
                                                                                                                                     {cell.waktu_mulai.slice(0, 5)} -{' '}
@@ -530,7 +538,7 @@ export default function Jadwal({
                                                                                                                             <div className="flex items-center gap-1">
                                                                                                                                 <Badge
                                                                                                                                     variant="outline"
-                                                                                                                                    className="px-1.5 py-0.5 text-xs font-medium"
+                                                                                                                                    className="px-1.5 py-0.5 text-xs font-medium border-[rgb(39,86,60)] dark:border-white"
                                                                                                                                 >
                                                                                                                                     {cell.sks} SKS
                                                                                                                                 </Badge>
@@ -546,7 +554,7 @@ export default function Jadwal({
                                                                                                                                     !cell.is_past && (
                                                                                                                                         <Badge
                                                                                                                                             variant="default"
-                                                                                                                                            className="px-1.5 py-0.5 text-xs font-medium bg-yellow-500 text-white hover:bg-yellow-500"
+                                                                                                                                            className="px-1.5 py-0.5 text-xs font-medium bg-yellow-500 text-white hover:bg-yellow-500 dark:bg-yellow-600 dark:hover:bg-yellow-600"
                                                                                                                                         >
                                                                                                                                             Berlangsung
                                                                                                                                         </Badge>
@@ -556,7 +564,7 @@ export default function Jadwal({
                                                                                                                                     !cell.is_active && (
                                                                                                                                         <Badge
                                                                                                                                             variant="secondary"
-                                                                                                                                            className="px-1.5 py-0.5 text-xs font-medium"
+                                                                                                                                            className="px-1.5 py-0.5 text-xs font-medium text-white"
                                                                                                                                         >
                                                                                                                                             Sudah Lewat
                                                                                                                                         </Badge>
@@ -567,7 +575,7 @@ export default function Jadwal({
                                                                                                                                     !cell.is_active && (
                                                                                                                                         <Badge
                                                                                                                                             variant="default"
-                                                                                                                                            className="px-1.5 py-0.5 text-xs font-medium bg-orange-500 hover:bg-orange-500"
+                                                                                                                                            className="px-1.5 py-0.5 text-xs font-medium bg-orange-500 text-white hover:bg-orange-500 dark:bg-orange-600 dark:hover:bg-orange-600"
                                                                                                                                         >
                                                                                                                                             Booking
                                                                                                                                         </Badge>
@@ -578,7 +586,7 @@ export default function Jadwal({
                                                                                                                                     !cell.is_active && (
                                                                                                                                         <Badge
                                                                                                                                             variant="default"
-                                                                                                                                            className="px-1.5 py-0.5 text-xs font-medium bg-blue-500 hover:bg-blue-500"
+                                                                                                                                            className="px-1.5 py-0.5 text-xs font-medium bg-blue-500 text-white hover:bg-blue-500 dark:bg-blue-600 dark:hover:bg-blue-600"
                                                                                                                                         >
                                                                                                                                             Terjadwal
                                                                                                                                         </Badge>
@@ -589,7 +597,7 @@ export default function Jadwal({
                                                                                                                                     !cell.is_active && (
                                                                                                                                         <Badge
                                                                                                                                             variant="outline"
-                                                                                                                                            className="px-1.5 py-0.5 text-xs font-medium"
+                                                                                                                                            className="px-1.5 py-0.5 text-xs font-medium text-white"
                                                                                                                                         >
                                                                                                                                             Tidak Masuk
                                                                                                                                         </Badge>
@@ -795,19 +803,19 @@ export default function Jadwal({
                                                                                                                 </div>
 
                                                                                                                 <div className="space-y-0.5 text-xs">
-                                                                                                                    <div className="flex items-center gap-1 text-gray-700">
+                                                                                                                    <div className={`flex items-center gap-1 ${colorScheme.detailText}`}>
                                                                                                                         <User className="h-3 w-3 flex-shrink-0" />
                                                                                                                         <span className="flex-1 truncate font-medium">
                                                                                                                             {cell.dosen}
                                                                                                                         </span>
                                                                                                                     </div>
-                                                                                                                    <div className="flex items-center gap-1 text-gray-700">
+                                                                                                                    <div className={`flex items-center gap-1 ${colorScheme.detailText}`}>
                                                                                                                         <MapPin className="h-3 w-3 flex-shrink-0" />
                                                                                                                         <span className="flex-1 truncate font-medium">
                                                                                                                             {cell.lab}
                                                                                                                         </span>
                                                                                                                     </div>
-                                                                                                                    <div className="flex items-center gap-1 text-gray-700">
+                                                                                                                    <div className={`flex items-center gap-1 ${colorScheme.detailText}`}>
                                                                                                                         <Clock className="h-3 w-3 flex-shrink-0" />
                                                                                                                         <span className="flex-1 font-medium">
                                                                                                                             {cell.waktu_mulai.slice(0, 5)} -{' '}
@@ -822,13 +830,13 @@ export default function Jadwal({
                                                                                                                     <div className="flex items-center gap-1">
                                                                                                                         <Badge
                                                                                                                             variant="outline"
-                                                                                                                            className="px-1.5 py-0.5 text-xs font-medium"
+                                                                                                                            className="px-1.5 py-0.5 text-xs font-medium border-[rgb(39,86,60)] dark:border-white"
                                                                                                                         >
                                                                                                                             {cell.sks} SKS
                                                                                                                         </Badge>
                                                                                                                         {cell.is_swapped && (
                                                                                                                             <div title="Jadwal Ditukar">
-                                                                                                                                <ArrowLeftRight className="h-3 w-3 text-purple-600" />
+                                                                                                                                <ArrowLeftRight className="h-3 w-3 text-purple-600 dark:text-purple-400" />
                                                                                                                             </div>
                                                                                                                         )}
                                                                                                                     </div>
@@ -838,7 +846,7 @@ export default function Jadwal({
                                                                                                                             !cell.is_past && (
                                                                                                                                 <Badge
                                                                                                                                     variant="default"
-                                                                                                                                    className="px-1.5 py-0.5 text-xs font-medium bg-yellow-500 text-white hover:bg-yellow-500"
+                                                                                                                                    className="px-1.5 py-0.5 text-xs font-medium bg-yellow-500 text-white hover:bg-yellow-500 dark:bg-yellow-600 dark:hover:bg-yellow-600"
                                                                                                                                 >
                                                                                                                                     Berlangsung
                                                                                                                                 </Badge>
@@ -848,7 +856,7 @@ export default function Jadwal({
                                                                                                                             !cell.is_active && (
                                                                                                                                 <Badge
                                                                                                                                     variant="secondary"
-                                                                                                                                    className="px-1.5 py-0.5 text-xs font-medium"
+                                                                                                                                    className="px-1.5 py-0.5 text-xs font-medium text-white"
                                                                                                                                 >
                                                                                                                                     Sudah Lewat
                                                                                                                                 </Badge>
@@ -859,7 +867,7 @@ export default function Jadwal({
                                                                                                                             !cell.is_active && (
                                                                                                                                 <Badge
                                                                                                                                     variant="default"
-                                                                                                                                    className="px-1.5 py-0.5 text-xs font-medium bg-orange-500 hover:bg-orange-500"
+                                                                                                                                    className="px-1.5 py-0.5 text-xs font-medium bg-orange-500 text-white hover:bg-orange-500 dark:bg-orange-600 dark:hover:bg-orange-600"
                                                                                                                                 >
                                                                                                                                     Booking
                                                                                                                                 </Badge>
@@ -870,7 +878,7 @@ export default function Jadwal({
                                                                                                                             !cell.is_active && (
                                                                                                                                 <Badge
                                                                                                                                     variant="default"
-                                                                                                                                    className="px-1.5 py-0.5 text-xs font-medium bg-blue-500 hover:bg-blue-500"
+                                                                                                                                    className="px-1.5 py-0.5 text-xs font-medium bg-blue-500 text-white hover:bg-blue-500 dark:bg-blue-600 dark:hover:bg-blue-600"
                                                                                                                                 >
                                                                                                                                     Terjadwal
                                                                                                                                 </Badge>
@@ -881,7 +889,7 @@ export default function Jadwal({
                                                                                                                             !cell.is_active && (
                                                                                                                                 <Badge
                                                                                                                                     variant="outline"
-                                                                                                                                    className="px-1.5 py-0.5 text-xs font-medium"
+                                                                                                                                    className="px-1.5 py-0.5 text-xs font-medium text-white"
                                                                                                                                 >
                                                                                                                                     Tidak Masuk
                                                                                                                                 </Badge>
@@ -1008,27 +1016,27 @@ export default function Jadwal({
                                                         <TableCell>{item.sks} SKS</TableCell>
                                                         <TableCell>
                                                             {item.is_active && !item.is_past && (
-                                                                <Badge className="bg-yellow-500 hover:bg-yellow-500">
+                                                                <Badge className="bg-yellow-500 hover:bg-yellow-500 dark:bg-yellow-600 dark:hover:bg-yellow-600 text-white">
                                                                     Berlangsung
                                                                 </Badge>
                                                             )}
                                                             {item.is_past && !item.is_active && (
-                                                                <Badge variant="secondary">Sudah Lewat</Badge>
+                                                                <Badge variant="secondary" className="text-white">Sudah Lewat</Badge>
                                                             )}
                                                             {!item.is_past && !item.is_active && (
                                                                 <>
                                                                     {item.status === 'booking' && (
-                                                                        <Badge className="bg-orange-500 hover:bg-orange-500">
+                                                                        <Badge className="bg-orange-500 hover:bg-orange-500 dark:bg-orange-600 dark:hover:bg-orange-600 text-white">
                                                                             Booking
                                                                         </Badge>
                                                                     )}
                                                                     {item.status === 'terjadwal' && (
-                                                                        <Badge className="bg-blue-500 hover:bg-blue-500">
+                                                                        <Badge className="bg-blue-500 hover:bg-blue-500 dark:bg-blue-600 dark:hover:bg-blue-600 text-white">
                                                                             Terjadwal
                                                                         </Badge>
                                                                     )}
                                                                     {item.status === 'tidak_masuk' && (
-                                                                        <Badge variant="outline">
+                                                                        <Badge variant="outline" className="text-white">
                                                                             Tidak Masuk
                                                                         </Badge>
                                                                     )}
