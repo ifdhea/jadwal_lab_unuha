@@ -41,6 +41,16 @@
     --color-destructive: var(--destructive);
     --color-destructive-foreground: var(--destructive-foreground);
 
+    --color-success: var(--success);
+    --color-success-foreground: var(--success-foreground);
+
+    --color-warning: var(--warning);
+    --color-warning-foreground: var(--warning-foreground);
+    --color-info: var(--info);
+    --color-info-foreground: var(--info-foreground);
+    --color-booking: var(--booking);
+    --color-booking-foreground: var(--booking-foreground);
+
     --color-border: var(--border);
     --color-input: var(--input);
     --color-ring: var(--ring);
@@ -94,6 +104,16 @@
     --destructive: rgb(239, 68, 68);
     --destructive-foreground: rgb(255, 255, 255);
     
+    --success: rgb(22, 163, 74);
+    --success-foreground: rgb(240, 253, 244);
+    
+    --warning: rgb(245, 158, 11);
+    --warning-foreground: rgb(255, 255, 255);
+    --info: rgb(59, 130, 246);
+    --info-foreground: rgb(255, 255, 255);
+    --booking: rgb(249, 115, 22);
+    --booking-foreground: rgb(255, 255, 255);
+
     --border: rgb(228, 228, 255);
     --input: rgb(228, 228, 255);
     --ring: rgb(39, 86, 60);
@@ -142,6 +162,16 @@
     --destructive: rgb(239, 68, 68);
     --destructive-foreground: rgb(255, 255, 255);
     
+    --success: rgb(74, 222, 128);
+    --success-foreground: rgb(22, 101, 52);
+    
+    --warning: rgb(252, 211, 77);
+    --warning-foreground: rgb(120, 53, 15);
+    --info: rgb(96, 165, 250);
+    --info-foreground: rgb(30, 58, 138);
+    --booking: rgb(251, 146, 60);
+    --booking-foreground: rgb(124, 45, 18);
+
     --border: rgb(51, 65, 85);
     --input: rgb(51, 65, 85);
     --ring: rgb(154, 239, 93);

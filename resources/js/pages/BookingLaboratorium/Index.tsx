@@ -100,7 +100,7 @@ export default function Index({
             menunggu: { variant: 'default', label: 'Menunggu', icon: Clock },
             disetujui: { variant: 'success', label: 'Disetujui', icon: CheckCircle2 },
             ditolak: { variant: 'destructive', label: 'Ditolak', icon: XCircle },
-            selesai: { variant: 'secondary', label: 'Selesai', icon: CheckCircle2 },
+            selesai: { variant: 'outline', label: 'Selesai', icon: CheckCircle2 },
             dibatalkan: { variant: 'secondary', label: 'Dibatalkan', icon: XCircle },
         };
 

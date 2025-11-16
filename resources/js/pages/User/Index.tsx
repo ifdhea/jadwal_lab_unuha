@@ -57,13 +57,19 @@ export default function Index({ users, breadcrumbs }: Props) {
     };
 
     const getPeranBadge = (peran: string) => {
-        const variants: Record<string, { label: string; className: string }> = {
-            super_admin: { label: 'Super Admin', className: 'bg-purple-500' },
-            admin: { label: 'Admin', className: 'bg-blue-500' },
-            dosen: { label: 'Dosen', className: 'bg-green-500' },
+        const variants: Record<
+            string,
+            {
+                label: string;
+                variant: 'default' | 'secondary' | 'destructive' | 'outline' | 'success';
+            }
+        > = {
+            super_admin: { label: 'Super Admin', variant: 'default' },
+            admin: { label: 'Admin', variant: 'secondary' },
+            dosen: { label: 'Dosen', variant: 'success' },
         };
-        const config = variants[peran] || { label: peran, className: 'bg-gray-500' };
-        return <Badge className={config.className}>{config.label}</Badge>;
+        const config = variants[peran] || { label: peran, variant: 'outline' };
+        return <Badge variant={config.variant}>{config.label}</Badge>;
     };
 
     return (

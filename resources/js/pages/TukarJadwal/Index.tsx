@@ -90,7 +90,7 @@ export default function Index({ tukarJadwals, filters, dosenId }: PageProps) {
     const getStatusBadge = (status: string) => {
         const variants: Record<string, { variant: any; label: string; icon: any }> = {
             menunggu: { variant: 'default', label: 'Menunggu', icon: Clock },
-            disetujui: { variant: 'outline', label: 'Disetujui', icon: CheckCircle2 },
+            disetujui: { variant: 'success', label: 'Disetujui', icon: CheckCircle2 },
             ditolak: { variant: 'destructive', label: 'Ditolak', icon: XCircle },
             dibatalkan: { variant: 'secondary', label: 'Dibatalkan', icon: XCircle },
         };

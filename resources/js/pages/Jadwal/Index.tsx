@@ -1,4 +1,4 @@
-import { Badge } from '@/components/ui/badge';
+import { Badge, type VariantProps } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
@@ -96,6 +96,41 @@ interface Props {
     isEmbed?: boolean;
     breadcrumbs: Array<{ title: string; href: string }>;
 }
+
+const StatusBadge = ({ cell }: { cell: JadwalCell }) => {
+    const commonClass = "px-1.5 py-0.5 text-xs font-medium";
+
+    if (cell.is_active && !cell.is_past) {
+        return <Badge variant="warning" className={commonClass}>Berlangsung</Badge>;
+    }
+    if (cell.is_past && !cell.is_active) {
+        return <Badge variant="secondary" className={commonClass}>Sudah Lewat</Badge>;
+    }
+
+    // Logic for not past and not active
+    if (!cell.is_past && !cell.is_active) {
+        switch (cell.status) {
+            case 'booking':
+                return <Badge variant="booking" className={commonClass}>Booking</Badge>;
+            case 'terjadwal':
+                if (cell.is_my_schedule) {
+                    return <Badge variant="success" className={commonClass}>Jadwal Saya</Badge>;
+                }
+                return <Badge variant="info" className={commonClass}>Terjadwal</Badge>;
+            case 'tidak_masuk':
+                return <Badge variant="outline" className={commonClass}>Tidak Masuk</Badge>;
+            case 'dibatalkan':
+                return <Badge variant="destructive" className={commonClass}>Dibatalkan</Badge>;
+        }
+    }
+    
+    if (cell.status === 'selesai') {
+        return <Badge variant="outline" className={commonClass}>Selesai</Badge>;
+    }
+
+    return null; // Or some default badge
+};
+
 
 export default function Index({
     semesters,
@@ -532,27 +567,6 @@ export default function Index({
                                                                                                     cell,
                                                                                                     idx,
                                                                                                 ) => {
-                                                                                                    // Mapping status ke variant badge
-                                                                                                    const getStatusVariant =
-                                                                                                        (
-                                                                                                            status: string,
-                                                                                                        ) => {
-                                                                                                            switch (
-                                                                                                                status
-                                                                                                            ) {
-                                                                                                                case 'terjadwal':
-                                                                                                                    return 'default';
-                                                                                                                case 'selesai':
-                                                                                                                    return 'secondary';
-                                                                                                                case 'tidak_masuk':
-                                                                                                                    return 'outline';
-                                                                                                                case 'dibatalkan':
-                                                                                                                    return 'destructive';
-                                                                                                                default:
-                                                                                                                    return 'outline';
-                                                                                                            }
-                                                                                                        };
-
                                                                                                     // Generate warna berbeda untuk setiap jadwal berdasarkan dosen
                                                                                                     const getColorScheme =
                                                                                                         (
@@ -750,59 +764,8 @@ export default function Index({
                                                                                                                     )}
                                                                                                                 </div>
                                                                                                                 
-                                                                                                                {/* Status Badges - Priority Order (Same as TukarJadwal) */}
                                                                                                                 <div className="flex flex-wrap gap-1">
-                                                                                                                    {/* Badge Berlangsung - Highest Priority */}
-                                                                                                                    {cell.is_active && !cell.is_past && (
-                                                                                                                        <Badge variant="default" className="px-1.5 py-0.5 text-xs font-medium bg-yellow-500 text-white hover:bg-yellow-500">
-                                                                                                                            Berlangsung
-                                                                                                                        </Badge>
-                                                                                                                    )}
-                                                                                                                    
-                                                                                                                    {/* Badge Sudah Lewat */}
-                                                                                                                    {cell.is_past && !cell.is_active && (
-                                                                                                                        <Badge variant="secondary" className="px-1.5 py-0.5 text-xs font-medium">
-                                                                                                                            Sudah Lewat
-                                                                                                                        </Badge>
-                                                                                                                    )}
-                                                                                                                    
-                                                                                                                    {/* Badge Booking */}
-                                                                                                                    {cell.status === 'booking' && !cell.is_past && !cell.is_active && (
-                                                                                                                        <Badge variant="default" className="px-1.5 py-0.5 text-xs font-medium bg-orange-500 hover:bg-orange-500">
-                                                                                                                            Booking
-                                                                                                                        </Badge>
-                                                                                                                    )}
-                                                                                                                    
-                                                                                                                    {/* Badge Jadwal Saya */}
-                                                                                                                    {cell.is_my_schedule && !cell.is_past && !cell.is_active && cell.status !== 'booking' && cell.status === 'terjadwal' && (
-                                                                                                                        <Badge variant="default" className="px-1.5 py-0.5 text-xs font-medium bg-green-600 hover:bg-green-600">
-                                                                                                                            Jadwal Saya
-                                                                                                                        </Badge>
-                                                                                                                    )}
-                                                                                                                    
-                                                                                                                    {/* Badge Terjadwal */}
-                                                                                                                    {cell.status === 'terjadwal' && !cell.is_past && !cell.is_active && !cell.is_my_schedule && (
-                                                                                                                        <Badge variant="default" className="px-1.5 py-0.5 text-xs font-medium bg-blue-500 hover:bg-blue-500">
-                                                                                                                            Terjadwal
-                                                                                                                        </Badge>
-                                                                                                                    )}
-                                                                                                                    
-                                                                                                                    {/* Badge Other Status */}
-                                                                                                                    {cell.status === 'selesai' && (
-                                                                                                                        <Badge variant="secondary" className="px-1.5 py-0.5 text-xs font-medium">
-                                                                                                                            Selesai
-                                                                                                                        </Badge>
-                                                                                                                    )}
-                                                                                                                    {cell.status === 'tidak_masuk' && !cell.is_past && !cell.is_active && (
-                                                                                                                        <Badge variant="outline" className="px-1.5 py-0.5 text-xs font-medium">
-                                                                                                                            Tidak Masuk
-                                                                                                                        </Badge>
-                                                                                                                    )}
-                                                                                                                    {cell.status === 'dibatalkan' && (
-                                                                                                                        <Badge variant="destructive" className="px-1.5 py-0.5 text-xs font-medium">
-                                                                                                                            Dibatalkan
-                                                                                                                        </Badge>
-                                                                                                                    )}
+                                                                                                                    <StatusBadge cell={cell} />
                                                                                                                 </div>
                                                                                                             </div>
 
@@ -910,8 +873,7 @@ export default function Index({
                                         <SelectContent>
                                             <SelectItem value="all">Semua Status</SelectItem>
                                             <SelectItem value="terjadwal">Terjadwal</SelectItem>
-                                            <SelectItem value="booking">Booking</SelectItem>
-                                            <SelectItem value="tidak_masuk">Tidak Masuk</SelectItem>
+                                                                                          <SelectItem value="booking">Booking</SelectItem>                                            <SelectItem value="tidak_masuk">Tidak Masuk</SelectItem>
                                         </SelectContent>
                                     </Select>
                                 </div>
@@ -964,38 +926,7 @@ export default function Index({
                                                         <TableCell>{item.kampus}</TableCell>
                                                         <TableCell>{item.sks} SKS</TableCell>
                                                         <TableCell>
-                                                            {item.is_active && !item.is_past && (
-                                                                <Badge className="bg-yellow-500 hover:bg-yellow-500">
-                                                                    Berlangsung
-                                                                </Badge>
-                                                            )}
-                                                            {item.is_past && !item.is_active && (
-                                                                <Badge variant="secondary">Sudah Lewat</Badge>
-                                                            )}
-                                                            {!item.is_past && !item.is_active && (
-                                                                <>
-                                                                    {item.status === 'booking' && (
-                                                                        <Badge className="bg-orange-500 hover:bg-orange-500">
-                                                                            Booking
-                                                                        </Badge>
-                                                                    )}
-                                                                    {item.is_my_schedule && item.status === 'terjadwal' && (
-                                                                        <Badge className="bg-green-600 hover:bg-green-600">
-                                                                            Jadwal Saya
-                                                                        </Badge>
-                                                                    )}
-                                                                    {!item.is_my_schedule && item.status === 'terjadwal' && (
-                                                                        <Badge className="bg-blue-500 hover:bg-blue-500">
-                                                                            Terjadwal
-                                                                        </Badge>
-                                                                    )}
-                                                                    {item.status === 'tidak_masuk' && (
-                                                                        <Badge variant="outline">
-                                                                            Tidak Masuk
-                                                                        </Badge>
-                                                                    )}
-                                                                </>
-                                                            )}
+                                                            <StatusBadge cell={item} />
                                                         </TableCell>
                                                     </TableRow>
                                                 ))

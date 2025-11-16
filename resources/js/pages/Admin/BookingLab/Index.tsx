@@ -75,10 +75,10 @@ export default function Index({ bookings, filters = {} }: PageProps) {
     const getStatusBadge = (status: string) => {
         const variants: Record<string, { variant: any; label: string; icon: any }> = {
             menunggu: { variant: 'default', label: 'Menunggu', icon: Clock },
-            disetujui: { variant: 'outline', label: 'Disetujui', icon: CheckCircle2 },
+            disetujui: { variant: 'success', label: 'Disetujui', icon: CheckCircle2 },
             ditolak: { variant: 'destructive', label: 'Ditolak', icon: XCircle },
             dibatalkan: { variant: 'secondary', label: 'Dibatalkan', icon: XCircle },
-            selesai: { variant: 'secondary', label: 'Selesai', icon: CheckCircle2 },
+            selesai: { variant: 'outline', label: 'Selesai', icon: CheckCircle2 },
         };
         const config = variants[status] || variants.menunggu;
         const Icon = config.icon;

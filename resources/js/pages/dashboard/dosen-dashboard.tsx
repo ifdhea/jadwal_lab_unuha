@@ -67,45 +67,37 @@ export default function DosenDashboard({
     error,
 }: DosenDashboardProps) {
     const getStatusBadge = (jadwal: JadwalItem) => {
-        // Priority order untuk badge (sama seperti di jadwal utama)
-        // 1. Berlangsung (highest priority)
+        const commonClass = "px-1.5 py-0.5 text-xs font-medium";
+
         if (jadwal.is_active && !jadwal.is_past) {
-            return <Badge variant="default" className="px-1.5 py-0.5 text-xs font-medium bg-yellow-500 text-white hover:bg-yellow-500">Berlangsung</Badge>;
+            return <Badge variant="warning" className={commonClass}>Berlangsung</Badge>;
         }
-        
-        // 2. Sudah Lewat
         if (jadwal.is_past && !jadwal.is_active) {
-            return <Badge variant="secondary" className="px-1.5 py-0.5 text-xs font-medium">Sudah Lewat</Badge>;
+            return <Badge variant="secondary" className={commonClass}>Sudah Lewat</Badge>;
         }
-        
-        // 3. Booking
-        if (jadwal.status === 'booking' && !jadwal.is_past && !jadwal.is_active) {
-            return <Badge variant="default" className="px-1.5 py-0.5 text-xs font-medium bg-orange-500 hover:bg-orange-500">Booking</Badge>;
+
+        if (!jadwal.is_past && !jadwal.is_active) {
+            switch (jadwal.status) {
+                case 'booking':
+                    return <Badge variant="booking" className={commonClass}>Booking</Badge>;
+                case 'terjadwal':
+                    if (jadwal.is_my_schedule) {
+                        return <Badge variant="success" className={commonClass}>Jadwal Saya</Badge>;
+                    }
+                    return <Badge variant="info" className={commonClass}>Terjadwal</Badge>;
+                case 'tidak_masuk':
+                    return <Badge variant="outline" className={commonClass}>Tidak Masuk</Badge>;
+                case 'dibatalkan':
+                    return <Badge variant="destructive" className={commonClass}>Dibatalkan</Badge>;
+            }
         }
-        
-        // 4. Jadwal Saya
-        if (jadwal.is_my_schedule && !jadwal.is_past && !jadwal.is_active && jadwal.status !== 'booking' && jadwal.status === 'terjadwal') {
-            return <Badge variant="default" className="px-1.5 py-0.5 text-xs font-medium bg-green-600 hover:bg-green-600">Jadwal Saya</Badge>;
-        }
-        
-        // 5. Terjadwal
-        if (jadwal.status === 'terjadwal' && !jadwal.is_past && !jadwal.is_active && !jadwal.is_my_schedule) {
-            return <Badge variant="default" className="px-1.5 py-0.5 text-xs font-medium bg-blue-500 hover:bg-blue-500">Terjadwal</Badge>;
-        }
-        
-        // 6. Other statuses
+
         if (jadwal.status === 'selesai') {
-            return <Badge variant="secondary" className="px-1.5 py-0.5 text-xs font-medium">Selesai</Badge>;
+            return <Badge variant="outline" className={commonClass}>Selesai</Badge>;
         }
-        if (jadwal.status === 'tidak_masuk' && !jadwal.is_past && !jadwal.is_active) {
-            return <Badge variant="outline" className="px-1.5 py-0.5 text-xs font-medium">Tidak Masuk</Badge>;
-        }
-        if (jadwal.status === 'dibatalkan') {
-            return <Badge variant="destructive" className="px-1.5 py-0.5 text-xs font-medium">Dibatalkan</Badge>;
-        }
-        
-        // Default
-        return <Badge variant="default" className="px-1.5 py-0.5 text-xs font-medium">Terjadwal</Badge>;
+
+        // Fallback for any other cases
+        return <Badge variant="info" className={commonClass}>Terjadwal</Badge>;
     };
 
     if (error) {
