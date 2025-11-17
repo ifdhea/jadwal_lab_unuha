@@ -34,6 +34,7 @@ import {
 interface Kelas {
     id: number;
     nama: string;
+    tingkat_semester: number;
 }
 interface MataKuliah {
     id: number;
@@ -41,6 +42,14 @@ interface MataKuliah {
     sks: number;
 }
 interface Semester {
+    id: number;
+    nama: string;
+}
+interface ProgramStudi {
+    id: number;
+    nama: string;
+}
+interface TahunAjaran {
     id: number;
     nama: string;
 }
@@ -52,10 +61,14 @@ interface KelasMataKuliah {
 }
 
 interface Filters {
+    [key: string]: string | undefined;
     search?: string;
     kelas_id?: string;
     mata_kuliah_id?: string;
     semester_id?: string;
+    program_studi_id?: string;
+    tahun_ajaran_id?: string;
+    tingkat_semester?: string;
 }
 
 interface Props {
@@ -63,11 +76,13 @@ interface Props {
     kelas: Kelas[];
     mataKuliah: MataKuliah[];
     semester: Semester[];
+    programStudi: ProgramStudi[];
+    tahunAjaran: TahunAjaran[];
     filters: Filters;
     breadcrumbs: Array<{ title: string; href: string }>;
 }
 
-export default function Index({ kelasMataKuliah, kelas, mataKuliah, semester, filters, breadcrumbs }: Props) {
+export default function Index({ kelasMataKuliah, kelas, mataKuliah, semester, programStudi, tahunAjaran, filters, breadcrumbs }: Props) {
     const [deleteId, setDeleteId] = useState<number | null>(null);
     const { flash } = usePage<{ flash: { success?: string; error?: string } }>().props;
     const [showToast, setShowToast] = useState(false);
@@ -95,16 +110,26 @@ export default function Index({ kelasMataKuliah, kelas, mataKuliah, semester, fi
     };
 
     const handleFilterChange = (key: keyof Filters, value: string) => {
-        setLocalFilters(prev => ({ ...prev, [key]: value }));
+        const newFilters = { ...localFilters, [key]: value };
+        setLocalFilters(newFilters);
+        
+        // Apply filter immediately with new value
+        const cleanFilters = Object.fromEntries(
+            Object.entries(newFilters).filter(([_, v]) => v !== '' && v !== undefined)
+        );
+        router.get('/kelas-matkul', cleanFilters, { preserveState: true, preserveScroll: true, replace: true });
     };
 
     const applyFilters = () => {
-        router.get('/kelas-matkul', localFilters, { preserveState: true });
+        const cleanFilters = Object.fromEntries(
+            Object.entries(localFilters).filter(([_, value]) => value !== '' && value !== undefined)
+        );
+        router.get('/kelas-matkul', cleanFilters, { preserveState: true, preserveScroll: true });
     };
 
     const resetFilters = () => {
         setLocalFilters({});
-        router.get('/kelas-matkul', {}, { preserveState: true });
+        router.get('/kelas-matkul', {}, { preserveState: true, preserveScroll: true });
     };
 
     const handleSearch = (e: React.FormEvent) => {
@@ -192,12 +217,11 @@ export default function Index({ kelasMataKuliah, kelas, mataKuliah, semester, fi
                         </div>
 
                         {showFilters && (
-                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 p-3 border rounded-lg bg-gradient-to-br from-muted/50 to-muted/30 backdrop-blur-sm">
+                            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2 p-3 border rounded-lg bg-gradient-to-br from-muted/50 to-muted/30 backdrop-blur-sm">
                                 <Select
                                     value={localFilters.kelas_id || 'all'}
                                     onValueChange={(value) => {
                                         handleFilterChange('kelas_id', value === 'all' ? '' : value);
-                                        setTimeout(applyFilters, 100);
                                     }}
                                 >
                                     <SelectTrigger className="h-9 text-sm">
@@ -217,7 +241,6 @@ export default function Index({ kelasMataKuliah, kelas, mataKuliah, semester, fi
                                     value={localFilters.mata_kuliah_id || 'all'}
                                     onValueChange={(value) => {
                                         handleFilterChange('mata_kuliah_id', value === 'all' ? '' : value);
-                                        setTimeout(applyFilters, 100);
                                     }}
                                 >
                                     <SelectTrigger className="h-9 text-sm">
@@ -237,7 +260,6 @@ export default function Index({ kelasMataKuliah, kelas, mataKuliah, semester, fi
                                     value={localFilters.semester_id || 'all'}
                                     onValueChange={(value) => {
                                         handleFilterChange('semester_id', value === 'all' ? '' : value);
-                                        setTimeout(applyFilters, 100);
                                     }}
                                 >
                                     <SelectTrigger className="h-9 text-sm">
@@ -248,6 +270,63 @@ export default function Index({ kelasMataKuliah, kelas, mataKuliah, semester, fi
                                         {semester.map(s => (
                                             <SelectItem key={s.id} value={String(s.id)}>
                                                 {s.nama}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+
+                                <Select
+                                    value={localFilters.program_studi_id || 'all'}
+                                    onValueChange={(value) => {
+                                        handleFilterChange('program_studi_id', value === 'all' ? '' : value);
+                                    }}
+                                >
+                                    <SelectTrigger className="h-9 text-sm">
+                                        <SelectValue placeholder="Prodi" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="all">Semua Prodi</SelectItem>
+                                        {programStudi.map(ps => (
+                                            <SelectItem key={ps.id} value={String(ps.id)}>
+                                                {ps.nama}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+
+                                <Select
+                                    value={localFilters.tahun_ajaran_id || 'all'}
+                                    onValueChange={(value) => {
+                                        handleFilterChange('tahun_ajaran_id', value === 'all' ? '' : value);
+                                    }}
+                                >
+                                    <SelectTrigger className="h-9 text-sm">
+                                        <SelectValue placeholder="Tahun Ajaran" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="all">Semua Tahun Ajaran</SelectItem>
+                                        {tahunAjaran.map(ta => (
+                                            <SelectItem key={ta.id} value={String(ta.id)}>
+                                                {ta.nama}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+
+                                <Select
+                                    value={localFilters.tingkat_semester || 'all'}
+                                    onValueChange={(value) => {
+                                        handleFilterChange('tingkat_semester', value === 'all' ? '' : value);
+                                    }}
+                                >
+                                    <SelectTrigger className="h-9 text-sm">
+                                        <SelectValue placeholder="Tingkat Semester" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="all">Semua Tingkat</SelectItem>
+                                        {[1, 2, 3, 4, 5, 6, 7, 8].map(sem => (
+                                            <SelectItem key={sem} value={String(sem)}>
+                                                Semester {sem}
                                             </SelectItem>
                                         ))}
                                     </SelectContent>

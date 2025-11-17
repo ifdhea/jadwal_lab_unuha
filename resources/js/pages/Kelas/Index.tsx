@@ -56,6 +56,7 @@ interface Kelas {
 }
 
 interface Filters {
+    [key: string]: string | undefined;
     search?: string;
     program_studi_id?: string;
     kampus_id?: string;
@@ -101,16 +102,26 @@ export default function Index({ kelas, programStudi, kampus, tahunAjaran, filter
     };
 
     const handleFilterChange = (key: keyof Filters, value: string) => {
-        setLocalFilters(prev => ({ ...prev, [key]: value }));
+        const newFilters = { ...localFilters, [key]: value };
+        setLocalFilters(newFilters);
+        
+        // Apply filter immediately with new value
+        const cleanFilters = Object.fromEntries(
+            Object.entries(newFilters).filter(([_, v]) => v !== '' && v !== undefined)
+        );
+        router.get('/kelas', cleanFilters, { preserveState: true, preserveScroll: true, replace: true });
     };
 
     const applyFilters = () => {
-        router.get('/kelas', localFilters, { preserveState: true });
+        const cleanFilters = Object.fromEntries(
+            Object.entries(localFilters).filter(([_, value]) => value !== '' && value !== undefined)
+        );
+        router.get('/kelas', cleanFilters, { preserveState: true, preserveScroll: true });
     };
 
     const resetFilters = () => {
         setLocalFilters({});
-        router.get('/kelas', {}, { preserveState: true });
+        router.get('/kelas', {}, { preserveState: true, preserveScroll: true });
     };
 
     const handleSearch = (e: React.FormEvent) => {
@@ -201,7 +212,6 @@ export default function Index({ kelas, programStudi, kampus, tahunAjaran, filter
                                     value={localFilters.program_studi_id || 'all'}
                                     onValueChange={(value) => {
                                         handleFilterChange('program_studi_id', value === 'all' ? '' : value);
-                                        setTimeout(applyFilters, 100);
                                     }}
                                 >
                                     <SelectTrigger className="h-9 text-sm">
@@ -221,7 +231,6 @@ export default function Index({ kelas, programStudi, kampus, tahunAjaran, filter
                                     value={localFilters.kampus_id || 'all'}
                                     onValueChange={(value) => {
                                         handleFilterChange('kampus_id', value === 'all' ? '' : value);
-                                        setTimeout(applyFilters, 100);
                                     }}
                                 >
                                     <SelectTrigger className="h-9 text-sm">
@@ -241,14 +250,13 @@ export default function Index({ kelas, programStudi, kampus, tahunAjaran, filter
                                     value={localFilters.tahun_ajaran_id || 'all'}
                                     onValueChange={(value) => {
                                         handleFilterChange('tahun_ajaran_id', value === 'all' ? '' : value);
-                                        setTimeout(applyFilters, 100);
                                     }}
                                 >
                                     <SelectTrigger className="h-9 text-sm">
                                         <SelectValue placeholder="Tahun Ajaran" />
                                     </SelectTrigger>
                                     <SelectContent>
-                                        <SelectItem value="all">Semua Tahun</SelectItem>
+                                        <SelectItem value="all">Semua Tahun Ajaran</SelectItem>
                                         {tahunAjaran.map(ta => (
                                             <SelectItem key={ta.id} value={String(ta.id)}>
                                                 {ta.nama}
@@ -261,7 +269,6 @@ export default function Index({ kelas, programStudi, kampus, tahunAjaran, filter
                                     value={localFilters.tingkat_semester || 'all'}
                                     onValueChange={(value) => {
                                         handleFilterChange('tingkat_semester', value === 'all' ? '' : value);
-                                        setTimeout(applyFilters, 100);
                                     }}
                                 >
                                     <SelectTrigger className="h-9 text-sm">
@@ -281,14 +288,13 @@ export default function Index({ kelas, programStudi, kampus, tahunAjaran, filter
                                     value={localFilters.is_aktif || 'all'}
                                     onValueChange={(value) => {
                                         handleFilterChange('is_aktif', value === 'all' ? '' : value);
-                                        setTimeout(applyFilters, 100);
                                     }}
                                 >
                                     <SelectTrigger className="h-9 text-sm">
                                         <SelectValue placeholder="Status" />
                                     </SelectTrigger>
                                     <SelectContent>
-                                        <SelectItem value="all">Status</SelectItem>
+                                        <SelectItem value="all">Semua Status</SelectItem>
                                         <SelectItem value="true">Aktif</SelectItem>
                                         <SelectItem value="false">Tidak Aktif</SelectItem>
                                     </SelectContent>

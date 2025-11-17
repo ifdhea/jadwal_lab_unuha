@@ -3,6 +3,7 @@ import { Head, Link, router, useForm, usePage } from '@inertiajs/react';
 import AppLayout from '@/layouts/app-layout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Checkbox } from '@/components/ui/checkbox';
 import {
     Table,
     TableBody,
@@ -29,7 +30,7 @@ import {
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
-import { Plus, Pencil, Trash2, CheckCircle2, CalendarCog, AlertTriangle, X, Search, Filter } from 'lucide-react';
+import { Plus, Pencil, Trash2, CheckCircle2, CalendarCog, AlertTriangle, X, Search, Filter, XCircle, Trash } from 'lucide-react';
 import {
     AlertDialog,
     AlertDialogAction,
@@ -76,6 +77,7 @@ interface Konflik {
 }
 
 interface Filters {
+    [key: string]: string | undefined;
     search?: string;
     semester_id?: string;
     dosen_id?: string;
@@ -96,6 +98,8 @@ interface Props {
 export default function Index({ jadwalMaster, semester, dosen, laboratorium, filters, breadcrumbs }: Props) {
     const [deleteId, setDeleteId] = useState<number | null>(null);
     const [showGenerateModal, setShowGenerateModal] = useState(false);
+    const [selectedIds, setSelectedIds] = useState<number[]>([]);
+    const [showBulkDeleteDialog, setShowBulkDeleteDialog] = useState(false);
     const { data, setData, post, processing } = useForm({ semester_id: '' });
     const { flash } = usePage<{ flash: { success?: string; warning?: string; konflik?: Konflik[] } }>().props;
     const [showToast, setShowToast] = useState(false);
@@ -103,21 +107,56 @@ export default function Index({ jadwalMaster, semester, dosen, laboratorium, fil
     const [localFilters, setLocalFilters] = useState<Filters>(filters || {});
 
     const handleFilterChange = (key: keyof Filters, value: string) => {
-        setLocalFilters(prev => ({ ...prev, [key]: value }));
+        const newFilters = { ...localFilters, [key]: value };
+        setLocalFilters(newFilters);
+        
+        // Apply filter immediately with new value
+        const cleanFilters = Object.fromEntries(
+            Object.entries(newFilters).filter(([_, v]) => v !== '' && v !== undefined)
+        );
+        router.get('/jadwal-master', cleanFilters, { preserveState: true, preserveScroll: true, replace: true });
     };
 
     const applyFilters = () => {
-        router.get('/jadwal-master', localFilters, { preserveState: true });
+        const cleanFilters = Object.fromEntries(
+            Object.entries(localFilters).filter(([_, value]) => value !== '' && value !== undefined)
+        );
+        router.get('/jadwal-master', cleanFilters, { preserveState: true, preserveScroll: true });
     };
 
     const resetFilters = () => {
         setLocalFilters({});
-        router.get('/jadwal-master', {}, { preserveState: true });
+        router.get('/jadwal-master', {}, { preserveState: true, preserveScroll: true });
     };
 
     const handleSearch = (e: React.FormEvent) => {
         e.preventDefault();
         applyFilters();
+    };
+
+    const handleSelectAll = (checked: boolean) => {
+        if (checked) {
+            setSelectedIds(jadwalMaster.map(item => item.id));
+        } else {
+            setSelectedIds([]);
+        }
+    };
+
+    const handleSelectOne = (id: number, checked: boolean) => {
+        if (checked) {
+            setSelectedIds([...selectedIds, id]);
+        } else {
+            setSelectedIds(selectedIds.filter(selectedId => selectedId !== id));
+        }
+    };
+
+    const handleBulkDelete = () => {
+        router.post('/jadwal-master/bulk-delete', { ids: selectedIds }, {
+            onSuccess: () => {
+                setSelectedIds([]);
+                setShowBulkDeleteDialog(false);
+            },
+        });
     };
 
     useEffect(() => {
@@ -198,6 +237,15 @@ export default function Index({ jadwalMaster, semester, dosen, laboratorium, fil
                                 <CalendarCog className="mr-2 h-4 w-4" />
                                 Generate Jadwal
                             </Button>
+                            {selectedIds.length > 0 && (
+                                <Button 
+                                    variant="destructive" 
+                                    onClick={() => setShowBulkDeleteDialog(true)}
+                                >
+                                    <Trash className="mr-2 h-4 w-4" />
+                                    Hapus Terpilih ({selectedIds.length})
+                                </Button>
+                            )}
                             <Link href="/jadwal-master/create">
                                 <Button>
                                     <Plus className="mr-2 h-4 w-4" />
@@ -254,7 +302,6 @@ export default function Index({ jadwalMaster, semester, dosen, laboratorium, fil
                                     value={localFilters.semester_id || 'all'}
                                     onValueChange={(value) => {
                                         handleFilterChange('semester_id', value === 'all' ? '' : value);
-                                        setTimeout(applyFilters, 100);
                                     }}
                                 >
                                     <SelectTrigger className="h-9 text-sm">
@@ -274,7 +321,6 @@ export default function Index({ jadwalMaster, semester, dosen, laboratorium, fil
                                     value={localFilters.dosen_id || 'all'}
                                     onValueChange={(value) => {
                                         handleFilterChange('dosen_id', value === 'all' ? '' : value);
-                                        setTimeout(applyFilters, 100);
                                     }}
                                 >
                                     <SelectTrigger className="h-9 text-sm">
@@ -294,7 +340,6 @@ export default function Index({ jadwalMaster, semester, dosen, laboratorium, fil
                                     value={localFilters.laboratorium_id || 'all'}
                                     onValueChange={(value) => {
                                         handleFilterChange('laboratorium_id', value === 'all' ? '' : value);
-                                        setTimeout(applyFilters, 100);
                                     }}
                                 >
                                     <SelectTrigger className="h-9 text-sm">
@@ -314,7 +359,6 @@ export default function Index({ jadwalMaster, semester, dosen, laboratorium, fil
                                     value={localFilters.hari || 'all'}
                                     onValueChange={(value) => {
                                         handleFilterChange('hari', value === 'all' ? '' : value);
-                                        setTimeout(applyFilters, 100);
                                     }}
                                 >
                                     <SelectTrigger className="h-9 text-sm">
@@ -336,16 +380,15 @@ export default function Index({ jadwalMaster, semester, dosen, laboratorium, fil
                                     value={localFilters.status_konflik || 'all'}
                                     onValueChange={(value) => {
                                         handleFilterChange('status_konflik', value === 'all' ? '' : value);
-                                        setTimeout(applyFilters, 100);
                                     }}
                                 >
                                     <SelectTrigger className="h-9 text-sm">
-                                        <SelectValue placeholder="Konflik" />
+                                        <SelectValue placeholder="Status Konflik" />
                                     </SelectTrigger>
                                     <SelectContent>
-                                        <SelectItem value="all">Semua</SelectItem>
+                                        <SelectItem value="all">Semua Status Konflik</SelectItem>
                                         <SelectItem value="true">Ada Konflik</SelectItem>
-                                        <SelectItem value="false">Tidak Ada</SelectItem>
+                                        <SelectItem value="false">Tidak Ada Konflik</SelectItem>
                                     </SelectContent>
                                 </Select>
                             </div>
@@ -356,6 +399,12 @@ export default function Index({ jadwalMaster, semester, dosen, laboratorium, fil
                         <Table>
                             <TableHeader>
                                 <TableRow>
+                                    <TableHead className="w-[50px]">
+                                        <Checkbox
+                                            checked={selectedIds.length === jadwalMaster.length && jadwalMaster.length > 0}
+                                            onCheckedChange={handleSelectAll}
+                                        />
+                                    </TableHead>
                                     <TableHead>Kelas & Matkul</TableHead>
                                     <TableHead>Dosen</TableHead>
                                     <TableHead>Jadwal</TableHead>
@@ -368,7 +417,7 @@ export default function Index({ jadwalMaster, semester, dosen, laboratorium, fil
                                 {jadwalMaster.length === 0 ? (
                                     <TableRow>
                                         <TableCell
-                                            colSpan={6}
+                                            colSpan={7}
                                             className="text-center text-muted-foreground"
                                         >
                                             Belum ada data jadwal
@@ -377,6 +426,12 @@ export default function Index({ jadwalMaster, semester, dosen, laboratorium, fil
                                 ) : (
                                     jadwalMaster.map((item) => (
                                         <TableRow key={item.id}>
+                                            <TableCell>
+                                                <Checkbox
+                                                    checked={selectedIds.includes(item.id)}
+                                                    onCheckedChange={(checked) => handleSelectOne(item.id, checked as boolean)}
+                                                />
+                                            </TableCell>
                                             <TableCell className="font-medium">
                                                 {item.kelas_matkul.kelas.nama} - Semester {item.kelas_matkul.kelas.tingkat_semester} - {item.kelas_matkul.mata_kuliah.nama}
                                             </TableCell>
@@ -424,6 +479,26 @@ export default function Index({ jadwalMaster, semester, dosen, laboratorium, fil
                             <AlertDialogFooter>
                                 <AlertDialogCancel>Batal</AlertDialogCancel>
                                 <AlertDialogAction onClick={handleDelete}>Hapus</AlertDialogAction>
+                            </AlertDialogFooter>
+                        </AlertDialogContent>
+                    </AlertDialog>
+
+                    <AlertDialog open={showBulkDeleteDialog} onOpenChange={setShowBulkDeleteDialog}>
+                        <AlertDialogContent>
+                            <AlertDialogHeader>
+                                <AlertDialogTitle>Konfirmasi Hapus Multiple</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                    Apakah Anda yakin ingin menghapus {selectedIds.length} jadwal yang dipilih? 
+                                    Tindakan ini tidak dapat dibatalkan.
+                                </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                                <AlertDialogCancel onClick={() => setShowBulkDeleteDialog(false)}>
+                                    Batal
+                                </AlertDialogCancel>
+                                <AlertDialogAction onClick={handleBulkDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                                    Hapus Semua
+                                </AlertDialogAction>
                             </AlertDialogFooter>
                         </AlertDialogContent>
                     </AlertDialog>

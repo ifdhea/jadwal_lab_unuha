@@ -49,6 +49,7 @@ interface MataKuliah {
 }
 
 interface Filters {
+    [key: string]: string | undefined;
     search?: string;
     program_studi_id?: string;
     tingkat_semester?: string;
@@ -92,16 +93,26 @@ export default function Index({ mataKuliah, programStudi, filters, breadcrumbs }
     };
 
     const handleFilterChange = (key: keyof Filters, value: string) => {
-        setLocalFilters(prev => ({ ...prev, [key]: value }));
+        const newFilters = { ...localFilters, [key]: value };
+        setLocalFilters(newFilters);
+        
+        // Apply filter immediately with new value
+        const cleanFilters = Object.fromEntries(
+            Object.entries(newFilters).filter(([_, v]) => v !== '' && v !== undefined)
+        );
+        router.get('/mata-kuliah', cleanFilters, { preserveState: true, preserveScroll: true, replace: true });
     };
 
     const applyFilters = () => {
-        router.get('/mata-kuliah', localFilters, { preserveState: true });
+        const cleanFilters = Object.fromEntries(
+            Object.entries(localFilters).filter(([_, value]) => value !== '' && value !== undefined)
+        );
+        router.get('/mata-kuliah', cleanFilters, { preserveState: true, preserveScroll: true });
     };
 
     const resetFilters = () => {
         setLocalFilters({});
-        router.get('/mata-kuliah', {}, { preserveState: true });
+        router.get('/mata-kuliah', {}, { preserveState: true, preserveScroll: true });
     };
 
     const handleSearch = (e: React.FormEvent) => {
@@ -192,7 +203,6 @@ export default function Index({ mataKuliah, programStudi, filters, breadcrumbs }
                                     value={localFilters.program_studi_id || 'all'}
                                     onValueChange={(value) => {
                                         handleFilterChange('program_studi_id', value === 'all' ? '' : value);
-                                        setTimeout(applyFilters, 100);
                                     }}
                                 >
                                     <SelectTrigger className="h-9 text-sm">
@@ -212,14 +222,13 @@ export default function Index({ mataKuliah, programStudi, filters, breadcrumbs }
                                     value={localFilters.tingkat_semester || 'all'}
                                     onValueChange={(value) => {
                                         handleFilterChange('tingkat_semester', value === 'all' ? '' : value);
-                                        setTimeout(applyFilters, 100);
                                     }}
                                 >
                                     <SelectTrigger className="h-9 text-sm">
                                         <SelectValue placeholder="Semester" />
                                     </SelectTrigger>
                                     <SelectContent>
-                                        <SelectItem value="all">Semua</SelectItem>
+                                        <SelectItem value="all">Semua Semester</SelectItem>
                                         {[1, 2, 3, 4, 5, 6, 7, 8].map(sem => (
                                             <SelectItem key={sem} value={String(sem)}>
                                                 Semester {sem}
@@ -232,7 +241,6 @@ export default function Index({ mataKuliah, programStudi, filters, breadcrumbs }
                                     value={localFilters.tipe_semester || 'all'}
                                     onValueChange={(value) => {
                                         handleFilterChange('tipe_semester', value === 'all' ? '' : value);
-                                        setTimeout(applyFilters, 100);
                                     }}
                                 >
                                     <SelectTrigger className="h-9 text-sm">
@@ -250,16 +258,15 @@ export default function Index({ mataKuliah, programStudi, filters, breadcrumbs }
                                     value={localFilters.butuh_lab || 'all'}
                                     onValueChange={(value) => {
                                         handleFilterChange('butuh_lab', value === 'all' ? '' : value);
-                                        setTimeout(applyFilters, 100);
                                     }}
                                 >
                                     <SelectTrigger className="h-9 text-sm">
                                         <SelectValue placeholder="Lab" />
                                     </SelectTrigger>
                                     <SelectContent>
-                                        <SelectItem value="all">Semua</SelectItem>
+                                        <SelectItem value="all">Semua Lab</SelectItem>
                                         <SelectItem value="true">Butuh Lab</SelectItem>
-                                        <SelectItem value="false">Tidak Butuh</SelectItem>
+                                        <SelectItem value="false">Tidak Butuh Lab</SelectItem>
                                     </SelectContent>
                                 </Select>
 
@@ -267,14 +274,13 @@ export default function Index({ mataKuliah, programStudi, filters, breadcrumbs }
                                     value={localFilters.is_aktif || 'all'}
                                     onValueChange={(value) => {
                                         handleFilterChange('is_aktif', value === 'all' ? '' : value);
-                                        setTimeout(applyFilters, 100);
                                     }}
                                 >
                                     <SelectTrigger className="h-9 text-sm">
                                         <SelectValue placeholder="Status" />
                                     </SelectTrigger>
                                     <SelectContent>
-                                        <SelectItem value="all">Semua</SelectItem>
+                                        <SelectItem value="all">Semua Status</SelectItem>
                                         <SelectItem value="true">Aktif</SelectItem>
                                         <SelectItem value="false">Tidak Aktif</SelectItem>
                                     </SelectContent>

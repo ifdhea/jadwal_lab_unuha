@@ -5,7 +5,9 @@ namespace App\Http\Controllers;
 use App\Models\Kelas;
 use App\Models\KelasMatKul;
 use App\Models\MataKuliah;
+use App\Models\ProgramStudi;
 use App\Models\Semester;
+use App\Models\TahunAjaran;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 use Inertia\Inertia;
@@ -14,7 +16,7 @@ class KelasMataKuliahController extends Controller
 {
     public function index(Request $request)
     {
-        $query = KelasMatKul::with(['kelas.programStudi', 'mataKuliah', 'semester']);
+        $query = KelasMatKul::with(['kelas.programStudi', 'kelas.tahunAjaran', 'mataKuliah', 'semester']);
 
         if ($request->filled('search')) {
             $search = $request->search;
@@ -39,6 +41,24 @@ class KelasMataKuliahController extends Controller
             $query->where('semester_id', $request->semester_id);
         }
 
+        if ($request->filled('program_studi_id')) {
+            $query->whereHas('kelas', function($q) use ($request) {
+                $q->where('program_studi_id', $request->program_studi_id);
+            });
+        }
+
+        if ($request->filled('tahun_ajaran_id')) {
+            $query->whereHas('kelas', function($q) use ($request) {
+                $q->where('tahun_ajaran_id', $request->tahun_ajaran_id);
+            });
+        }
+
+        if ($request->filled('tingkat_semester')) {
+            $query->whereHas('kelas', function($q) use ($request) {
+                $q->where('tingkat_semester', $request->tingkat_semester);
+            });
+        }
+
         $kelasMataKuliah = $query->get();
 
         return Inertia::render('KelasMataKuliah/Index', [
@@ -46,7 +66,9 @@ class KelasMataKuliahController extends Controller
             'kelas' => Kelas::where('is_aktif', true)->orderBy('nama')->get(),
             'mataKuliah' => MataKuliah::where('is_aktif', true)->orderBy('nama')->get(),
             'semester' => Semester::where('is_aktif', true)->orderBy('nama', 'desc')->get(),
-            'filters' => $request->only(['search', 'kelas_id', 'mata_kuliah_id', 'semester_id']),
+            'programStudi' => ProgramStudi::orderBy('nama')->get(),
+            'tahunAjaran' => TahunAjaran::orderBy('nama', 'desc')->get(),
+            'filters' => $request->only(['search', 'kelas_id', 'mata_kuliah_id', 'semester_id', 'program_studi_id', 'tahun_ajaran_id', 'tingkat_semester']),
             'breadcrumbs' => [
                 ['title' => 'Dashboard', 'href' => '/dashboard'],
                 ['title' => 'Kelas & Mata Kuliah', 'href' => '/kelas-matkul'],
