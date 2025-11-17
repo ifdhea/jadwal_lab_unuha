@@ -31,9 +31,13 @@ Route::get('/beranda', [PublicController::class, 'beranda'])->name('beranda');
 Route::get('/jadwal-lab', [PublicController::class, 'jadwal'])->name('jadwal-lab');
 Route::get('/tentang', [PublicController::class, 'tentang'])->name('tentang');
 
-// Public Activity Log API
-Route::get('/api/activity-logs/recent', [ActivityLogController::class, 'getRecent'])->name('api.activity-logs.recent');
-Route::get('/api/activity-logs/today', [ActivityLogController::class, 'getToday'])->name('api.activity-logs.today');
+// Public Activity Log API - dengan web middleware untuk session
+Route::middleware('web')->group(function () {
+    Route::get('/api/activity-logs/recent', [ActivityLogController::class, 'getRecent'])->name('api.activity-logs.recent');
+    Route::get('/api/activity-logs/today', [ActivityLogController::class, 'getToday'])->name('api.activity-logs.today');
+    Route::get('/api/activity-logs/check-unread', [ActivityLogController::class, 'checkUnread'])->name('api.activity-logs.check-unread');
+    Route::post('/api/activity-logs/mark-seen', [ActivityLogController::class, 'markAsSeen'])->name('api.activity-logs.mark-seen');
+});
 
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('dashboard', [DashboardController::class, 'index'])->name('dashboard');

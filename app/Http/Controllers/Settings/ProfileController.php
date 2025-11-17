@@ -43,11 +43,11 @@ class ProfileController extends Controller
         // Handle foto profil upload
         if ($request->hasFile('foto_profil')) {
             // Delete old photo if exists
-            if ($user->foto_profil && \Storage::disk('public')->exists($user->foto_profil)) {
-                \Storage::disk('public')->delete($user->foto_profil);
+            if ($user->foto_profil && \Storage::disk('public_uploads')->exists($user->foto_profil)) {
+                \Storage::disk('public_uploads')->delete($user->foto_profil);
             }
             
-            $path = $request->file('foto_profil')->store('foto_profil', 'public');
+            $path = $request->file('foto_profil')->store('foto_profil', 'public_uploads');
             $validated['foto_profil'] = $path;
         }
         

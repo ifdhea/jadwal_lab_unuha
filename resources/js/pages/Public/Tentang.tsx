@@ -222,11 +222,11 @@ export default function Tentang() {
                     {/* CTA Section */}
                     <section className="relative mx-auto max-w-4xl py-12" data-aos="zoom-in">
                         {/* Local mesh enhancement */}
-                        <div className="absolute inset-0 -z-10">
-                            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[700px] bg-[#9AEF5E] opacity-35 rounded-full blur-[140px]" />
-                        </div>
-
                         <div className="relative overflow-hidden rounded-3xl border border-primary/20 bg-gradient-to-br from-primary/10 via-primary/5 to-background/50 backdrop-blur-sm p-10 sm:p-14 shadow-2xl shadow-primary/10">
+                            {/* Local mesh enhancement */}
+                            <div className="absolute inset-0 -z-10">
+                                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[700px] bg-[#9AEF5E] opacity-35 rounded-full blur-[140px]" />
+                            </div>
                             <div className="absolute top-0 right-0 h-48 w-48 rounded-full bg-[#9AEF5E]/25 blur-3xl" />
                             <div className="absolute bottom-0 left-0 h-48 w-48 rounded-full bg-[#27563C]/25 blur-3xl" />
                             <div className="relative text-center space-y-6">

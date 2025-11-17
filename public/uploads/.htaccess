@@ -1,0 +1,18 @@
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    # Allow images
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteRule ^(.*)$ - [F,L]
+</IfModule>
+
+<IfModule mod_headers.c>
+    # Prevent PHP execution
+    <FilesMatch "\.(php|php3|php4|php5|phtml)$">
+        Require all denied
+    </FilesMatch>
+</IfModule>
+
+# Allow specific file types
+<FilesMatch "\.(jpg|jpeg|png|gif|webp|svg)$">
+    Require all granted
+</FilesMatch>

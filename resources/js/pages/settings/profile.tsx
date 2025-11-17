@@ -1,3 +1,4 @@
+import { toast } from '@/hooks/use-toast';
 import ProfileController from '@/actions/App/Http/Controllers/Settings/ProfileController';
 import { send } from '@/routes/verification';
 import { type BreadcrumbItem, type SharedData } from '@/types';
@@ -63,6 +64,10 @@ export default function Profile({
             preserveScroll: true,
             onSuccess: () => {
                 setSelectedFile(null);
+                toast({
+                    title: 'Berhasil!',
+                    description: 'Foto profil Anda telah berhasil diperbarui.',
+                });
             },
         });
     };

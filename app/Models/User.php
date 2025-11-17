@@ -80,7 +80,7 @@ class User extends Authenticatable
     public function getFotoProfilUrlAttribute()
     {
         if ($this->foto_profil) {
-            return asset('storage/' . $this->foto_profil);
+            return asset('uploads/' . $this->foto_profil);
         }
         return null;
     }

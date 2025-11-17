@@ -72,7 +72,7 @@ export default function PublicLayout({ children }: Props) {
                             alt="Logo UNUHA"
                             className="h-9 w-9 object-contain"
                         />
-                        <div className="hidden sm:block">
+                        <div className="sm:block">
                             <h1 className="text-base font-bold leading-tight">Jadwal Lab</h1>
                             <p className="text-[10px] text-muted-foreground leading-tight">
                                 Universitas Nurul Huda
@@ -185,7 +185,7 @@ export default function PublicLayout({ children }: Props) {
                                         Dashboard
                                     </Link>
                                     <Link
-                                        href="/profile/edit"
+                                        href="/settings/profile"
                                         className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-foreground/70 hover:bg-gray-100 dark:hover:bg-primary/10 hover:text-foreground dark:hover:text-primary transition-all duration-200"
                                         onClick={() => setMobileMenuOpen(false)}
                                     >
@@ -274,7 +274,7 @@ export default function PublicLayout({ children }: Props) {
                         </div>
                     </div>
                     <div className="mt-10 border-t pt-6">
-                        <p className="text-center text-sm text-muted-foreground">
+                        <p className="text-center text-xs text-muted-foreground">
                             &copy; {new Date().getFullYear()} <a href="https://unuha.ac.id" target="_blank" rel="noopener noreferrer" className="hover:underline">Universitas Nurul Huda</a>. All rights reserved.
                             <br />
                             Powered by UNUHA IT CENTER

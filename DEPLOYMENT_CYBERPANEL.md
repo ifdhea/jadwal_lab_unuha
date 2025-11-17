@@ -47,8 +47,8 @@ composer install --optimize-autoloader --no-dev
 cd /home/username/public_html
 
 # Set permissions
-chmod -R 755 storage bootstrap/cache
-chown -R username:username storage bootstrap/cache
+chmod -R 755 storage bootstrap/cache public/uploads
+chown -R username:username storage bootstrap/cache public/uploads
 
 # Install dependencies (jika belum)
 composer install --optimize-autoloader --no-dev
@@ -62,8 +62,9 @@ php artisan view:cache
 # Migrate database
 php artisan migrate --force
 
-# Link storage
-php artisan storage:link
+# CATATAN: Aplikasi ini TIDAK menggunakan symlink storage
+# File upload langsung disimpan ke public/uploads
+# Jadi TIDAK perlu menjalankan 'php artisan storage:link'
 ```
 
 ### 5. File .env untuk Production
@@ -91,7 +92,7 @@ QUEUE_CONNECTION=database
 SESSION_DRIVER=file
 
 # Filesystem
-FILESYSTEM_DISK=public
+FILESYSTEM_DISK=public_uploads
 
 # Mail (sesuaikan dengan SMTP Anda)
 MAIL_MAILER=smtp
@@ -104,7 +105,23 @@ MAIL_FROM_ADDRESS=your_email@gmail.com
 MAIL_FROM_NAME="${APP_NAME}"
 ```
 
-### 6. Update index.php
+### 6. Konfigurasi Folder Uploads (PENTING!)
+
+**Aplikasi ini TIDAK menggunakan symlink storage!**
+
+**Buat folder uploads di server:**
+```bash
+cd /home/username/public_html/public_html
+mkdir -p uploads/foto_profil
+chmod -R 755 uploads
+chown -R username:username uploads
+```
+
+**Upload file .htaccess untuk keamanan:**
+- Upload file `public/uploads/.htaccess` dari project Anda
+- File ini mencegah eksekusi PHP di folder uploads
+
+### 7. Update index.php
 
 Edit `/home/username/public_html/public_html/index.php`:
 
@@ -164,7 +181,14 @@ php artisan view:clear
 ✅ **Solusi:**
 - Cek folder `build/` ada di `public_html/`
 - Pastikan APP_URL di .env sesuai domain
-- Run: `php artisan storage:link`
+- ⚠️ **JANGAN** run `php artisan storage:link` (tidak digunakan)
+
+### Upload foto tidak muncul
+✅ **Solusi:**
+- Cek folder `uploads/` ada di `public_html/`
+- Cek permissions: `chmod -R 755 public_html/uploads`
+- Pastikan FILESYSTEM_DISK=public_uploads di .env
+- Cek file .htaccess ada di folder uploads/
 
 ### Database Connection Error
 ✅ **Solusi:**
@@ -178,13 +202,17 @@ php artisan view:clear
 - [ ] Upload isi folder public ke `/home/username/public_html/public_html/`
 - [ ] Set Document Root ke `public_html/`
 - [ ] Konfigurasi .env dengan data production
+- [ ] **Buat folder uploads:** `mkdir -p public_html/uploads/foto_profil`
+- [ ] **Set permissions uploads:** `chmod -R 755 public_html/uploads`
+- [ ] Upload file `.htaccess` ke folder `public_html/uploads/`
 - [ ] Set permissions: `chmod -R 755 storage bootstrap/cache`
 - [ ] Run: `composer install --no-dev`
 - [ ] Run: `php artisan key:generate` (jika APP_KEY kosong)
 - [ ] Run: `php artisan migrate --force`
 - [ ] Run: `php artisan optimize`
-- [ ] Run: `php artisan storage:link`
+- [ ] ⚠️ **JANGAN** run `php artisan storage:link` (tidak digunakan)
 - [ ] Test website di browser
+- [ ] Test upload foto profil
 
 ## 🔐 Security Checklist
 
