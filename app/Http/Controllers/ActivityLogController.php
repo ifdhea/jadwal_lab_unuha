@@ -9,11 +9,8 @@ class ActivityLogController extends Controller
 {
     public function getRecent(Request $request)
     {
-        $days = $request->input('days', 7); // Default 7 hari terakhir
-        
         $activities = ActivityLog::query()
             ->public()
-            ->recent($days)
             ->orderBy('created_at', 'desc')
             ->orderBy('id', 'desc')
             ->limit(50)
@@ -119,13 +116,8 @@ class ActivityLogController extends Controller
     {
         $user = $request->user();
         
-        // Ambil waktu dari aktivitas terbaru untuk memastikan semua sudah ditandai sebagai dibaca
-        $latestActivity = ActivityLog::query()
-            ->public()
-            ->latest('created_at')
-            ->first();
-            
-        $markTime = $latestActivity ? $latestActivity->created_at : now();
+        // Gunakan waktu saat ini untuk menandai
+        $markTime = now();
         
         if ($user) {
             // Update database untuk authenticated user

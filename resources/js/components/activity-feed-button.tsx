@@ -39,8 +39,6 @@ export function ActivityFeedButton({ variant = 'button', days = 7 }: ActivityFee
     const [hasUnread, setHasUnread] = useState(false);
     const instanceId = useRef(Math.random().toString(36).substring(7));
 
-    console.log(`[ActivityFeed-${instanceId.current}] Component rendered, hasUnread:`, hasUnread);
-
     const fetchActivities = async () => {
         try {
             const response = await axios.get(`/api/activity-logs/recent?days=${days}`);
@@ -57,16 +55,12 @@ export function ActivityFeedButton({ variant = 'button', days = 7 }: ActivityFee
             // Untuk guest, gunakan localStorage
             const lastSeenAt = localStorage.getItem('activity_last_seen_at');
             
-            console.log(`[ActivityFeed-${instanceId.current}] Checking unread, lastSeenAt from localStorage:`, lastSeenAt);
-            
             const response = await axios.get('/api/activity-logs/check-unread', {
                 withCredentials: true,
                 params: {
                     client_last_seen: lastSeenAt, // kirim dari client
                 }
             });
-            console.log(`[ActivityFeed-${instanceId.current}] Check unread response:`, response.data);
-            console.log(`[ActivityFeed-${instanceId.current}] has_unread value:`, response.data.has_unread, 'type:', typeof response.data.has_unread);
             setHasUnread(response.data.has_unread);
         } catch (error) {
             console.error(`[ActivityFeed-${instanceId.current}] Failed to check unread activities:`, error);
@@ -77,21 +71,17 @@ export function ActivityFeedButton({ variant = 'button', days = 7 }: ActivityFee
 
     const markAsSeen = async () => {
         try {
-            console.log(`[ActivityFeed-${instanceId.current}] Marking as seen...`);
             const response = await axios.post('/api/activity-logs/mark-seen', {}, {
                 withCredentials: true,
             });
-            console.log(`[ActivityFeed-${instanceId.current}] Marked as seen:`, response.data);
             
             // Simpan ke localStorage untuk guest
             if (response.data.marked_at) {
                 localStorage.setItem('activity_last_seen_at', response.data.marked_at);
-                console.log(`[ActivityFeed-${instanceId.current}] Saved to localStorage:`, response.data.marked_at);
             }
             
             // Set badge ke false langsung
             setHasUnread(false);
-            console.log(`[ActivityFeed-${instanceId.current}] Badge set to false`);
             
             // Trigger custom event untuk notify instance lain di window yang sama
             window.dispatchEvent(new CustomEvent('activity-marked-seen'));
@@ -114,14 +104,12 @@ export function ActivityFeedButton({ variant = 'button', days = 7 }: ActivityFee
         // Listen untuk perubahan localStorage dari tab/window lain
         const handleStorageChange = (e: StorageEvent) => {
             if (e.key === 'activity_last_seen_at') {
-                console.log(`[ActivityFeed-${instanceId.current}] localStorage changed by another tab, re-checking...`);
                 checkUnread();
             }
         };
         
         // Listen untuk custom event dari instance lain di window yang sama
         const handleActivityMarkedSeen = () => {
-            console.log(`[ActivityFeed-${instanceId.current}] Activity marked seen by another instance, updating...`);
             setHasUnread(false);
         };
         
@@ -170,23 +158,11 @@ export function ActivityFeedButton({ variant = 'button', days = 7 }: ActivityFee
                 {variant === 'icon' ? (
                     <Button variant="ghost" size="icon" title="Aktivitas Terkini" className="relative">
                         <Activity className="h-5 w-5" />
-                        {hasUnread && (
-                            <span className="absolute right-1 top-1 flex h-2 w-2">
-                                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-red-400 opacity-75"></span>
-                                <span className="relative inline-flex h-2 w-2 rounded-full bg-red-500"></span>
-                            </span>
-                        )}
                     </Button>
                 ) : (
                     <Button variant="outline" size="sm" className="relative">
                         <Activity className="mr-2 h-4 w-4" />
                         Aktivitas Terkini
-                        {hasUnread && (
-                            <span className="ml-2 flex h-2 w-2">
-                                <span className="absolute inline-flex h-2 w-2 animate-ping rounded-full bg-red-400 opacity-75"></span>
-                                <span className="relative inline-flex h-2 w-2 rounded-full bg-red-500"></span>
-                            </span>
-                        )}
                     </Button>
                 )}
             </DialogTrigger>
