@@ -14,7 +14,7 @@ import {
 } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import { CheckCircle2, XCircle, Calendar, Clock, Building2, User } from 'lucide-react';
+import { CheckCircle2, XCircle, Calendar, Clock, Building2, User, Trash2 } from 'lucide-react';
 
 interface Dosen {
     id: number;
@@ -70,6 +70,7 @@ export default function Index({ bookings, filters = {} }: PageProps) {
     const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
     const [showApproveDialog, setShowApproveDialog] = useState(false);
     const [showRejectDialog, setShowRejectDialog] = useState(false);
+    const [showDeleteAllDialog, setShowDeleteAllDialog] = useState(false);
     const [adminNote, setAdminNote] = useState('');
     const [processing, setProcessing] = useState(false);
 
@@ -133,6 +134,16 @@ export default function Index({ bookings, filters = {} }: PageProps) {
         });
     };
 
+    const submitDeleteAll = () => {
+        setProcessing(true);
+        router.post('/admin/booking-lab/delete-all', {}, {
+            onFinish: () => {
+                setProcessing(false);
+                setShowDeleteAllDialog(false);
+            }
+        });
+    };
+
     return (
         <AppLayout
             breadcrumbs={[
@@ -150,6 +161,13 @@ export default function Index({ bookings, filters = {} }: PageProps) {
                             Kelola dan approve request booking laboratorium dari dosen
                         </p>
                     </div>
+                    <Button
+                        variant="destructive"
+                        onClick={() => setShowDeleteAllDialog(true)}
+                    >
+                        <Trash2 className="h-4 w-4 mr-2" />
+                        Hapus Semua
+                    </Button>
                 </div>
 
                 <Card>
@@ -339,6 +357,33 @@ export default function Index({ bookings, filters = {} }: PageProps) {
                             disabled={processing || !adminNote.trim()}
                         >
                             {processing ? 'Memproses...' : 'Tolak'}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            <Dialog open={showDeleteAllDialog} onOpenChange={setShowDeleteAllDialog}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Hapus Semua Booking</DialogTitle>
+                        <DialogDescription>
+                            Apakah Anda yakin ingin menghapus semua data booking? Tindakan ini tidak dapat diurungkan.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <DialogFooter>
+                        <Button
+                            variant="outline"
+                            onClick={() => setShowDeleteAllDialog(false)}
+                            disabled={processing}
+                        >
+                            Batal
+                        </Button>
+                        <Button
+                            variant="destructive"
+                            onClick={submitDeleteAll}
+                            disabled={processing}
+                        >
+                            {processing ? 'Menghapus...' : 'Hapus Semua'}
                         </Button>
                     </DialogFooter>
                 </DialogContent>

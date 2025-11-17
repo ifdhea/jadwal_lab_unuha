@@ -966,4 +966,10 @@ class BookingLaboratoriumController extends Controller
             ],
         ]);
     }
+
+    public function deleteAll(Request $request)
+    {
+        BookingLaboratorium::truncate();
+        return redirect()->route('admin.booking-lab.index')->with('success', 'Semua data booking berhasil dihapus.');
+    }
 }

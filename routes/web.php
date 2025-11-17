@@ -88,6 +88,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('/admin/booking-lab', [BookingLaboratoriumController::class, 'adminIndex'])->name('admin.booking-lab.index');
         Route::post('/booking-lab/{bookingLab}/approve', [BookingLaboratoriumController::class, 'approve'])->name('booking-lab.approve');
         Route::post('/booking-lab/{bookingLab}/reject', [BookingLaboratoriumController::class, 'reject'])->name('booking-lab.reject');
+        Route::post('/admin/booking-lab/delete-all', [BookingLaboratoriumController::class, 'deleteAll'])->name('admin.booking-lab.delete-all');
         
         // Admin: Tandai dosen tidak hadir & batalkan jadwal
         Route::post('/sesi-jadwal/{sesiJadwal}/tandai-tidak-hadir', [SesiJadwalController::class, 'tandaiTidakHadir'])->name('sesi-jadwal.tandai-tidak-hadir');
@@ -108,6 +109,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::resource('dosen', DosenController::class);
         Route::resource('users', UserController::class);
         Route::resource('jadwal-master', JadwalMasterController::class);
+        Route::post('/jadwal-master/bulk-delete', [JadwalMasterController::class, 'bulkDelete'])->name('jadwal-master.bulk-delete');
+
         Route::post('/jadwal/generate', [JadwalGeneratorController::class, 'generate'])->name('jadwal.generate');
     });
 });

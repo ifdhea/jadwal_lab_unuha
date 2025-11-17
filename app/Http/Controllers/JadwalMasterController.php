@@ -222,4 +222,16 @@ class JadwalMasterController extends Controller
             return redirect('/jadwal-master')->with('error', 'Jadwal Master tidak dapat dihapus karena memiliki relasi dengan data lain.');
         }
     }
+
+    public function bulkDelete(Request $request)
+    {
+        $request->validate([
+            'ids' => 'required|array',
+            'ids.*' => 'exists:jadwal_master,id',
+        ]);
+
+        JadwalMaster::whereIn('id', $request->ids)->delete();
+
+        return redirect('/jadwal-master')->with('success', 'Jadwal Master yang dipilih berhasil dihapus.');
+    }
 }
