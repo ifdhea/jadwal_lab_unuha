@@ -234,7 +234,7 @@ export default function Jadwal({
 
     return (
         <PublicLayout>
-            <Head title="Jadwal Lab - Universitas Nurul Huda" />
+            <Head title="Jadwal Lab" />
 
             <div className="container mx-auto space-y-6 px-6 py-8 pt-20 md:pt-24 lg:px-8">
                 {/* Header */}

@@ -10,7 +10,7 @@ const appName = import.meta.env.VITE_APP_NAME || 'Laravel';
 
 // Expose React to window for detection tools
 if (typeof window !== 'undefined') {
-    window.React = { version };
+    (window as any).React = { version };
 }
 
 createInertiaApp({

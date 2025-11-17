@@ -26,7 +26,7 @@ export default function Beranda({ activeSemester, totalKampus }: Props) {
 
     return (
         <PublicLayout>
-            <Head title="Beranda - Jadwal Lab" />
+            <Head title="Beranda" />
 
             {/* Hero Section with SVG Background */}
             <section className="relative min-h-[90vh] overflow-hidden">

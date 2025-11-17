@@ -17,7 +17,7 @@ import {
 export default function Tentang() {
     return (
         <PublicLayout>
-            <Head title="Tentang - Jadwal Lab" />
+            <Head title="Tentang" />
             <div className="container mx-auto space-y-20 px-6 py-8 md:py-16 lg:px-8 relative">
             {/* Hero Section */}
             <section className="relative mx-auto max-w-4xl text-center space-y-6 pt-12 md:pt-24">
@@ -54,7 +54,8 @@ export default function Tentang() {
                                 </p>
                             </CardContent>
                         </Card>
-
+
+
                         <Card className="group hover:shadow-lg transition-all duration-300 hover:border-primary/50" data-aos="fade-left" data-aos-delay="200">
                             <CardHeader>
                                 <div className="mb-3 inline-flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10 text-primary group-hover:bg-primary group-hover:text-primary-foreground transition-colors">
@@ -114,7 +115,8 @@ export default function Tentang() {
                                     </p>
                                 </CardContent>
                             </Card>
-
+
+
                             <Card className="hover:shadow-lg transition-shadow duration-300 " data-aos="fade-up" data-aos-delay="200">
                                 <CardHeader>
                                     <CardTitle className="flex items-center gap-2.5">
