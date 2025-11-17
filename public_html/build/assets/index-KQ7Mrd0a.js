@@ -1,0 +1,1 @@
+import{q as s}from"./index-D-s97nNy.js";const o=r=>({url:o.url(r),method:"post"});o.definition={methods:["post"],url:"/user/confirm-password"};o.url=r=>o.definition.url+s(r);o.post=r=>({url:o.url(r),method:"post"});o.form=r=>({action:o.url(r),method:"post"});const e={store:Object.assign(o,o)};export{e as c,o as s};

@@ -4,7 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\JadwalMaster;
 use App\Models\Semester;
-use App\Models\KelasMatkul;
+use App\Models\KelasMatKul;
 use App\Models\Dosen;
 use App\Models\Laboratorium;
 use App\Models\SlotWaktu;
@@ -96,7 +96,7 @@ class JadwalMasterController extends Controller
 
     private function getFormData()
     {
-        $kelasMatkul = KelasMatkul::with(['kelas', 'mataKuliah'])->get()->map(function ($item) {
+        $kelasMatkul = KelasMatKul::with(['kelas', 'mataKuliah'])->get()->map(function ($item) {
             return [
                 'id' => $item->id,
                 'kelas' => $item->kelas,

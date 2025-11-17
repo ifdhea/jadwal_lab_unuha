@@ -268,7 +268,7 @@ export default function Index({ kelas, programStudi, kampus, tahunAjaran, filter
                                         <SelectValue placeholder="Semester" />
                                     </SelectTrigger>
                                     <SelectContent>
-                                        <SelectItem value="all">Semua</SelectItem>
+                                        <SelectItem value="all">Semua Semester</SelectItem>
                                         {[1, 2, 3, 4, 5, 6, 7, 8].map(sem => (
                                             <SelectItem key={sem} value={String(sem)}>
                                                 Semester {sem}
@@ -288,7 +288,7 @@ export default function Index({ kelas, programStudi, kampus, tahunAjaran, filter
                                         <SelectValue placeholder="Status" />
                                     </SelectTrigger>
                                     <SelectContent>
-                                        <SelectItem value="all">Semua</SelectItem>
+                                        <SelectItem value="all">Status</SelectItem>
                                         <SelectItem value="true">Aktif</SelectItem>
                                         <SelectItem value="false">Tidak Aktif</SelectItem>
                                     </SelectContent>
