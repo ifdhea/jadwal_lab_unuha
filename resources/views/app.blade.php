@@ -4,6 +4,9 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="generator" content="React">
+    <meta name="framework" content="React">
+    <meta name="react-version" content="19.2.0">
 
     {{-- Inline script to detect system dark mode preference and apply it immediately --}}
     <script>
@@ -42,10 +45,16 @@
     @viteReactRefresh
     @vite(['resources/js/app.tsx', "resources/js/pages/{$page['component']}.tsx"])
     @inertiaHead
+    
+    {{-- Expose React for detection --}}
+    <script>
+        window.React = window.React || { version: '19.2.0' };
+    </script>
 </head>
 
-<body class="font-sans antialiased">
+<body class="font-sans antialiased" data-react-root data-reactroot>
     @inertia
+    <script>window.__REACT__ = true;</script>
 </body>
 
 </html>
