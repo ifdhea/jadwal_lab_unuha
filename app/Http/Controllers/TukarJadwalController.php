@@ -27,7 +27,9 @@ class TukarJadwalController extends Controller
 
         $query = TukarJadwal::with([
             'pemohon.user',
+            'pemohon',
             'mitra.user',
+            'mitra',
             'sesiJadwalPemohon.jadwalMaster.kelasMatKul.mataKuliah',
             'sesiJadwalPemohon.jadwalMaster.laboratorium',
             'sesiJadwalMitra.jadwalMaster.kelasMatKul.mataKuliah',
@@ -57,7 +59,7 @@ class TukarJadwalController extends Controller
                     'id' => $item->id,
                     'pemohon' => [
                         'id' => $item->pemohon->id,
-                        'nama' => $item->pemohon->user->name,
+                        'nama' => $item->pemohon->nama_lengkap,
                     ],
                     'sesi_pemohon' => [
                         'id' => $item->sesiJadwalPemohon->id,
@@ -142,7 +144,7 @@ class TukarJadwalController extends Controller
             ->map(function ($d) {
                 return [
                     'id' => $d->id,
-                    'nama' => $d->user->name,
+                    'nama' => $d->nama_lengkap,
                     'nidn' => $d->nidn,
                 ];
             });
@@ -746,6 +748,7 @@ class TukarJadwalController extends Controller
             ->with([
                 'jadwalMaster.laboratorium.kampus',
                 'jadwalMaster.dosen.user',
+                'jadwalMaster.dosen',
                 'jadwalMaster.kelasMatKul.kelas',
                 'jadwalMaster.kelasMatKul.mataKuliah',
                 'jadwalMaster.slotWaktuMulai',
@@ -837,7 +840,7 @@ class TukarJadwalController extends Controller
                     'sesi_jadwal_id' => $sesi->id,
                     'matkul' => $master->kelasMatKul->mataKuliah->nama,
                     'kelas' => $master->kelasMatKul->kelas->nama,
-                    'dosen' => $master->dosen->user->name,
+                    'dosen' => $master->dosen->nama_lengkap,
                     'dosen_id' => $master->dosen->id,
                     'lab' => $lab->nama,
                     'laboratorium_id' => $labId,
@@ -863,6 +866,7 @@ class TukarJadwalController extends Controller
             ->whereBetween('tanggal', [$mingguStart->format('Y-m-d'), $mingguStart->copy()->addDays(5)->format('Y-m-d')])
             ->with([
                 'dosen.user',
+                'dosen',
                 'kelasMatKul.kelas',
                 'kelasMatKul.mataKuliah',
                 'laboratorium.kampus',
@@ -902,7 +906,7 @@ class TukarJadwalController extends Controller
                     'booking_id' => $booking->id,
                     'matkul' => $booking->kelasMatKul ? $booking->kelasMatKul->mataKuliah->nama : 'Booking Lab',
                     'kelas' => $booking->kelasMatKul ? $booking->kelasMatKul->kelas->nama : '-',
-                    'dosen' => $booking->dosen->user->name,
+                    'dosen' => $booking->dosen->nama_lengkap,
                     'dosen_id' => $booking->dosen->id,
                     'lab' => $booking->laboratorium->nama,
                     'laboratorium_id' => $booking->laboratorium_id,
@@ -927,7 +931,9 @@ class TukarJadwalController extends Controller
         $myRequests = TukarJadwal::where('pemohon_id', $dosen->id)
             ->with([
                 'pemohon.user',
+                'pemohon',
                 'mitra.user',
+                'mitra',
                 'sesiJadwalPemohon.jadwalMaster.kelasMatKul.mataKuliah',
                 'sesiJadwalPemohon.jadwalMaster.laboratorium',
                 'sesiJadwalMitra.jadwalMaster.kelasMatKul.mataKuliah',
@@ -941,7 +947,7 @@ class TukarJadwalController extends Controller
                     'id' => $item->id,
                     'pemohon' => [
                         'id' => $item->pemohon->id,
-                        'nama' => $item->pemohon->user->name,
+                        'nama' => $item->pemohon->nama_lengkap,
                     ],
                     'sesi_pemohon' => [
                         'id' => $item->sesiJadwalPemohon->id,
@@ -979,7 +985,9 @@ class TukarJadwalController extends Controller
         $incomingRequests = TukarJadwal::where('mitra_id', $dosen->id)
             ->with([
                 'pemohon.user',
+                'pemohon',
                 'mitra.user',
+                'mitra',
                 'sesiJadwalPemohon.jadwalMaster.kelasMatKul.mataKuliah',
                 'sesiJadwalPemohon.jadwalMaster.laboratorium',
                 'sesiJadwalMitra.jadwalMaster.kelasMatKul.mataKuliah',
@@ -993,7 +1001,7 @@ class TukarJadwalController extends Controller
                     'id' => $item->id,
                     'pemohon' => [
                         'id' => $item->pemohon->id,
-                        'nama' => $item->pemohon->user->name,
+                        'nama' => $item->pemohon->nama_lengkap,
                     ],
                     'sesi_pemohon' => [
                         'id' => $item->sesiJadwalPemohon->id,
@@ -1006,7 +1014,7 @@ class TukarJadwalController extends Controller
                     ],
                     'mitra' => $item->mitra ? [
                         'id' => $item->mitra->id,
-                        'nama' => $item->mitra->user->name,
+                        'nama' => $item->mitra->nama_lengkap,
                     ] : null,
                     'sesi_mitra' => $item->sesiJadwalMitra ? [
                         'id' => $item->sesiJadwalMitra->id,

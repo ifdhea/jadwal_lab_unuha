@@ -133,6 +133,7 @@ class PublicController extends Controller
             ->with([
                 'jadwalMaster.laboratorium.kampus',
                 'jadwalMaster.dosen.user',
+                'jadwalMaster.dosen',
                 'jadwalMaster.kelasMatKul.kelas',
                 'jadwalMaster.kelasMatKul.mataKuliah',
                 'jadwalMaster.slotWaktuMulai',
@@ -196,7 +197,7 @@ class PublicController extends Controller
                     'sesi_jadwal_id' => $sesi->id,
                     'matkul' => $master->kelasMatKul->mataKuliah->nama,
                     'kelas' => $master->kelasMatKul->kelas->nama,
-                    'dosen' => $master->dosen->user->name,
+                    'dosen' => $master->dosen->nama_lengkap,
                     'lab' => $lab->nama,
                     'sks' => $master->kelasMatKul->mataKuliah->sks,
                     'durasi_slot' => $durasiSlot,
@@ -223,7 +224,7 @@ class PublicController extends Controller
             $bookings = \App\Models\BookingLaboratorium::where('status', 'disetujui')
                 ->whereDate('tanggal', '>=', $mingguStart)
                 ->whereDate('tanggal', '<=', $weekEnd)
-                ->with(['dosen.user', 'laboratorium.kampus', 'slotWaktuMulai', 'slotWaktuSelesai', 'kelasMatKul.mataKuliah', 'kelasMatKul.kelas'])
+                ->with(['dosen.user', 'dosen', 'laboratorium.kampus', 'slotWaktuMulai', 'slotWaktuSelesai', 'kelasMatKul.mataKuliah', 'kelasMatKul.kelas'])
                 ->get();
 
             foreach ($bookings as $booking) {
@@ -259,7 +260,7 @@ class PublicController extends Controller
                             'booking_id' => $booking->id,
                             'matkul' => $booking->kelasMatKul ? $booking->kelasMatKul->mataKuliah->nama : '-',
                             'kelas' => $booking->kelasMatKul ? $booking->kelasMatKul->kelas->nama : '-',
-                            'dosen' => $booking->dosen->user->name,
+                            'dosen' => $booking->dosen->nama_lengkap,
                             'lab' => $booking->laboratorium->nama,
                             'sks' => $booking->kelasMatKul ? $booking->kelasMatKul->mataKuliah->sks : $booking->durasi_slot,
                             'durasi_slot' => $booking->durasi_slot,

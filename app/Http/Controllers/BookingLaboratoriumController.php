@@ -23,6 +23,7 @@ class BookingLaboratoriumController extends Controller
 
         $query = BookingLaboratorium::with([
             'dosen.user',
+            'dosen',
             'laboratorium.kampus',
             'slotWaktuMulai',
             'slotWaktuSelesai',
@@ -109,6 +110,7 @@ class BookingLaboratoriumController extends Controller
     {
         $query = BookingLaboratorium::with([
             'dosen.user',
+            'dosen',
             'laboratorium.kampus',
             'slotWaktuMulai',
             'slotWaktuSelesai',
@@ -771,6 +773,7 @@ class BookingLaboratoriumController extends Controller
             ->with([
                 'jadwalMaster.laboratorium.kampus',
                 'jadwalMaster.dosen.user',
+                'jadwalMaster.dosen',
                 'jadwalMaster.kelasMatKul.kelas',
                 'jadwalMaster.kelasMatKul.mataKuliah',
                 'jadwalMaster.slotWaktuMulai',
@@ -814,7 +817,7 @@ class BookingLaboratoriumController extends Controller
                         'sesi_jadwal_id' => $sesi->id,
                         'matkul' => $master->kelasMatKul->mataKuliah->nama,
                         'kelas' => $master->kelasMatKul->kelas->nama,
-                        'dosen' => $master->dosen->user->name,
+                        'dosen' => $master->dosen->nama_lengkap,
                         'lab' => $master->laboratorium->nama,
                         'laboratorium_id' => $master->laboratorium_id,
                         'sks' => $master->kelasMatKul->mataKuliah->sks,
@@ -833,7 +836,7 @@ class BookingLaboratoriumController extends Controller
 
         $bookings = BookingLaboratorium::whereIn('status', ['disetujui', 'menunggu'])
             ->whereHas('laboratorium.kampus')
-            ->with(['dosen.user', 'laboratorium.kampus', 'slotWaktuMulai', 'slotWaktuSelesai', 'kelasMatKul.mataKuliah', 'kelasMatKul.kelas'])
+            ->with(['dosen.user', 'dosen', 'laboratorium.kampus', 'slotWaktuMulai', 'slotWaktuSelesai', 'kelasMatKul.mataKuliah', 'kelasMatKul.kelas'])
             ->get();
 
         foreach ($bookings as $booking) {
@@ -871,7 +874,7 @@ class BookingLaboratoriumController extends Controller
                         'booking_id' => $booking->id,
                         'matkul' => $booking->kelasMatKul ? $booking->kelasMatKul->mataKuliah->nama : '-',
                         'kelas' => $booking->kelasMatKul ? $booking->kelasMatKul->kelas->nama : '-',
-                        'dosen' => $booking->dosen->user->name,
+                        'dosen' => $booking->dosen->nama_lengkap,
                         'lab' => $booking->laboratorium->nama,
                         'laboratorium_id' => $booking->laboratorium_id,
                         'sks' => $booking->kelasMatKul ? $booking->kelasMatKul->mataKuliah->sks : $booking->durasi_slot,
