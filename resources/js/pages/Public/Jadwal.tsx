@@ -356,8 +356,8 @@ export default function Jadwal({
                                                                                     <th
                                                                                         key={h.id}
                                                                                         className={`border p-2 font-semibold min-w-[140px] ${isTodayCell
-                                                                                                ? 'bg-primary/10 ring-2 ring-primary ring-inset'
-                                                                                                : ''
+                                                                                            ? 'bg-primary/10 ring-2 ring-primary ring-inset'
+                                                                                            : ''
                                                                                             }`}
                                                                                     >
                                                                                         <div className="flex flex-col gap-1">
@@ -373,8 +373,8 @@ export default function Jadwal({
                                                                                             {h.tanggal && (
                                                                                                 <span
                                                                                                     className={`text-xs ${isTodayCell
-                                                                                                            ? 'text-primary font-semibold'
-                                                                                                            : 'text-muted-foreground'
+                                                                                                        ? 'text-primary font-semibold'
+                                                                                                        : 'text-muted-foreground'
                                                                                                         }`}
                                                                                                 >
                                                                                                     {new Date(
@@ -411,8 +411,8 @@ export default function Jadwal({
                                                                                     >
                                                                                         <td
                                                                                             className={`sticky left-0 z-10 border-r-2 border-r-gray-300 p-1 text-center font-mono text-xs font-semibold shadow-md whitespace-nowrap ${isBreakTime
-                                                                                                    ? 'bg-muted h-16'
-                                                                                                    : 'bg-background h-24'
+                                                                                                ? 'bg-muted h-16'
+                                                                                                : 'bg-background h-24'
                                                                                                 }`}
                                                                                         >
                                                                                             {slot.waktu_mulai.slice(0, 5)} -{' '}
@@ -601,8 +601,7 @@ export default function Jadwal({
                                                                                                                                     !cell.is_active && (
                                                                                                                                         <Badge
                                                                                                                                             variant="outline"
-                                                                                                                                            className="px-1.5 py-0.5 text-xs font-medium text-white"
-                                                                                                                                        >
+                                                                                                                                            className="px-1.5 py-0.5 text-xs font-medium text-gray-900 dark:text-gray-100 border-gray-900 dark:border-gray-100">
                                                                                                                                             Tidak Masuk
                                                                                                                                         </Badge>
                                                                                                                                     )}
@@ -648,8 +647,8 @@ export default function Jadwal({
                                                                             <th
                                                                                 key={h.id}
                                                                                 className={`border p-2 font-semibold min-w-[160px] md:min-w-0 ${isTodayCell
-                                                                                        ? 'bg-primary/10 ring-2 ring-primary ring-inset'
-                                                                                        : ''
+                                                                                    ? 'bg-primary/10 ring-2 ring-primary ring-inset'
+                                                                                    : ''
                                                                                     }`}
                                                                             >
                                                                                 <div className="flex flex-col gap-1">
@@ -665,8 +664,8 @@ export default function Jadwal({
                                                                                     {h.tanggal && (
                                                                                         <span
                                                                                             className={`text-xs ${isTodayCell
-                                                                                                    ? 'text-primary font-semibold'
-                                                                                                    : 'text-muted-foreground'
+                                                                                                ? 'text-primary font-semibold'
+                                                                                                : 'text-muted-foreground'
                                                                                                 }`}
                                                                                         >
                                                                                             {new Date(
@@ -703,8 +702,8 @@ export default function Jadwal({
                                                                             >
                                                                                 <td
                                                                                     className={`sticky left-0 z-10 border p-2 text-center font-mono text-xs font-semibold ${isBreakTime
-                                                                                            ? 'bg-muted h-16'
-                                                                                            : 'bg-background h-24'
+                                                                                        ? 'bg-muted h-16'
+                                                                                        : 'bg-background h-24'
                                                                                         }`}
                                                                                 >
                                                                                     {slot.waktu_mulai.slice(0, 5)} -{' '}
@@ -893,7 +892,7 @@ export default function Jadwal({
                                                                                                                             !cell.is_active && (
                                                                                                                                 <Badge
                                                                                                                                     variant="outline"
-                                                                                                                                    className="px-1.5 py-0.5 text-xs font-medium text-white"
+                                                                                                                                    className="px-1.5 py-0.5 text-xs font-medium text-gray-900 dark:text-gray-100 border-gray-900 dark:border-gray-100"
                                                                                                                                 >
                                                                                                                                     Tidak Masuk
                                                                                                                                 </Badge>
@@ -1040,7 +1039,7 @@ export default function Jadwal({
                                                                         </Badge>
                                                                     )}
                                                                     {item.status === 'tidak_masuk' && (
-                                                                        <Badge variant="outline" className="text-white">
+                                                                        <Badge variant="outline" className="text-gray-900 dark:text-gray-100 border-gray-900 dark:border-gray-100">
                                                                             Tidak Masuk
                                                                         </Badge>
                                                                     )}
