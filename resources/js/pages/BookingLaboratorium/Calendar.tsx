@@ -89,6 +89,14 @@ interface MatKul {
     nama: string;
     kelas: string;
     sks: number;
+    kampus_id: number;
+    kampus_nama: string | null;
+}
+
+interface Lab {
+    id: number;
+    nama: string;
+    kode: string;
 }
 
 interface Booking {
@@ -110,6 +118,7 @@ interface Props {
     semesters: Semester[];
     selectedSemesterId: number | null;
     kampusList: Kampus[];
+    labsByKampus: Record<number, Lab[]>;
     mingguList: Minggu[];
     selectedMinggu: number;
     hari: Hari[];
@@ -124,6 +133,7 @@ export default function Calendar({
     semesters,
     selectedSemesterId,
     kampusList,
+    labsByKampus,
     mingguList,
     selectedMinggu,
     hari,
@@ -143,9 +153,11 @@ export default function Calendar({
         tanggal: string;
         slot_mulai_id: number;
         waktu_mulai: string;
+        lab_id: number | null;
     } | null>(null);
     const [bookingForm, setBookingForm] = useState({
         kelas_mata_kuliah_id: '',
+        laboratorium_id: '',
         keperluan: '',
         keterangan: '',
     });
@@ -227,22 +239,35 @@ export default function Calendar({
             return;
         }
 
+        // Ambil lab pertama dari kampus ini sebagai default
+        const labsInKampus = labsByKampus[kampusId] || [];
+        const defaultLabId = labsInKampus.length > 0 ? labsInKampus[0].id : null;
+
         setSelectedSlot({
             kampus_id: kampusId,
             tanggal,
             slot_mulai_id: slotId,
             waktu_mulai: waktuMulai,
+            lab_id: defaultLabId,
         });
-        setBookingForm({ kelas_mata_kuliah_id: '', keperluan: '', keterangan: '' });
+        setBookingForm({ 
+            kelas_mata_kuliah_id: '', 
+            laboratorium_id: defaultLabId ? String(defaultLabId) : '',
+            keperluan: '', 
+            keterangan: '' 
+        });
         setShowBookingDialog(true);
     };
 
     const handleSubmitBooking = () => {
-        if (!selectedSlot || !bookingForm.kelas_mata_kuliah_id || !bookingForm.keperluan.trim()) return;
+        if (!selectedSlot || !bookingForm.kelas_mata_kuliah_id || !bookingForm.laboratorium_id || !bookingForm.keperluan.trim()) {
+            alert('Mohon lengkapi semua field yang wajib diisi');
+            return;
+        }
 
         router.post('/booking-lab', {
             kelas_mata_kuliah_id: bookingForm.kelas_mata_kuliah_id,
-            laboratorium_id: 1,
+            laboratorium_id: bookingForm.laboratorium_id,
             tanggal: selectedSlot.tanggal,
             slot_waktu_mulai_id: selectedSlot.slot_mulai_id,
             keperluan: bookingForm.keperluan,
@@ -251,7 +276,12 @@ export default function Calendar({
             onSuccess: () => {
                 setShowBookingDialog(false);
                 setSelectedSlot(null);
-                setBookingForm({ kelas_mata_kuliah_id: '', keperluan: '', keterangan: '' });
+                setBookingForm({ 
+                    kelas_mata_kuliah_id: '', 
+                    laboratorium_id: '',
+                    keperluan: '', 
+                    keterangan: '' 
+                });
                 
                 // Scroll ke list booking
                 setTimeout(() => {
@@ -1771,16 +1801,44 @@ export default function Calendar({
                                         <SelectValue placeholder="Pilih Mata Kuliah" />
                                     </SelectTrigger>
                                     <SelectContent>
-                                        {myMatKuls.map((mk) => (
-                                            <SelectItem key={mk.id} value={String(mk.id)}>
-                                                {mk.nama} - {mk.kelas} ({mk.sks} SKS)
+                                        {myMatKuls
+                                            .filter((mk) => mk.kampus_id === selectedSlot?.kampus_id)
+                                            .map((mk) => (
+                                                <SelectItem key={mk.id} value={String(mk.id)}>
+                                                    {mk.nama} - {mk.kelas} ({mk.sks} SKS)
+                                                </SelectItem>
+                                            ))}
+                                    </SelectContent>
+                                </Select>
+                                <p className="text-xs text-muted-foreground">
+                                    Durasi booking akan disesuaikan dengan SKS mata kuliah. Hanya menampilkan mata kuliah di kampus {kampusList.find(k => k.id === selectedSlot?.kampus_id)?.nama || 'ini'}.
+                                </p>
+                            </div>
+
+                            <div className="space-y-2">
+                                <Label htmlFor="laboratorium">
+                                    Laboratorium <span className="text-destructive">*</span>
+                                </Label>
+                                <Select
+                                    value={bookingForm.laboratorium_id}
+                                    onValueChange={(value) =>
+                                        setBookingForm({
+                                            ...bookingForm,
+                                            laboratorium_id: value,
+                                        })
+                                    }
+                                >
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="Pilih Laboratorium" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {(labsByKampus[selectedSlot?.kampus_id || 0] || []).map((lab) => (
+                                            <SelectItem key={lab.id} value={String(lab.id)}>
+                                                {lab.nama}
                                             </SelectItem>
                                         ))}
                                     </SelectContent>
                                 </Select>
-                                <p className="text-xs text-muted-foreground">
-                                    Durasi booking akan disesuaikan dengan SKS mata kuliah
-                                </p>
                             </div>
 
                             <div className="space-y-2">
@@ -1826,7 +1884,7 @@ export default function Calendar({
                         </Button>
                         <Button
                             onClick={handleSubmitBooking}
-                            disabled={!bookingForm.kelas_mata_kuliah_id || !bookingForm.keperluan.trim()}
+                            disabled={!bookingForm.kelas_mata_kuliah_id || !bookingForm.laboratorium_id || !bookingForm.keperluan.trim()}
                         >
                             Ajukan Booking
                         </Button>
