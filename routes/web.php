@@ -46,6 +46,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
     
     // Jadwal Embed (tanpa layout untuk iframe di dashboard)
     Route::get('/jadwal/embed', [JadwalController::class, 'embed'])->name('jadwal.embed');
+    
+    // Jadwal Export (Excel)
+    Route::get('/jadwal/export', [JadwalController::class, 'export'])->name('jadwal.export');
 
     // Notifications
     Route::get('/notifications', [NotificationController::class, 'index'])->name('notifications.index');

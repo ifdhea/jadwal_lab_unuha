@@ -401,6 +401,185 @@ class JadwalController extends Controller
         ]);
     }
 
+    public function export(Request $request)
+    {
+        $semesters = Semester::where('is_aktif', true)->orderBy('tanggal_mulai', 'desc')->get();
+        $selectedSemesterId = $request->input('semester_id', $semesters->first()->id ?? null);
+
+        if (!$selectedSemesterId) {
+            return back()->with('error', 'Semester tidak ditemukan');
+        }
+
+        $semester = Semester::find($selectedSemesterId);
+        $kampusList = Kampus::where('is_aktif', true)->orderBy('kode')->get();
+        $slots = SlotWaktu::where('is_aktif', true)->orderBy('waktu_mulai')->get();
+        
+        $tanggalMulai = Carbon::parse($semester->tanggal_mulai);
+        $totalMinggu = $semester->total_minggu ?? 16;
+
+        // Generate sheets untuk setiap minggu
+        $sheets = [];
+        
+        for ($mingguNomor = 1; $mingguNomor <= $totalMinggu; $mingguNomor++) {
+            $mingguStart = $tanggalMulai->copy()->addWeeks($mingguNomor - 1)->startOfWeek(Carbon::MONDAY);
+            $mingguEnd = $mingguStart->copy()->addDays(5);
+
+            // Ambil semua jadwal untuk minggu ini
+            $sesiJadwals = SesiJadwal::whereHas('jadwalMaster.kelasMatKul', function ($query) use ($selectedSemesterId) {
+                    $query->where('semester_id', $selectedSemesterId);
+                })
+                ->whereBetween('tanggal', [$mingguStart->format('Y-m-d'), $mingguEnd->format('Y-m-d')])
+                ->with([
+                    'jadwalMaster.laboratorium.kampus',
+                    'jadwalMaster.dosen.user',
+                    'jadwalMaster.dosen',
+                    'jadwalMaster.kelasMatKul.kelas',
+                    'jadwalMaster.kelasMatKul.mataKuliah',
+                    'jadwalMaster.slotWaktuMulai',
+                    'jadwalMaster.slotWaktuSelesai',
+                    'overrideSlotWaktuMulai',
+                    'overrideSlotWaktuSelesai',
+                    'overrideLaboratorium.kampus'
+                ])
+                ->whereNotIn('status', ['dibatalkan'])
+                ->get();
+
+            // Ambil booking yang disetujui
+            $bookings = \App\Models\BookingLaboratorium::where('status', 'disetujui')
+                ->whereDate('tanggal', '>=', $mingguStart)
+                ->whereDate('tanggal', '<=', $mingguEnd)
+                ->with(['dosen.user', 'dosen', 'laboratorium.kampus', 'slotWaktuMulai', 'slotWaktuSelesai', 'kelasMatKul.mataKuliah', 'kelasMatKul.kelas'])
+                ->get();
+
+            // Build struktur jadwal per lab/hari/slot
+            $jadwalMap = [];
+            
+            // Process sesi jadwal reguler
+            foreach ($sesiJadwals as $sesi) {
+                $master = $sesi->jadwalMaster;
+                $tanggalSesi = Carbon::parse($sesi->tanggal);
+                $hariNama = ucfirst($tanggalSesi->locale('id')->dayName);
+                
+                $slotMulaiId = $sesi->override_slot_waktu_mulai_id ?? $master->slot_waktu_mulai_id;
+                $slotSelesaiId = $sesi->override_slot_waktu_selesai_id ?? $master->slot_waktu_selesai_id;
+                $labId = $sesi->override_laboratorium_id ?? $master->laboratorium_id;
+                $lab = $sesi->overrideLaboratorium ?? $master->laboratorium;
+                
+                $slotMulai = $sesi->overrideSlotWaktuMulai ?? $master->slotWaktuMulai;
+                $slotSelesai = $sesi->overrideSlotWaktuSelesai ?? $master->slotWaktuSelesai;
+                
+                $key = $labId . '_' . $tanggalSesi->format('Y-m-d') . '_' . $slotMulaiId;
+                
+                // Tentukan status berdasarkan kondisi sesi
+                $statusText = 'Terjadwal';
+                if ($sesi->status === 'tidak_masuk') {
+                    $statusText = 'Tidak Masuk';
+                } elseif ($sesi->override_slot_waktu_mulai_id || $sesi->override_laboratorium_id) {
+                    $statusText = 'Terjadwal (Ditukar)';
+                }
+                
+                $jadwalMap[$key] = [
+                    'kampus' => $lab->kampus->nama,
+                    'laboratorium' => $lab->nama,
+                    'hari' => $hariNama,
+                    'tanggal' => $tanggalSesi->format('Y-m-d'),
+                    'waktu_mulai' => $slotMulai->waktu_mulai,
+                    'waktu_selesai' => $slotSelesai->waktu_selesai,
+                    'status' => $statusText,
+                    'mata_kuliah' => $master->kelasMatKul->mataKuliah->nama,
+                    'kelas' => $master->kelasMatKul->kelas->nama,
+                    'dosen' => $master->dosen->nama_lengkap,
+                    'sks' => $master->kelasMatKul->mataKuliah->sks,
+                    'keperluan' => '-',
+                ];
+            }
+
+            // Process booking
+            foreach ($bookings as $booking) {
+                $tanggalBooking = Carbon::parse($booking->tanggal);
+                $hariNama = $this->getHariIndonesia($tanggalBooking->dayOfWeek);
+                
+                $key = $booking->laboratorium_id . '_' . $tanggalBooking->format('Y-m-d') . '_' . $booking->slot_waktu_mulai_id;
+                
+                $jadwalMap[$key] = [
+                    'kampus' => $booking->laboratorium->kampus->nama,
+                    'laboratorium' => $booking->laboratorium->nama,
+                    'hari' => $hariNama,
+                    'tanggal' => $tanggalBooking->format('Y-m-d'),
+                    'waktu_mulai' => $booking->slotWaktuMulai->waktu_mulai,
+                    'waktu_selesai' => $booking->slotWaktuSelesai->waktu_selesai,
+                    'status' => 'Booking',
+                    'mata_kuliah' => $booking->kelasMatKul ? $booking->kelasMatKul->mataKuliah->nama : '-',
+                    'kelas' => $booking->kelasMatKul ? $booking->kelasMatKul->kelas->nama : '-',
+                    'dosen' => $booking->dosen->nama_lengkap,
+                    'sks' => $booking->kelasMatKul ? $booking->kelasMatKul->mataKuliah->sks : '-',
+                    'keperluan' => $booking->keperluan,
+                ];
+            }
+
+            // Build complete data including empty slots untuk minggu ini
+            $mingguData = [];
+            
+            foreach ($kampusList as $kampus) {
+                $labs = \App\Models\Laboratorium::where('kampus_id', $kampus->id)
+                    ->where('is_aktif', true)
+                    ->orderBy('nama')
+                    ->get();
+                
+                foreach ($labs as $lab) {
+                    // Loop untuk setiap hari
+                    for ($dayOffset = 0; $dayOffset < 6; $dayOffset++) {
+                        $currentDate = $mingguStart->copy()->addDays($dayOffset);
+                        $hariNama = $this->getHariIndonesia($currentDate->dayOfWeek);
+                        
+                        // Loop untuk setiap slot
+                        foreach ($slots as $slot) {
+                            $key = $lab->id . '_' . $currentDate->format('Y-m-d') . '_' . $slot->id;
+                            
+                            if (isset($jadwalMap[$key])) {
+                                // Slot terisi
+                                $mingguData[] = $jadwalMap[$key];
+                            } else {
+                                // Slot kosong
+                                $mingguData[] = [
+                                    'kampus' => $kampus->nama,
+                                    'laboratorium' => $lab->nama,
+                                    'hari' => $hariNama,
+                                    'tanggal' => $currentDate->format('Y-m-d'),
+                                    'waktu_mulai' => $slot->waktu_mulai,
+                                    'waktu_selesai' => $slot->waktu_selesai,
+                                    'status' => 'Kosong',
+                                    'mata_kuliah' => '-',
+                                    'kelas' => '-',
+                                    'dosen' => '-',
+                                    'sks' => '-',
+                                    'keperluan' => '-',
+                                ];
+                            }
+                        }
+                    }
+                }
+            }
+            
+            // Buat sheet untuk minggu ini
+            $sheets[] = new \App\Exports\JadwalMingguSheet(
+                $mingguData,
+                $mingguNomor,
+                $mingguStart->format('Y-m-d'),
+                $mingguEnd->format('Y-m-d')
+            );
+        }
+
+        // Bersihkan nama semester dari karakter yang tidak diperbolehkan dalam nama file
+        $semesterNama = str_replace(['/', '\\'], '-', $semester->nama);
+        $filename = 'jadwal-lab-semester-' . $semesterNama . '-' . date('Y-m-d') . '.xlsx';
+        
+        return \Maatwebsite\Excel\Facades\Excel::download(
+            new \App\Exports\JadwalExport($sheets),
+            $filename
+        );
+    }
+
     private function getHariIndonesia($dayOfWeek)
     {
         $hari = [
