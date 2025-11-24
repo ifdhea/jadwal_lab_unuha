@@ -791,23 +791,16 @@ class TukarJadwalController extends Controller
             $slotSelesaiId = $sesi->override_slot_waktu_selesai_id ?? $master->slot_waktu_selesai_id;
             $labId = $sesi->override_laboratorium_id ?? $master->laboratorium_id;
             
-            // Hitung durasi_slot yang BENAR berdasarkan slot aktual (dengan override)
-            $durasiSlot = $slotSelesaiId - $slotMulaiId + 1;
-            
             // Load actual slot/lab objects
             $slotMulai = $sesi->overrideSlotWaktuMulai ?? $master->slotWaktuMulai;
             $slotSelesai = $sesi->overrideSlotWaktuSelesai ?? $master->slotWaktuSelesai;
             $lab = $sesi->overrideLaboratorium ?? $master->laboratorium;
             
-            $slotId = $slotMulaiId;
+            // Recalculate kampusId and durasi from actual objects (after override)
+            $kampusId = $lab->kampus_id;
+            $durasiSlot = $slotSelesai->urutan - $slotMulai->urutan + 1;
 
             if ($hariId) {
-                // Gunakan minggu yang ditampilkan (selectedMinggu) bukan pertemuan_ke
-                // Karena kita query by date range
-                if (!isset($jadwalData[$kampusId][$selectedMinggu][$hariId][$slotId])) {
-                    $jadwalData[$kampusId][$selectedMinggu][$hariId][$slotId] = [];
-                }
-                
                 $isMySchedule = $master->dosen_id === $dosen->id;
                 
                 // Check if this is a swapped schedule
@@ -819,45 +812,50 @@ class TukarJadwalController extends Controller
                     ->where('jenis', 'tukar')
                     ->exists();
                 
-                // Check if past using timezone-aware comparison
-                $now = now(); // Already uses Asia/Jakarta from config
-                $sesiDate = Carbon::parse($sesi->tanggal)->setTimezone('Asia/Jakarta');
-                $sesiDate->setHours(23, 59, 59); // End of day
-                $isPast = $now->greaterThan($sesiDate);
-                
-                // Check if currently active (berlangsung)
+                // Check if past and active using timezone-aware comparison
+                $now = now();
                 $jadwalStart = Carbon::parse($sesi->tanggal)->setTimezone('Asia/Jakarta')->setTimeFromTimeString($slotMulai->waktu_mulai);
                 $jadwalEnd = Carbon::parse($sesi->tanggal)->setTimezone('Asia/Jakarta')->setTimeFromTimeString($slotSelesai->waktu_selesai);
                 $isActive = $now->between($jadwalStart, $jadwalEnd);
+                $isPast = $now->greaterThan($jadwalEnd);
                 
-                // Re-check isPast: if schedule ended, mark as past
-                if ($now->greaterThan($jadwalEnd)) {
-                    $isPast = true;
-                    $isActive = false;
+                // CRITICAL FIX: Loop through ALL slots in duration!
+                for ($i = 0; $i < $durasiSlot; $i++) {
+                    $currentSlot = \App\Models\SlotWaktu::where('urutan', $slotMulai->urutan + $i)->first();
+                    if (!$currentSlot || !$currentSlot->is_aktif) continue;
+                    
+                    $slotId = $currentSlot->id;
+                    
+                    if (!isset($jadwalData[$kampusId][$selectedMinggu][$hariId][$slotId])) {
+                        $jadwalData[$kampusId][$selectedMinggu][$hariId][$slotId] = [];
+                    }
+                    
+                    $jadwalData[$kampusId][$selectedMinggu][$hariId][$slotId][] = [
+                        'sesi_jadwal_id' => $sesi->id,
+                        'matkul' => $master->kelasMatKul->mataKuliah->nama,
+                        'kelas' => $master->kelasMatKul->kelas->nama,
+                        'dosen' => $master->dosen->nama_lengkap,
+                        'dosen_id' => $master->dosen->id,
+                        'lab' => $lab->nama,
+                        'laboratorium_id' => $labId,
+                        'sks' => $master->kelasMatKul->mataKuliah->sks,
+                        'durasi_slot' => $durasiSlot,
+                        'waktu_mulai' => $slotMulai->waktu_mulai,
+                        'waktu_selesai' => $slotSelesai->waktu_selesai,
+                        'slot_mulai_id' => $slotMulai->id,
+                        'slot_selesai_id' => $slotSelesai->id,
+                        'status' => $sesi->status,
+                        'tanggal' => $sesi->tanggal->format('Y-m-d'),
+                        'is_my_schedule' => $isMySchedule,
+                        'is_past' => $isPast,
+                        'is_active' => $isActive,
+                        'is_swapped' => $isSwapped,
+                        'has_override' => $sesi->override_slot_waktu_mulai_id !== null,
+                        'slot_position' => $i,
+                        'is_first_slot' => $i === 0,
+                        'is_last_slot' => $i === ($durasiSlot - 1),
+                    ];
                 }
-                
-                $jadwalData[$kampusId][$selectedMinggu][$hariId][$slotId][] = [
-                    'sesi_jadwal_id' => $sesi->id,
-                    'matkul' => $master->kelasMatKul->mataKuliah->nama,
-                    'kelas' => $master->kelasMatKul->kelas->nama,
-                    'dosen' => $master->dosen->nama_lengkap,
-                    'dosen_id' => $master->dosen->id,
-                    'lab' => $lab->nama,
-                    'laboratorium_id' => $labId,
-                    'sks' => $master->kelasMatKul->mataKuliah->sks,
-                    'durasi_slot' => $durasiSlot, // Gunakan durasi yang dihitung dari slot aktual
-                    'waktu_mulai' => $slotMulai->waktu_mulai,
-                    'waktu_selesai' => $slotSelesai->waktu_selesai,
-                    'slot_mulai_id' => $slotMulai->id, // ID slot mulai untuk calculate rowSpan
-                    'slot_selesai_id' => $slotSelesai->id, // ID slot selesai untuk calculate rowSpan
-                    'status' => $sesi->status,
-                    'tanggal' => $sesi->tanggal->format('Y-m-d'),
-                    'is_my_schedule' => $isMySchedule,
-                    'is_past' => $isPast,
-                    'is_active' => $isActive,
-                    'is_swapped' => $isSwapped,
-                    'has_override' => $sesi->override_slot_waktu_mulai_id !== null,
-                ];
             }
         }
 

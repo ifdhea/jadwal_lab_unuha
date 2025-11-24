@@ -709,10 +709,14 @@ class BookingLaboratoriumController extends Controller
 
         $slots = SlotWaktu::where('is_aktif', true)->orderBy('urutan')->get();
 
+        // PENTING: Gunakan whereBetween tanggal, bukan where pertemuan_ke
+        // Agar data sync dengan generate jadwal
+        $mingguEnd = $mingguStart->copy()->addDays(5);
+        
         $sesiJadwals = SesiJadwal::whereHas('jadwalMaster.kelasMatKul', function ($query) use ($selectedSemesterId) {
                 $query->where('semester_id', $selectedSemesterId);
             })
-            ->where('pertemuan_ke', $selectedMinggu)
+            ->whereBetween('tanggal', [$mingguStart->format('Y-m-d'), $mingguEnd->format('Y-m-d')])
             ->whereNotIn('status', ['dibatalkan']) // Filter jadwal yang dibatalkan
             ->with([
                 'jadwalMaster.laboratorium.kampus',
@@ -721,7 +725,10 @@ class BookingLaboratoriumController extends Controller
                 'jadwalMaster.kelasMatKul.kelas',
                 'jadwalMaster.kelasMatKul.mataKuliah',
                 'jadwalMaster.slotWaktuMulai',
-                'jadwalMaster.slotWaktuSelesai'
+                'jadwalMaster.slotWaktuSelesai',
+                'overrideSlotWaktuMulai',
+                'overrideSlotWaktuSelesai',
+                'overrideLaboratorium.kampus'
             ])
             ->get();
 
@@ -738,41 +745,52 @@ class BookingLaboratoriumController extends Controller
         foreach ($sesiJadwals as $sesi) {
             $master = $sesi->jadwalMaster;
             $kampusId = $master->laboratorium->kampus_id;
-            $hariId = $hariMap[$master->hari] ?? null;
-            $slotMulaiId = $master->slot_waktu_mulai_id;
-            $minggu = $sesi->pertemuan_ke;
+            
+            // PENTING: Gunakan tanggal dari sesi, bukan master->hari
+            $tanggalSesi = Carbon::parse($sesi->tanggal);
+            $hariNama = ucfirst($tanggalSesi->locale('id')->dayName);
+            $hariId = $hariMap[$hariNama] ?? null;
+            
+            // Handle override untuk tukar jadwal
+            $slotMulaiId = $sesi->override_slot_waktu_mulai_id ?? $master->slot_waktu_mulai_id;
+            $slotSelesaiId = $sesi->override_slot_waktu_selesai_id ?? $master->slot_waktu_selesai_id;
+            $labId = $sesi->override_laboratorium_id ?? $master->laboratorium_id;
+            
+            $slotMulai = $sesi->overrideSlotWaktuMulai ?? $master->slotWaktuMulai;
+            $slotSelesai = $sesi->overrideSlotWaktuSelesai ?? $master->slotWaktuSelesai;
+            $lab = $sesi->overrideLaboratorium ?? $master->laboratorium;
+            
+            $kampusId = $lab->kampus_id;
+            $durasiSlot = $slotSelesai->urutan - $slotMulai->urutan + 1;
 
             if ($hariId) {
-                for ($i = 0; $i < $master->durasi_slot; $i++) {
-                    $currentSlot = SlotWaktu::where('urutan', $master->slotWaktuMulai->urutan + $i)->first();
-                    if (!$currentSlot) continue;
+                for ($i = 0; $i < $durasiSlot; $i++) {
+                    $currentSlot = SlotWaktu::where('urutan', $slotMulai->urutan + $i)->first();
+                    if (!$currentSlot || !$currentSlot->is_aktif) continue;
 
                     $slotId = $currentSlot->id;
                     
-                    if (!isset($jadwalData[$kampusId][$minggu][$hariId][$slotId])) {
-                        $jadwalData[$kampusId][$minggu][$hariId][$slotId] = [];
+                    if (!isset($jadwalData[$kampusId][$selectedMinggu][$hariId][$slotId])) {
+                        $jadwalData[$kampusId][$selectedMinggu][$hariId][$slotId] = [];
                     }
-
-                    // Re-calculate date on the fly to ensure synchronization
-                    $weekStartDateForSesi = $tanggalMulai->copy()->addWeeks($sesi->pertemuan_ke - 1)->startOfWeek(Carbon::MONDAY);
-                    $correctDateForSesi = $weekStartDateForSesi->copy()->addDays($hariId - 1);
                     
-                    $jadwalData[$kampusId][$minggu][$hariId][$slotId][] = [
+                    $jadwalData[$kampusId][$selectedMinggu][$hariId][$slotId][] = [
                         'sesi_jadwal_id' => $sesi->id,
                         'matkul' => $master->kelasMatKul->mataKuliah->nama,
                         'kelas' => $master->kelasMatKul->kelas->nama,
                         'dosen' => $master->dosen->nama_lengkap,
-                        'lab' => $master->laboratorium->nama,
-                        'laboratorium_id' => $master->laboratorium_id,
+                        'lab' => $lab->nama,
+                        'laboratorium_id' => $labId,
                         'sks' => $master->kelasMatKul->mataKuliah->sks,
-                        'durasi_slot' => $master->durasi_slot,
-                        'waktu_mulai' => $master->slotWaktuMulai->waktu_mulai,
-                        'waktu_selesai' => $master->slotWaktuSelesai->waktu_selesai,
+                        'durasi_slot' => $durasiSlot,
+                        'waktu_mulai' => $slotMulai->waktu_mulai,
+                        'waktu_selesai' => $slotSelesai->waktu_selesai,
                         'status' => $sesi->status,
-                        'tanggal' => $correctDateForSesi->format('Y-m-d'),
+                        'tanggal' => $sesi->tanggal,
                         'slot_position' => $i,
                         'is_first_slot' => $i === 0,
-                        'is_last_slot' => $i === ($master->durasi_slot - 1),
+                        'is_last_slot' => $i === ($durasiSlot - 1),
+                        'is_swapped' => ($sesi->override_slot_waktu_mulai_id || $sesi->override_laboratorium_id) ? true : false,
                     ];
                 }
             }

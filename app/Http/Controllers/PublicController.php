@@ -166,19 +166,15 @@ class PublicController extends Controller
             $slotSelesaiId = $sesi->override_slot_waktu_selesai_id ?? $master->slot_waktu_selesai_id;
             $labId = $sesi->override_laboratorium_id ?? $master->laboratorium_id;
             
-            $durasiSlot = $slotSelesaiId - $slotMulaiId + 1;
-            
             $slotMulai = $sesi->overrideSlotWaktuMulai ?? $master->slotWaktuMulai;
             $slotSelesai = $sesi->overrideSlotWaktuSelesai ?? $master->slotWaktuSelesai;
             $lab = $sesi->overrideLaboratorium ?? $master->laboratorium;
             
-            $slotId = $slotMulaiId;
+            // Recalculate kampusId and durasi from actual objects (after override)
+            $kampusId = $lab->kampus_id;
+            $durasiSlot = $slotSelesai->urutan - $slotMulai->urutan + 1;
 
             if ($hariId) {
-                if (!isset($jadwalData[$kampusId][$selectedMinggu][$hariId][$slotId])) {
-                    $jadwalData[$kampusId][$selectedMinggu][$hariId][$slotId] = [];
-                }
-                
                 $isSwapped = \App\Models\TukarJadwal::where(function($q) use ($sesi) {
                         $q->where('sesi_jadwal_pemohon_id', $sesi->id)
                           ->orWhere('sesi_jadwal_mitra_id', $sesi->id);
@@ -193,26 +189,41 @@ class PublicController extends Controller
                 $isActive = $now->between($jadwalStart, $jadwalEnd);
                 $isPast = $now->greaterThan($jadwalEnd);
                 
-                $jadwalData[$kampusId][$selectedMinggu][$hariId][$slotId][] = [
-                    'sesi_jadwal_id' => $sesi->id,
-                    'matkul' => $master->kelasMatKul->mataKuliah->nama,
-                    'kelas' => $master->kelasMatKul->kelas->nama,
-                    'dosen' => $master->dosen->nama_lengkap,
-                    'lab' => $lab->nama,
-                    'sks' => $master->kelasMatKul->mataKuliah->sks,
-                    'durasi_slot' => $durasiSlot,
-                    'waktu_mulai' => $slotMulai->waktu_mulai,
-                    'waktu_selesai' => $slotSelesai->waktu_selesai,
-                    'status' => $sesi->status,
-                    'tanggal' => $sesi->tanggal->format('Y-m-d'),
-                    'is_past' => $isPast,
-                    'is_active' => $isActive,
-                    'is_swapped' => $isSwapped,
-                    'slot_waktu_mulai_id' => $slotMulaiId,
-                    'laboratorium_id' => $labId,
-                    'has_override' => $sesi->override_slot_waktu_mulai_id !== null,
-                    'kampus' => $master->laboratorium->kampus->nama,
-                ];
+                // CRITICAL FIX: Loop through ALL slots in duration!
+                for ($i = 0; $i < $durasiSlot; $i++) {
+                    $currentSlot = SlotWaktu::where('urutan', $slotMulai->urutan + $i)->first();
+                    if (!$currentSlot || !$currentSlot->is_aktif) continue;
+                    
+                    $slotId = $currentSlot->id;
+                    
+                    if (!isset($jadwalData[$kampusId][$selectedMinggu][$hariId][$slotId])) {
+                        $jadwalData[$kampusId][$selectedMinggu][$hariId][$slotId] = [];
+                    }
+                    
+                    $jadwalData[$kampusId][$selectedMinggu][$hariId][$slotId][] = [
+                        'sesi_jadwal_id' => $sesi->id,
+                        'matkul' => $master->kelasMatKul->mataKuliah->nama,
+                        'kelas' => $master->kelasMatKul->kelas->nama,
+                        'dosen' => $master->dosen->nama_lengkap,
+                        'lab' => $lab->nama,
+                        'sks' => $master->kelasMatKul->mataKuliah->sks,
+                        'durasi_slot' => $durasiSlot,
+                        'waktu_mulai' => $slotMulai->waktu_mulai,
+                        'waktu_selesai' => $slotSelesai->waktu_selesai,
+                        'status' => $sesi->status,
+                        'tanggal' => $sesi->tanggal->format('Y-m-d'),
+                        'is_past' => $isPast,
+                        'is_active' => $isActive,
+                        'is_swapped' => $isSwapped,
+                        'slot_waktu_mulai_id' => $slotMulaiId,
+                        'laboratorium_id' => $labId,
+                        'has_override' => $sesi->override_slot_waktu_mulai_id !== null,
+                        'kampus' => $lab->kampus->nama,
+                        'slot_position' => $i,
+                        'is_first_slot' => $i === 0,
+                        'is_last_slot' => $i === ($durasiSlot - 1),
+                    ];
+                }
             }
         }
 

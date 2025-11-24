@@ -132,7 +132,11 @@ class JadwalController extends Controller
                 'jadwalMaster.kelasMatKul.kelas',
                 'jadwalMaster.kelasMatKul.mataKuliah',
                 'jadwalMaster.slotWaktuMulai',
-                'jadwalMaster.slotWaktuSelesai'
+                'jadwalMaster.slotWaktuSelesai',
+                // IMPORTANT: Load override relationships for tukar jadwal
+                'overrideSlotWaktuMulai',
+                'overrideSlotWaktuSelesai',
+                'overrideLaboratorium.kampus'
             ])
             ->whereNotIn('status', ['dibatalkan']) // Filter jadwal yang dibatalkan
             ->get();
@@ -170,22 +174,16 @@ class JadwalController extends Controller
             $slotSelesaiId = $sesi->override_slot_waktu_selesai_id ?? $master->slot_waktu_selesai_id;
             $labId = $sesi->override_laboratorium_id ?? $master->laboratorium_id;
             
-            // Hitung durasi_slot yang BENAR berdasarkan slot aktual (dengan override)
-            $durasiSlot = $slotSelesaiId - $slotMulaiId + 1;
-            
             // Load actual slot/lab objects
             $slotMulai = $sesi->overrideSlotWaktuMulai ?? $master->slotWaktuMulai;
             $slotSelesai = $sesi->overrideSlotWaktuSelesai ?? $master->slotWaktuSelesai;
             $lab = $sesi->overrideLaboratorium ?? $master->laboratorium;
             
-            $slotId = $slotMulaiId;
+            // IMPORTANT: Recalculate kampusId from actual lab (after override)
+            $kampusId = $lab->kampus_id;
+            $durasiSlot = $slotSelesai->urutan - $slotMulai->urutan + 1;
 
             if ($hariId) {
-                // Gunakan selectedMinggu sebagai key, bukan pertemuan_ke
-                if (!isset($jadwalData[$kampusId][$selectedMinggu][$hariId][$slotId])) {
-                    $jadwalData[$kampusId][$selectedMinggu][$hariId][$slotId] = [];
-                }
-                
                 // Cek apakah user adalah dosen pemilik jadwal ini
                 $user = $request->user();
                 $isMySchedule = false;
@@ -203,32 +201,47 @@ class JadwalController extends Controller
                     ->exists();
                 
                 // Check if past and active using timezone-aware comparison
-                $now = now(); // Already uses Asia/Jakarta from config
+                $now = now();
                 $jadwalStart = Carbon::parse($sesi->tanggal)->setTimezone('Asia/Jakarta')->setTimeFromTimeString($slotMulai->waktu_mulai);
                 $jadwalEnd = Carbon::parse($sesi->tanggal)->setTimezone('Asia/Jakarta')->setTimeFromTimeString($slotSelesai->waktu_selesai);
                 $isActive = $now->between($jadwalStart, $jadwalEnd);
                 $isPast = $now->greaterThan($jadwalEnd);
                 
-                $jadwalData[$kampusId][$selectedMinggu][$hariId][$slotId][] = [
-                    'sesi_jadwal_id' => $sesi->id,
-                    'matkul' => $master->kelasMatKul->mataKuliah->nama,
-                    'kelas' => $master->kelasMatKul->kelas->nama,
-                    'dosen' => $master->dosen->nama_lengkap,
-                    'lab' => $lab->nama,
-                    'sks' => $master->kelasMatKul->mataKuliah->sks,
-                    'durasi_slot' => $durasiSlot, // Gunakan durasi yang dihitung dari slot aktual
-                    'waktu_mulai' => $slotMulai->waktu_mulai,
-                    'waktu_selesai' => $slotSelesai->waktu_selesai,
-                    'status' => $sesi->status,
-                    'is_my_schedule' => $isMySchedule,
-                    'tanggal' => $sesi->tanggal->format('Y-m-d'),
-                    'is_past' => $isPast,
-                    'is_active' => $isActive,
-                    'is_swapped' => $isSwapped,
-                    'slot_waktu_mulai_id' => $slotMulaiId,
-                    'laboratorium_id' => $labId,
-                    'has_override' => $sesi->override_slot_waktu_mulai_id !== null,
-                ];
+                // CRITICAL FIX: Loop through ALL slots in duration like BookingLab does!
+                for ($i = 0; $i < $durasiSlot; $i++) {
+                    $currentSlot = SlotWaktu::where('urutan', $slotMulai->urutan + $i)->first();
+                    if (!$currentSlot || !$currentSlot->is_aktif) continue;
+                    
+                    $slotId = $currentSlot->id;
+                    
+                    if (!isset($jadwalData[$kampusId][$selectedMinggu][$hariId][$slotId])) {
+                        $jadwalData[$kampusId][$selectedMinggu][$hariId][$slotId] = [];
+                    }
+                    
+                    $jadwalData[$kampusId][$selectedMinggu][$hariId][$slotId][] = [
+                        'sesi_jadwal_id' => $sesi->id,
+                        'matkul' => $master->kelasMatKul->mataKuliah->nama,
+                        'kelas' => $master->kelasMatKul->kelas->nama,
+                        'dosen' => $master->dosen->nama_lengkap,
+                        'lab' => $lab->nama,
+                        'sks' => $master->kelasMatKul->mataKuliah->sks,
+                        'durasi_slot' => $durasiSlot,
+                        'waktu_mulai' => $slotMulai->waktu_mulai,
+                        'waktu_selesai' => $slotSelesai->waktu_selesai,
+                        'status' => $sesi->status,
+                        'is_my_schedule' => $isMySchedule,
+                        'tanggal' => $sesi->tanggal->format('Y-m-d'),
+                        'is_past' => $isPast,
+                        'is_active' => $isActive,
+                        'is_swapped' => $isSwapped,
+                        'slot_waktu_mulai_id' => $slotMulaiId,
+                        'laboratorium_id' => $labId,
+                        'has_override' => $sesi->override_slot_waktu_mulai_id !== null,
+                        'slot_position' => $i,
+                        'is_first_slot' => $i === 0,
+                        'is_last_slot' => $i === ($durasiSlot - 1),
+                    ];
+                }
             }
         }
 
@@ -269,7 +282,7 @@ class JadwalController extends Controller
                         }
 
                         // Check if past and active using timezone-aware comparison
-                        $now = now(); // Already uses Asia/Jakarta from config
+                        $now = now();
                         $jadwalStart = Carbon::parse($tanggal)->setTimezone('Asia/Jakarta')->setTimeFromTimeString($booking->slotWaktuMulai->waktu_mulai);
                         $jadwalEnd = Carbon::parse($tanggal)->setTimezone('Asia/Jakarta')->setTimeFromTimeString($booking->slotWaktuSelesai->waktu_selesai);
                         $isActive = $now->between($jadwalStart, $jadwalEnd);
@@ -282,6 +295,7 @@ class JadwalController extends Controller
                             $isMySchedule = ($booking->dosen_id === $user->dosen->id);
                         }
                         
+                        // IMPORTANT: Use [] to APPEND
                         $jadwalData[$kampusId][$selectedMinggu][$hariId][$slotId][] = [
                             'booking_id' => $booking->id,
                             'matkul' => $booking->kelasMatKul ? $booking->kelasMatKul->mataKuliah->nama : '-',
@@ -298,6 +312,8 @@ class JadwalController extends Controller
                             'is_past' => $isPast,
                             'is_active' => $isActive,
                             'is_swapped' => false,
+                            'laboratorium_id' => $booking->laboratorium_id,
+                            'slot_waktu_mulai_id' => $booking->slot_waktu_mulai_id,
                             'slot_position' => $slotCounter,
                             'is_first_slot' => $slotCounter === 0,
                             'is_last_slot' => $slotCounter === ($booking->durasi_slot - 1),
